@@ -1,24 +1,14 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState, useSyncExternalStore } from "react"
 import { createStoreUtils } from "./createStoreUtils"
 import { getTodos } from "./model/get-todos"
 import { Todo } from "./model/todo"
+import { TransitionsStore, TransitionsStoreState } from "./TransitionsStore"
+import { createAsync } from "./createAsync"
+import { Subject } from "./Subject"
+import { Spinner } from "@blueprintjs/core"
 
-export type AnyFunction = (...args: any[]) => any
 type ArgsTuple = any[]
 export type EventsTuple = Record<string, ArgsTuple>
-export abstract class Subject<T extends AnyFunction = AnyFunction> {
-  observers = new Set<T>()
-
-  notify() {
-    this.observers.forEach(cb => cb())
-  }
-
-  subscribe(cb: T) {
-    this.observers.add(cb)
-    return () => this.observers.delete(cb)
-  }
-}
-
 export abstract class Store<T, TActions> extends Subject {
   abstract state: T
   abstract stateMiddleware: (state: T, action?: TActions) => T
@@ -49,6 +39,7 @@ export namespace NSTodos {
 
     export type LoadTodos = {
       type: "load-todos"
+      transitionName?: string
     }
   }
 }
@@ -57,18 +48,22 @@ type TodosStoreProps = {}
 
 type TodosState = {
   todos: Todo[]
+  __transitionName: string | null
 }
 
 export class TodosStore extends Store<TodosState, NSTodos.Actions> {
   state: TodosState
   stateMiddleware: (state: TodosState, action?: NSTodos.Actions) => TodosState
+  transitions: TransitionsStore
 
   constructor({}: TodosStoreProps) {
     super()
     this.stateMiddleware = stateMiddleware.bind(this)
+    this.transitions = new TransitionsStore()
 
     this.state = {
       todos: [],
+      __transitionName: null,
     }
   }
 }
@@ -80,8 +75,13 @@ function stateMiddleware(
 ): TodosState {
   const state = { ...intendedState }
 
+  if (action?.transitionName) {
+    state.__transitionName = action.transitionName
+  }
+
   if (action?.type === "load-todos") {
-    getTodos().then(todos => {
+    const async = createAsync(this.transitions, state.__transitionName)
+    async.promise(getTodos(), todos => {
       this.setStatePartial({ todos })
     })
   }
@@ -109,21 +109,35 @@ export default function App() {
   )
 }
 
+function useTodosTransitions<R>(selector: (data: TransitionsStoreState) => R) {
+  const [store] = useTodosUseState()
+  return useSyncExternalStore(
+    cb => store.transitions.subscribe(cb),
+    () => selector(store.transitions.state)
+  )
+}
+
 type ContentProps = {}
 
 export function Content({}: ContentProps) {
   const [store] = useTodosUseState()
   const todos = useTodosStore(s => s.todos)
+  const isLoading = useTodosTransitions(t => t.transitions["fetch-todos"] > 0)
 
   return (
     <div className="bg-black text-white cursor-default select-none min-h-screen">
       <button
         className="h-9 bg-sky-500"
         onClick={() => {
-          store.dispatch({ type: "load-todos" })
+          store.dispatch({
+            type: "load-todos",
+            transitionName: "fetch-todos",
+          })
         }}
+        disabled={isLoading}
+        style={{ opacity: isLoading ? 0.5 : 1 }}
       >
-        Load todos
+        {isLoading ? "Loading..." : "Load todos"}
       </button>
       <div className="flex flex-col gap-1">
         {todos.map(todo => (
