@@ -1,69 +1,140 @@
-import { Reducer, useEffect, useReducer } from "react"
-import { toast } from "sonner"
-import { cn } from "./lib/utils"
-import { Button } from "./Button"
+import { useEffect, useState } from "react"
+import { createStoreUtils } from "./createStoreUtils"
+import { getTodos } from "./model/get-todos"
+import { Todo } from "./model/todo"
 
-type Action_LoggedIn = { type: "logout" }
-type Action_NoSession = { type: "login" }
-type Action = Action_LoggedIn | Action_NoSession
+export type AnyFunction = (...args: any[]) => any
+type ArgsTuple = any[]
+export type EventsTuple = Record<string, ArgsTuple>
+export abstract class Subject<T extends AnyFunction = AnyFunction> {
+  observers = new Set<T>()
 
-type State = {
-  state: "logged-in" | "no-session"
-  handler: Record<string, Reducer<State, any>>
+  notify() {
+    this.observers.forEach(cb => cb())
+  }
+
+  subscribe(cb: T) {
+    this.observers.add(cb)
+    return () => this.observers.delete(cb)
+  }
 }
 
-const handlers = {
-  "logged-in": {
-    logout: (prevState: State, action: Action_LoggedIn) => {
-      prevState.state = "no-session"
-      return prevState
-    },
-  },
-  "no-session": {
-    login: (prevState: State, action: Action_NoSession) => {
-      prevState.state = "logged-in"
-      return prevState
-    },
-  },
-} satisfies Record<State["state"], Record<string, Reducer<State, any>>>
+export abstract class Store<T, TActions> extends Subject {
+  abstract state: T
+  abstract stateMiddleware: (state: T, action?: TActions) => T
 
-const reducer: Reducer<State, Action> = (currState, action) => {
-  let state = { ...currState }
-  if (!state.handler[action.type]) {
-    toast(`Unknown action [${action.type}]`)
-    return currState
+  setStatePartial(newState: Partial<T>): void
+  setStatePartial(arg1: ((state: T) => Partial<T>) | Partial<T>) {
+    let newStateSetter = typeof arg1 === "function" ? arg1(this.state) : arg1
+
+    const newState = {
+      ...this.state,
+      ...newStateSetter,
+    }
+
+    this.state = this.stateMiddleware ? this.stateMiddleware(newState) : newState
+    this.notify()
   }
-  state = state.handler[action.type]({ ...state }, action)
 
-  state.handler = handlers[state.state]
+  dispatch(action: TActions) {
+    this.state = this.stateMiddleware(this.state, action)
+    this.notify()
+  }
+}
+
+export namespace NSTodos {
+  export type Actions = Events.Union
+  export namespace Events {
+    export type Union = LoadTodos
+
+    export type LoadTodos = {
+      type: "load-todos"
+    }
+  }
+}
+
+type TodosStoreProps = {}
+
+type TodosState = {
+  todos: Todo[]
+}
+
+export class TodosStore extends Store<TodosState, NSTodos.Actions> {
+  state: TodosState
+  stateMiddleware: (state: TodosState, action?: NSTodos.Actions) => TodosState
+
+  constructor({}: TodosStoreProps) {
+    super()
+    this.stateMiddleware = stateMiddleware.bind(this)
+
+    this.state = {
+      todos: [],
+    }
+  }
+}
+
+function stateMiddleware(
+  this: TodosStore,
+  intendedState: TodosState,
+  action?: NSTodos.Actions
+): TodosState {
+  const state = { ...intendedState }
+
+  if (action?.type === "load-todos") {
+    getTodos().then(todos => {
+      this.setStatePartial({ todos })
+    })
+  }
+
   return state
 }
 
-const initialState: State = {
-  state: "no-session",
-  handler: handlers["no-session"],
-}
+export const [TodosContext, useTodosStore, useTodosUseState] = createStoreUtils<
+  TodosStore,
+  TodosState
+>()
 
-function App() {
-  const [store, dispatch] = useReducer(reducer, initialState)
+export default function App() {
+  const storeState = useState(() => new TodosStore({}))
+  const [store] = storeState
 
   useEffect(() => {
-    console.log(store)
     Object.assign(window, { store })
-  }, [store])
+  }, [])
 
   return (
-    <>
-      {"logout" in store.handler && (
-        <Button onClick={() => dispatch({ type: "logout" })}>Logout</Button>
-      )}
-      {"login" in store.handler && (
-        <Button onClick={() => dispatch({ type: "login" })}>Login</Button>
-      )}
-      <p className={cn("", store.state !== "logged-in" && "opacity-30")}>Logged in</p>
-      <p className={cn("", store.state !== "no-session" && "opacity-30")}>No session</p>
-    </>
+    <TodosContext.Provider value={storeState}>
+      <Content />
+    </TodosContext.Provider>
   )
 }
 
-export default App
+type ContentProps = {}
+
+export function Content({}: ContentProps) {
+  const [store] = useTodosUseState()
+  const todos = useTodosStore(s => s.todos)
+
+  return (
+    <div className="bg-black text-white cursor-default select-none min-h-screen">
+      <button
+        className="h-9 bg-sky-500"
+        onClick={() => {
+          store.dispatch({ type: "load-todos" })
+        }}
+      >
+        Load todos
+      </button>
+      <div className="flex flex-col gap-1">
+        {todos.map(todo => (
+          <div
+            className="bg-slate-500"
+            key={todo.id}
+          >
+            {todo.title}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
