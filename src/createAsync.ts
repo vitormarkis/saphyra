@@ -1,22 +1,19 @@
 import { TransitionsStore } from "./TransitionsStore"
 
-export function createAsync(
-  transitions: TransitionsStore,
-  transitionName: string | null
-) {
+export function createAsync(transitions: TransitionsStore, transition: any[] | null) {
   const promise = <T>(promise: Promise<T>, onSuccess: (value: T) => void) => {
-    transitions.add(transitionName)
+    transitions.addKey(transition)
     promise.then(value => {
       onSuccess(value)
-      transitions.done(transitionName)
+      transitions.doneKey(transition)
     })
   }
 
   const timer = (callback: () => void) => {
-    transitions.add(transitionName)
+    transitions.addKey(transition)
     setTimeout(() => {
       callback()
-      transitions.done(transitionName)
+      transitions.doneKey(transition)
     }, 0)
   }
 
