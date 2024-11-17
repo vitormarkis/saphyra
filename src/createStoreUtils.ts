@@ -1,7 +1,11 @@
 import { createContext, useContext, useSyncExternalStore } from "react"
 import { Store } from "./App"
+import { TransitionsStore } from "./TransitionsStore"
 
-export function createStoreUtils<TStore extends Store<any, any>, TStoreData>() {
+export function createStoreUtils<
+  TStore extends Store<any, any> & { transitions: TransitionsStore },
+  TStoreData
+>() {
   const Context = createContext<
     [TStore, React.Dispatch<React.SetStateAction<TStore>>] | null
   >(null)

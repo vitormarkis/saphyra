@@ -1,3 +1,4 @@
+import { EventEmitter } from "./event-emitter"
 import { Subject } from "./Subject"
 
 export type TransitionsStoreState = {
@@ -6,6 +7,9 @@ export type TransitionsStoreState = {
 
 export class TransitionsStore extends Subject {
   state: TransitionsStoreState
+  events = {
+    done: new EventEmitter(),
+  }
 
   constructor() {
     super()
@@ -48,6 +52,11 @@ export class TransitionsStore extends Subject {
     state.transitions[transitionName] ??= 0
     state.transitions[transitionName]--
 
+    if (state.transitions[transitionName] <= 0) {
+      delete state.transitions[transitionName]
+      this.events.done.emit(transitionName)
+    }
+
     this.setState(state)
   }
 
@@ -59,5 +68,23 @@ export class TransitionsStore extends Subject {
       ctx = key
       this.done(key)
     }
+  }
+
+  isHappening(transition: any[] | null) {
+    if (!transition) return false
+    let isHappening = false
+
+    let ctx = ""
+    for (let key of transition) {
+      if (ctx !== "") key = `${ctx}:${key}`
+      ctx = key
+      const subtransitions = this.state.transitions[key]
+      if (subtransitions > 0) {
+        isHappening = true
+        break
+      }
+    }
+
+    return isHappening
   }
 }
