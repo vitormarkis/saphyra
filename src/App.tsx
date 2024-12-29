@@ -1,16 +1,16 @@
-import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react"
+import { useEffect, useState, useSyncExternalStore } from "react"
+import { createAsync } from "./createAsync"
 import { createStoreUtils } from "./createStoreUtils"
+import { createDiffOnKeyChange } from "./diff"
+import { cn } from "./lib/utils"
+import { sleep } from "./sleep"
 import { Subject } from "./Subject"
 import { TransitionsStore } from "./TransitionsStore"
-import { createAsync } from "./createAsync"
-import { createDiffOnKeyChange } from "./diff"
-import { sleep } from "./sleep"
-import { cn } from "./lib/utils"
-
-const PERMISSIONS = () => ({
-  admin: ["all:all"],
-  user: ["posts:read", "posts:write"],
-})
+import { SelectedRole } from "./types"
+import { PERMISSIONS } from "./consts"
+import { getPermissions } from "./getPermissions"
+import { Spinner } from "@blueprintjs/core"
+import { fetchRole } from "./fetchRole"
 
 type ArgsTuple = any[]
 export type EventsTuple = Record<string, ArgsTuple>
@@ -37,20 +37,23 @@ export abstract class Store<T, TActions> extends Subject {
   }
 }
 
-type SelectedRole = "user" | "admin"
-
 export namespace NSTodos {
   export type Actions = Events.Union
   export namespace Events {
-    export type Union = Base & ChangeRole
+    export type Union = Base & (ChangeRole | FinishTransition)
 
     export type Base = {
-      transition: any[]
+      transition: any[] | null
     }
 
     export type ChangeRole = {
       type: "change-role"
       role: SelectedRole
+    }
+
+    export type FinishTransition = {
+      type: "finish-transition"
+      error: unknown | null
     }
   }
 }
@@ -61,6 +64,8 @@ type TransactionState = {
   role: "user" | "admin"
   permissions: string[]
   currentTransition: any[] | null
+  currentTransitionState: TransactionState | null
+  transitionError: unknown | null
 }
 
 export class TranscationStore extends Store<TransactionState, NSTodos.Actions> {
@@ -77,7 +82,20 @@ export class TranscationStore extends Store<TransactionState, NSTodos.Actions> {
       role: "user",
       permissions: PERMISSIONS()["user"],
       currentTransition: null,
+      currentTransitionState: null,
+      transitionError: null,
     }
+  }
+
+  rollbackState(state: TransactionState | null, error: any) {
+    if (!state) return
+    this.state = {
+      ...state,
+      currentTransition: null,
+      currentTransitionState: null,
+      transitionError: "message" in error ? error.message : error,
+    }
+    this.notify()
   }
 }
 
@@ -89,13 +107,29 @@ function stateMiddleware(
   const state = { ...intendedState }
 
   // if (action?.transition && !Object.is(state.currentTransition, action?.transition)) {
+  const rollbackState = (error: unknown) => {
+    const store = this
+    setTimeout(() => {
+      store.rollbackState(state.currentTransitionState, error)
+      store.notify()
+    })
+  }
+
   if (action?.transition) {
     state.currentTransition = action.transition
+    state.currentTransitionState = this.state
     const store = this
-    const async = createAsync(this.transitions, state.currentTransition)
-    this.transitions.events.done.once(action.transition.join(":"), () => {
+    const async = createAsync(this.transitions, state.currentTransition, rollbackState)
+    this.transitions.events.done.once(action.transition.join(":"), error => {
       async.timer(() => {
-        store.setStatePartial({ currentTransition: null })
+        if (store.state.currentTransition) {
+          console.log(
+            `%cTransition completed! [${store.state.currentTransition.join(":")}]`,
+            "color: lightgreen"
+          )
+        }
+        store.dispatch({ type: "finish-transition", transition: null, error })
+
         // isso gera um render a mais do que o necessario.
         // é possivel que em outra branch eu ja tenha resolvido isso
       })
@@ -104,29 +138,33 @@ function stateMiddleware(
 
   const [, diff] = createDiffOnKeyChange(this.state, state)
 
-  const async = createAsync(this.transitions, state.currentTransition)
+  const async = createAsync(this.transitions, state.currentTransition, rollbackState)
+
+  if (action?.type === "finish-transition") {
+    state.currentTransition = null
+    state.currentTransitionState = null
+    state.transitionError = getMessage(action.error) ?? null
+  }
 
   if (action?.type === "change-role") {
-    async.promise(sleep(1000, "fetching role"), () => {
-      this.setStatePartial({ role: action.role })
+    async.promise(fetchRole({ roleName: action.role }), role => {
+      this.setStatePartial({ role })
     })
   }
 
   if (diff(["role"])) {
-    async.promise(sleep(1000, "fetching permissions"), () => {
-      this.setStatePartial({ permissions: PERMISSIONS()[state.role] })
+    async.promise(getPermissions({ role: state.role }), permissions => {
+      this.setStatePartial({ permissions })
     })
   }
-
-  // if (!this.transitions.isHappening(state.currentTransition)) {
-  //   state.currentTransition = null
-  // }
 
   return state
 }
 
-export const [TransactionsContext, useTranscationStore, useTransactionUseState] =
-  createStoreUtils<TranscationStore, TransactionState>()
+export const [TransactionsContext, useTranscationStore, useTransactionUseState] = createStoreUtils<
+  TranscationStore,
+  TransactionState
+>()
 
 export default function App() {
   const storeState = useState(() => new TranscationStore({}))
@@ -145,40 +183,54 @@ export default function App() {
 
 type ContentProps = {}
 
+export function Content({}: ContentProps) {
+  const [store] = useTransactionUseState()
+  const isChangingRole = useTransactionTransitions(["auth", "role"])
+  const state = useTranscationStore(s => s)
+  const { currentTransition, currentTransitionState, ...displayState } = state
+
+  return (
+    <div className="">
+      <div className="flex items-center gap-2">
+        <select
+          name=""
+          id=""
+          value={state.role}
+          disabled={isChangingRole}
+          className={cn("disabled:opacity-30 disabled:cursor-not-allowed", isChangingRole && "opacity-30")}
+          onChange={e => {
+            const selectedRole = e.target.value as "user" | "admin"
+            store.dispatch({
+              type: "change-role",
+              role: selectedRole,
+              transition: ["auth", "role"],
+            })
+          }}
+        >
+          <option value="user">User</option>
+          <option value="admin">Admin</option>
+        </select>
+        {isChangingRole ? <Spinner size={16} /> : null}
+      </div>
+
+      <pre className={cn("disabled:opacity-30 disabled:cursor-not-allowed", isChangingRole && "opacity-30")}>
+        {JSON.stringify(displayState, null, 2)}
+      </pre>
+    </div>
+  )
+}
+
+function getMessage(error: unknown) {
+  if (!error) return null
+  if (typeof error === "string") return error
+  if (error instanceof Error) return error.message
+  return null
+}
+
 function useTransactionTransitions(key: any[]) {
   const [store] = useTransactionUseState()
   return useSyncExternalStore(
     cb => store.transitions.subscribe(cb),
     () => store.transitions.get(key) > 0
-  )
-}
-
-export function Content({}: ContentProps) {
-  const [store] = useTransactionUseState()
-  const isChangingRole = useTransactionTransitions(["auth", "role"])
-  const state = useTranscationStore(s => s)
-  const { currentTransition, ...displayState } = state
-
-  return (
-    <div className="">
-      <select
-        name=""
-        id=""
-        onChange={e => {
-          const selectedRole = e.target.value as "user" | "admin"
-          store.dispatch({
-            type: "change-role",
-            role: selectedRole,
-            transition: ["auth", "role"],
-          })
-        }}
-      >
-        <option value="user">User</option>
-        <option value="admin">Admin</option>
-      </select>
-      <pre className={cn(isChangingRole && "opacity-30")}>
-        {JSON.stringify(displayState, null, 2)}
-      </pre>
-    </div>
   )
 }

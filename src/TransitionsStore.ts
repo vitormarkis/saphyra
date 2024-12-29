@@ -5,10 +5,14 @@ export type TransitionsStoreState = {
   transitions: Record<string, number>
 }
 
+type EventsDone = {
+  [K: string]: [error: unknown | null]
+}
+
 export class TransitionsStore extends Subject {
   state: TransitionsStoreState
   events = {
-    done: new EventEmitter(),
+    done: new EventEmitter<EventsDone>(),
   }
 
   constructor() {
@@ -46,7 +50,7 @@ export class TransitionsStore extends Subject {
     }
   }
 
-  done(transitionName: string | null) {
+  done(transitionName: string | null, error: unknown | null) {
     if (!transitionName) return
     const state = { ...this.state, transitions: { ...this.state.transitions } }
     state.transitions[transitionName] ??= 0
@@ -54,19 +58,19 @@ export class TransitionsStore extends Subject {
 
     if (state.transitions[transitionName] <= 0) {
       delete state.transitions[transitionName]
-      this.events.done.emit(transitionName)
+      this.events.done.emit(transitionName, error)
     }
 
     this.setState(state)
   }
 
-  doneKey(transition: any[] | null) {
+  doneKey(transition: any[] | null, error: unknown | null) {
     if (!transition) return
     let ctx = ""
     for (let key of transition) {
       if (ctx !== "") key = `${ctx}:${key}`
       ctx = key
-      this.done(key)
+      this.done(key, error)
     }
   }
 
