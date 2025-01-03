@@ -99,28 +99,19 @@ export class TranscationStore extends Store<TransactionState, NSTodos.Actions> {
   }
 }
 
-function stateMiddleware(
-  this: TranscationStore,
-  intendedState: TransactionState,
+type TransitionBoilerplateProps = {
+  store: TranscationStore
+  state: TransactionState
   action?: NSTodos.Actions
-): TransactionState {
-  const state = { ...intendedState }
+  rollbackState: (error: unknown) => void
+}
 
-  // if (action?.transition && !Object.is(state.currentTransition, action?.transition)) {
-  const rollbackState = (error: unknown) => {
-    const store = this
-    setTimeout(() => {
-      store.rollbackState(state.currentTransitionState, error)
-      store.notify()
-    })
-  }
-
+export function transitionBoilerplate({ store, state, action, rollbackState }: TransitionBoilerplateProps) {
   if (action?.transition) {
     state.currentTransition = action.transition
-    state.currentTransitionState = this.state
-    const store = this
-    const async = createAsync(this.transitions, state.currentTransition, rollbackState)
-    this.transitions.events.done.once(action.transition.join(":"), error => {
+    state.currentTransitionState = store.state
+    const async = createAsync(store.transitions, state.currentTransition, rollbackState)
+    store.transitions.events.done.once(action.transition.join(":"), error => {
       async.timer(() => {
         if (store.state.currentTransition) {
           console.log(
@@ -136,15 +127,39 @@ function stateMiddleware(
     })
   }
 
-  const [, diff] = createDiffOnKeyChange(this.state, state)
-
-  const async = createAsync(this.transitions, state.currentTransition, rollbackState)
-
   if (action?.type === "finish-transition") {
     state.currentTransition = null
     state.currentTransitionState = null
     state.transitionError = getMessage(action.error) ?? null
   }
+
+  return
+}
+
+function stateMiddleware(
+  this: TranscationStore,
+  intendedState: TransactionState,
+  action?: NSTodos.Actions
+): TransactionState {
+  const state = { ...intendedState }
+
+  const rollbackState = (error: unknown) => {
+    setTimeout(() => {
+      this.rollbackState(state.currentTransitionState, error)
+      this.notify()
+    })
+  }
+
+  transitionBoilerplate({
+    action,
+    state,
+    store: this,
+    rollbackState,
+  })
+
+  const [, diff] = createDiffOnKeyChange(this.state, state)
+
+  const async = createAsync(this.transitions, state.currentTransition, rollbackState)
 
   if (action?.type === "change-role") {
     async.promise(fetchRole({ roleName: action.role }), role => {
