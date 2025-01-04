@@ -1,15 +1,32 @@
+import "@blueprintjs/core/lib/css/blueprint.css"
+import "normalize.css"
 import { createRoot } from "react-dom/client"
 import App from "./App.tsx"
 import "./index.css"
-import { Toaster } from "sonner"
-import "normalize.css"
-import "@blueprintjs/core/lib/css/blueprint.css"
-// include blueprint-icons.css for icon font support
 import "@blueprintjs/icons/lib/css/blueprint-icons.css"
+import { createBrowserRouter, Outlet, RouterProvider } from "react-router-dom"
+import { Providers } from "./providers.tsx"
+import { GithubProfilePage } from "./pages/github-profile/page.tsx"
 
-createRoot(document.getElementById("root")!).render(
-  <>
-    <App />
-    <Toaster />
-  </>
-)
+const router = createBrowserRouter([
+  {
+    path: "/",
+    element: (
+      <Providers>
+        <Outlet />
+      </Providers>
+    ),
+    children: [
+      {
+        index: true,
+        element: <App />,
+      },
+      {
+        path: "/github-profile",
+        element: <GithubProfilePage />,
+      },
+    ],
+  },
+])
+
+createRoot(document.getElementById("root")!).render(<RouterProvider router={router} />)
