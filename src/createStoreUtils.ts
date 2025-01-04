@@ -1,12 +1,17 @@
 import { createContext, useContext, useSyncExternalStore } from "react"
-import { GenericStoreClass } from "./create-store/types"
+import { GenericStore, TransitionsExtension } from "./create-store/types"
 
 function defaultSelector<T>(data: T) {
   return data
 }
 
-export function createStoreUtils<TStoreClass extends GenericStoreClass<any, any, any>>() {
-  type TStore = InstanceType<TStoreClass>
+export function createStoreUtils<
+  TInitialProps = any,
+  TStoreFactory extends (initialProps: TInitialProps) => GenericStore<any, any> & TransitionsExtension = (
+    initialProps: TInitialProps
+  ) => GenericStore<any, any> & TransitionsExtension
+>() {
+  type TStore = ReturnType<TStoreFactory>
   const Context = createContext<[TStore, React.Dispatch<React.SetStateAction<TStore>>] | null>(null)
 
   function useUseState() {
@@ -23,9 +28,17 @@ export function createStoreUtils<TStoreClass extends GenericStoreClass<any, any,
     )
   }
 
+  function useTransition(transition: any[], store = useUseState()[0]): boolean {
+    return useSyncExternalStore(
+      cb => store.transitions.subscribe(cb),
+      () => store.transitions.get(transition) > 0
+    )
+  }
+
   return {
-    Context,
+    Provider: Context.Provider,
     useStore,
     useUseState,
+    useTransition,
   }
 }

@@ -1,5 +1,5 @@
-import { EventEmitterXX } from "./event-emitter"
-import { Subject } from "./Subject"
+import { Subject } from "../Subject"
+import { EventEmitter } from "./event-emitter"
 
 export type TransitionsStoreState = {
   transitions: Record<string, number>
@@ -12,7 +12,7 @@ type EventsDone = {
 export class TransitionsStore extends Subject {
   state: TransitionsStoreState
   events = {
-    done: new EventEmitterXX<EventsDone>(),
+    done: new EventEmitter<EventsDone>(),
   }
 
   constructor() {

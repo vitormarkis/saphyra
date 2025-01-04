@@ -6,13 +6,17 @@ type HandlersMapping<Events extends EventsTuple> = {
   [K in keyof Events]: EventHandlers<Events[K]>
 }
 
-export class EventEmitterXX<EventArgs extends EventsTuple = EventsTuple> {
+export class EventEmitter<EventArgs extends EventsTuple = EventsTuple> {
   private handlers: Partial<HandlersMapping<EventArgs>> = {}
 
   on<TEventName extends keyof EventArgs>(event: TEventName, handler: EventHandler<EventArgs[TEventName]>) {
     this.handlers[event] ??= []
     this.handlers[event]?.push(handler)
-    return () => void this.handlers[event]?.splice(this.handlers[event].indexOf(handler), 1)
+    return () => {
+      this.handlers[event]?.splice(this.handlers[event].indexOf(handler), 1)
+      function noop() {}
+      noop()
+    }
   }
 
   once<TEventName extends keyof EventArgs>(event: TEventName, handler: EventHandler<EventArgs[TEventName]>) {
