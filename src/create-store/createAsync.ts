@@ -13,14 +13,17 @@ export function createAsync<TState>(
     transition: any[] | null | undefined
   ) => void
 ): Async<TState> {
-  const promise = <T>(promise: Promise<T>, onSuccess: (value: T, state: TState) => Partial<TState>) => {
+  const promise = <T>(
+    promise: Promise<T>,
+    onSuccess: (value: T, state: TState) => Partial<TState> | void
+  ) => {
     if (!transition) throw _noTransitionError
     transitions.addKey(transition)
     promise
       .then(value => {
         registerSet(
           s => {
-            const newState = onSuccess(value, s)
+            const newState = onSuccess(value, s) ?? {}
             return { ...s, ...newState }
           },
           state,

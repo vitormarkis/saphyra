@@ -23,7 +23,7 @@ export type DefaultActions = { type: string }
 export type BaseAction = { transition?: any[] }
 
 export type Async<TState> = {
-  promise<T>(promise: Promise<T>, onSuccess: (value: T, state: TState) => Partial<TState>): void
+  promise<T>(promise: Promise<T>, onSuccess: (value: T, state: TState) => Partial<TState> | void): void
   timer(callback: () => void): void
 }
 
