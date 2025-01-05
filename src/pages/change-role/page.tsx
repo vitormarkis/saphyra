@@ -24,11 +24,15 @@ type ChangeRole = {
 const createAuthStore = createStoreFactory<AuthStoreInitialProps, AuthStoreInitialProps, AuthStoreActions>({
   reducer({ prevState, state, action, async }) {
     if (action?.type === "change-role") {
-      async.promise(fetchRole({ roleName: action.role }), role => ({ role }))
+      async.promise(fetchRole({ roleName: action.role }), (role, actor) => {
+        actor.set(() => ({ role }))
+      })
     }
 
     if (prevState.role !== state.role) {
-      async.promise(getPermissions({ role: state.role }), permissions => ({ permissions }))
+      async.promise(getPermissions({ role: state.role }), (permissions, actor) => {
+        actor.set(() => ({ permissions }))
+      })
     }
 
     return state
