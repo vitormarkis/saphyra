@@ -124,6 +124,11 @@ export function createStoreFactory<
       }
     }
 
+    setState(newState: Partial<TState>) {
+      this.state = { ...this.state, ...newState }
+      this.notify()
+    }
+
     private applyTransition(transition: any[] | null | undefined) {
       if (!transition) {
         debugger
@@ -150,8 +155,7 @@ export function createStoreFactory<
       const newState = { ...this.state }
 
       const store = this
-      const isNewTransition = this.state.currentTransition !== action.transition
-      if (action.transition != null && isNewTransition) {
+      if (action.transition != null) {
         newState.currentTransition = action.transition
         store.transitions.events.done.once(action.transition.join(":"), error => {
           if (!action.transition) throw new Error("Impossible to reach this point")

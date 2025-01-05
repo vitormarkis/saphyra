@@ -9,6 +9,7 @@ export type GenericStore<
 > = {
   state: TState
   dispatch(action: TActions): void
+  setState(newState: Partial<TState>): void
 } & Subject
 
 export type GenericStoreClass<

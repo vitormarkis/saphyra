@@ -10,7 +10,7 @@ export function createStoreUtils<
   TStoreFactory extends (initialProps: TInitialProps) => GenericStore<any, any> & TransitionsExtension = (
     initialProps: TInitialProps
   ) => GenericStore<any, any> & TransitionsExtension
->() {
+>(store: ReturnType<TStoreFactory>) {
   type TStore = ReturnType<TStoreFactory>
   const Context = createContext<[TStore, React.Dispatch<React.SetStateAction<TStore>>] | null>(null)
 
@@ -20,15 +20,17 @@ export function createStoreUtils<
     return ctx
   }
 
-  function useStore<R = TStore["state"]>(selector?: (data: TStore["state"]) => R, store = useUseState()[0]) {
-    let finalSelector = selector ?? (defaultSelector as (data: TStore["state"]) => R)
+  const getDefaultStore = store ? () => store : () => useUseState()[0]
+
+  function useStore<R = TStore["state"]>(selector?: (data: TStore["state"]) => R, store = getDefaultStore()) {
+    const finalSelector = selector ?? (defaultSelector as (data: TStore["state"]) => R)
     return useSyncExternalStore(
       cb => store.subscribe(cb),
       () => finalSelector(store.state)
     )
   }
 
-  function useTransition(transition: any[], store = useUseState()[0]): boolean {
+  function useTransition(transition: any[], store = getDefaultStore()): boolean {
     return useSyncExternalStore(
       cb => store.transitions.subscribe(cb),
       () => store.transitions.get(transition) > 0

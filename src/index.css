@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 input {
-  @apply bg-slate-500 border border-slate-400 h-9 text-black;
+  @apply border border-slate-400 h-9 text-black;
 }
 
 body {
