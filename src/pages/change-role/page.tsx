@@ -12,6 +12,7 @@ type AuthStoreInitialProps = {
   role: "user" | "admin"
   permissions: string[]
   currentTransition: any[] | null
+  username: string
 }
 
 type AuthStoreActions = ChangeRole
@@ -21,7 +22,7 @@ type ChangeRole = {
 }
 
 const createAuthStore = createStoreFactory<AuthStoreInitialProps, AuthStoreInitialProps, AuthStoreActions>({
-  reducer({ prevState, state, action, async, set }) {
+  reducer({ prevState, state, action, async }) {
     if (action?.type === "change-role") {
       async.promise(fetchRole({ roleName: action.role }), role => ({ role }))
     }
@@ -38,7 +39,9 @@ const authStore = createAuthStore({
   role: "user",
   permissions: PERMISSIONS()["user"],
   currentTransition: null,
+  username: "",
 })
+Object.assign(window, { authStore })
 
 const Auth = createStoreUtils<typeof createAuthStore>(authStore)
 
@@ -49,6 +52,14 @@ export function ChangeRolePage() {
   return (
     <div className="">
       <div className="flex items-center gap-2">
+        <input
+          type="text"
+          value={state.username}
+          onChange={e => {
+            const value = e.target.value
+            authStore.setState({ username: value })
+          }}
+        />
         <select
           name=""
           id=""
@@ -60,6 +71,7 @@ export function ChangeRolePage() {
             authStore.dispatch({
               type: "change-role",
               role: selectedRole,
+              // @ts-expect-error TODO
               transition: ["auth", "role"],
             })
           }}
@@ -70,7 +82,7 @@ export function ChangeRolePage() {
         {isChangingRole ? <Spinner size={16} /> : null}
       </div>
 
-      <pre className={cn("disabled:opacity-30 disabled:cursor-not-allowed", isChangingRole && "opacity-30")}>
+      <pre className={cn("disabled:opacity-30 disabled:cursor-not-allowed")}>
         {JSON.stringify(state, null, 2)}
       </pre>
     </div>

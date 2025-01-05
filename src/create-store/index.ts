@@ -5,9 +5,14 @@ import {
   Async,
   BaseAction,
   BaseState,
+  CreateReducerInner,
   DefaultActions,
   GenericStore,
-  GenericStoreClass,
+  InnerReducerSet,
+  ReducerInner,
+  ReducerInnerProps,
+  ReducerSet,
+  Setter,
   TODO,
   TransitionsExtension,
 } from "./types"
@@ -17,7 +22,7 @@ import {
  */
 type OnConstructProps<
   TInitialProps,
-  TState,
+  TState extends BaseState = TInitialProps & BaseState,
   TActions extends DefaultActions & BaseAction = DefaultActions & BaseAction
 > = {
   initialProps: TInitialProps
@@ -26,13 +31,13 @@ type OnConstructProps<
 
 type OnConstruct<
   TInitialProps,
-  TState = TInitialProps,
+  TState extends BaseState = TInitialProps & BaseState,
   TActions extends DefaultActions & BaseAction = DefaultActions & BaseAction
 > = (props: OnConstructProps<TInitialProps, TState, TActions>) => TState
 
 function defaultOnConstruct<
   TInitialProps,
-  TState = TInitialProps,
+  TState extends BaseState = TInitialProps & BaseState,
   TActions extends DefaultActions & BaseAction = DefaultActions & BaseAction
 >(props: OnConstructProps<TInitialProps, TState, TActions>) {
   const state = props.initialProps as unknown as TState
@@ -41,17 +46,13 @@ function defaultOnConstruct<
 
 //
 
-type ReducerSet<TState> = (setter: (state: TState) => Partial<TState>) => void
-type InnerReducerSet<TState> = (
-  setter: (state: TState) => Partial<TState>,
-  state: TState,
-  transition: any[] | null | undefined
-) => void
-
 /**
  * Reducer
  */
-type ReducerProps<TState, TActions extends DefaultActions & BaseAction = DefaultActions & BaseAction> = {
+type ReducerProps<
+  TState extends BaseState = BaseState,
+  TActions extends DefaultActions & BaseAction = DefaultActions & BaseAction
+> = {
   prevState: TState
   state: TState
   action: TActions
@@ -60,13 +61,15 @@ type ReducerProps<TState, TActions extends DefaultActions & BaseAction = Default
   async: Async<TState>
 }
 
-type Reducer<TState, TActions extends DefaultActions & BaseAction = DefaultActions & BaseAction> = (
-  props: ReducerProps<TState, TActions>
-) => TState
+type Reducer<
+  TState extends BaseState = BaseState,
+  TActions extends DefaultActions & BaseAction = DefaultActions & BaseAction
+> = (props: ReducerProps<TState, TActions>) => TState
 
-function defaultReducer<TState, TActions extends DefaultActions & BaseAction = DefaultActions & BaseAction>(
-  props: ReducerProps<TState, TActions>
-) {
+function defaultReducer<
+  TState extends BaseState = BaseState,
+  TActions extends DefaultActions & BaseAction = DefaultActions & BaseAction
+>(props: ReducerProps<TState, TActions>) {
   return props.state
 }
 
@@ -75,7 +78,7 @@ function defaultReducer<TState, TActions extends DefaultActions & BaseAction = D
  */
 type CreateStoreOptions<
   TInitialProps,
-  TState = TInitialProps,
+  TState extends BaseState = TInitialProps & BaseState,
   TActions extends DefaultActions & BaseAction = DefaultActions & BaseAction
 > = {
   onConstruct?: OnConstruct<TInitialProps, TState>
@@ -89,7 +92,7 @@ export function createStoreFactory<
 >(
   {
     onConstruct = defaultOnConstruct,
-    reducer = defaultReducer,
+    reducer: userReducer = defaultReducer,
   }: CreateStoreOptions<TInitialProps, TState, TActions> = {} as CreateStoreOptions<
     TInitialProps,
     TState,
@@ -105,10 +108,38 @@ export function createStoreFactory<
 
     constructor(initialProps: TInitialProps) {
       super()
-      this.state = onConstruct({ initialProps, store: this })
+      const store = this as GenericStore<TState, TActions> & TransitionsExtension
+      // @ts-expect-error // TODO
+      this.state = onConstruct({ initialProps, store })
     }
 
-    registerSet: InnerReducerSet<TState> = (setter, currentState, transition) => {
+    handleError(error: unknown) {
+      function onError(error: string) {
+        alert(error)
+      }
+
+      if (!error) {
+        return onError("Unknown error!")
+      }
+
+      if (typeof error === "string") {
+        return onError(error)
+      }
+      if (typeof error === "object") {
+        if ("message" in error && typeof error.message === "string") {
+          return onError(error.message)
+        }
+        if ("code" in error && typeof error.code === "string") {
+          return onError(error.code)
+        }
+      }
+
+      return onError("Unknown error!")
+    }
+
+    registerSet: InnerReducerSet<TState> = (setter, currentState, transition, mergeType) => {
+      const onDemandSetters: Setter<TState>[] = []
+
       if (transition) {
         const transitionKey = transition.join(":")
         this.setStateCallbacks[transitionKey] ??= []
@@ -118,7 +149,34 @@ export function createStoreFactory<
       // mutating the current new state so user
       // can have access to the future value
       // in the same function
-      const newState = setter(currentState)
+      let newState = setter(currentState) as TState
+
+      /**
+       * Re-running the reducer since the promise onSuccess
+       * callback only sets the state without running the reducer
+       */
+      if (mergeType === "reducer") {
+        const store = this
+        const reducer = this.createReducer({
+          async: createAsync(store, newState, transition),
+          prevState: currentState,
+          set: setter => {
+            onDemandSetters.push(setter)
+            return store.registerSet(setter, newState, transition, "set")
+          },
+          store,
+        })
+        const processedState = reducer({
+          action: { type: "noop" } as TActions,
+          state: newState,
+        })
+
+        newState = {
+          ...newState,
+          ...processedState,
+        }
+      }
+
       for (const key in newState) {
         Object.assign(currentState as any, { [key]: newState[key] })
       }
@@ -142,38 +200,73 @@ export function createStoreFactory<
       }
       this.setStateCallbacks[transitionKey] = []
       const newState = setters.reduce((acc: TState, setter) => ({ ...acc, ...setter(acc) }), this.state)
-      const async = createAsync(this.transitions, newState, transition, this.registerSet)
-      this.state = reducer({
-        action: { type: "noop" } as TActions,
-        prevState: this.state,
-        async,
-        set: setState => this.registerSet(setState, newState, null),
-        store: this,
-        state: newState,
-      })
+      this.state = newState
+      // const store = this
+      // this.state = userReducer({
+      //   store,
+      //   action: { type: "noop" } as TActions,
+      //   prevState: this.state,
+      //   async: createAsync(store, newState, transition),
+      //   set: this.createSet(newState),
+      //   state: newState,
+      // })
       this.notify()
+    }
+
+    createSet(newState: TState & Partial<TState>, mergeType: "reducer" | "set" = "set"): ReducerSet<TState> {
+      return setState => this.registerSet(setState, newState, null, mergeType)
+    }
+
+    createReducer({
+      async,
+      prevState,
+      set,
+      store,
+    }: CreateReducerInner<TState, TActions>): ReducerInner<TState, TActions> {
+      return function reducer({ action, state }: ReducerInnerProps<TState, TActions>): TState {
+        return userReducer({
+          action,
+          prevState,
+          async,
+          set,
+          state,
+          store,
+        })
+      }
     }
 
     dispatch(action: TActions) {
       const newState = { ...this.state }
 
+      const currentTransitionName = this.state.currentTransition?.join(":")
+      const actionTransitionName = action.transition?.join(":")
+      const isNewTransition = currentTransitionName !== actionTransitionName
+
       const store = this
-      if (action.transition != null) {
+      if (action.transition != null && isNewTransition) {
         newState.currentTransition = action.transition
         store.transitions.events.done.once(action.transition.join(":"), error => {
           if (!action.transition) throw new Error("Impossible to reach this point")
-          console.log(`%cTransition completed! [${action.transition.join(":")}]`, "color: lightgreen")
-          store.applyTransition(action.transition)
+          if (error) {
+            console.log(`%cTransition failed! [${action.transition.join(":")}]`, "color: red")
+            store.handleError(error)
+          } else {
+            console.log(`%cTransition completed! [${action.transition.join(":")}]`, "color: lightgreen")
+            store.applyTransition(action.transition)
+          }
         })
       }
 
+      const reducer = this.createReducer({
+        async: createAsync(store, newState, action.transition),
+        prevState: this.state,
+        set: this.createSet(newState),
+        store,
+      })
+
       const processedState = reducer({
         action,
-        prevState: this.state,
         state: newState,
-        store,
-        set: setState => this.registerSet(setState, newState, action.transition),
-        async: createAsync(this.transitions, newState, action.transition, this.registerSet),
       })
       if (action.transition == null) {
         this.state = processedState
