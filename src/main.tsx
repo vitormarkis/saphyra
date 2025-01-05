@@ -1,21 +1,22 @@
 import "@blueprintjs/core/lib/css/blueprint.css"
+import "@blueprintjs/icons/lib/css/blueprint-icons.css"
 import "normalize.css"
 import { createRoot } from "react-dom/client"
-import App from "./App.tsx"
-import "./index.css"
-import "@blueprintjs/icons/lib/css/blueprint-icons.css"
 import { createBrowserRouter, Outlet, RouterProvider } from "react-router-dom"
+import App from "./App.tsx"
+import { RootLayoutWrapper } from "./Navigation.tsx"
+import "./index.css"
+import { myRoutesManifest } from "./my-routes-manifest.tsx"
 import { Providers } from "./providers.tsx"
-import { GithubProfilePage } from "./pages/github-profile/page.tsx"
-import { ChangeRolePage } from "./pages/change-role/page.tsx"
-import { ZustandLikePage } from "./pages/zustand-like/page.tsx"
 
 export const routesManifest = [
   {
     path: "/",
     element: (
       <Providers>
-        <Outlet />
+        <RootLayoutWrapper>
+          <Outlet />
+        </RootLayoutWrapper>
       </Providers>
     ),
     children: [
@@ -23,18 +24,7 @@ export const routesManifest = [
         index: true,
         element: <App />,
       },
-      {
-        path: "/github-profile",
-        element: <GithubProfilePage />,
-      },
-      {
-        path: "/change-role",
-        element: <ChangeRolePage />,
-      },
-      {
-        path: "/zustand-like",
-        element: <ZustandLikePage />,
-      },
+      ...myRoutesManifest,
     ],
   },
 ]
