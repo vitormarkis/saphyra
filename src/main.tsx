@@ -7,6 +7,7 @@ import "@blueprintjs/icons/lib/css/blueprint-icons.css"
 import { createBrowserRouter, Outlet, RouterProvider } from "react-router-dom"
 import { Providers } from "./providers.tsx"
 import { GithubProfilePage } from "./pages/github-profile/page.tsx"
+import { ChangeRolePage } from "./pages/change-role/page.tsx"
 
 const router = createBrowserRouter([
   {
@@ -24,6 +25,10 @@ const router = createBrowserRouter([
       {
         path: "/github-profile",
         element: <GithubProfilePage />,
+      },
+      {
+        path: "/change-role",
+        element: <ChangeRolePage />,
       },
     ],
   },

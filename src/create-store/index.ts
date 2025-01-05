@@ -136,7 +136,10 @@ export function createStoreFactory<
       }
       const transitionKey = transition.join(":")
       const setters = this.setStateCallbacks[transitionKey]
-      if (!setters) throw new Error("Impossible to reach this point")
+      if (!setters) {
+        debugger
+        throw new Error("Impossible to reach this point")
+      }
       this.setStateCallbacks[transitionKey] = []
       const newState = setters.reduce((acc: TState, setter) => ({ ...acc, ...setter(acc) }), this.state)
       const async = createAsync(this.transitions, newState, transition, this.registerSet)
