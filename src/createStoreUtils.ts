@@ -1,5 +1,6 @@
-import { createContext, useContext, useSyncExternalStore } from "react"
+import { createContext, useContext, useEffect, useSyncExternalStore } from "react"
 import { GenericStore, TransitionsExtension } from "./create-store/types"
+import { StoreConstructorConfig } from "./create-store"
 
 function defaultSelector<T>(data: T) {
   return data
@@ -7,8 +8,12 @@ function defaultSelector<T>(data: T) {
 
 export function createStoreUtils<
   TInitialProps = any,
-  TStoreFactory extends (initialProps: TInitialProps) => GenericStore<any, any> & TransitionsExtension = (
-    initialProps: TInitialProps
+  TStoreFactory extends (
+    initialProps: TInitialProps,
+    config?: StoreConstructorConfig
+  ) => GenericStore<any, any> & TransitionsExtension = (
+    initialProps: TInitialProps,
+    config?: StoreConstructorConfig
   ) => GenericStore<any, any> & TransitionsExtension
 >(store: ReturnType<TStoreFactory>) {
   type TStore = ReturnType<TStoreFactory>
@@ -37,10 +42,18 @@ export function createStoreUtils<
     )
   }
 
+  function useErrorHandlers(handler: (error: unknown) => void, store = getDefaultStore()) {
+    useEffect(() => {
+      const unsub = store.registerErrorHandler(handler)
+      return () => void unsub()
+    }, [store])
+  }
+
   return {
     Provider: Context.Provider,
     useStore,
     useUseState,
     useTransition,
+    useErrorHandlers,
   }
 }

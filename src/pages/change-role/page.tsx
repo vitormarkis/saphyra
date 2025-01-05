@@ -24,13 +24,15 @@ type ChangeRole = {
 const createAuthStore = createStoreFactory<AuthStoreInitialProps, AuthStoreInitialProps, AuthStoreActions>({
   reducer({ prevState, state, action, async }) {
     if (action?.type === "change-role") {
-      async.promise(fetchRole({ roleName: action.role }), (role, actor) => {
+      const promise = fetchRole({ roleName: action.role })
+      async.promise(promise, (role, actor) => {
         actor.set(() => ({ role }))
       })
     }
 
     if (prevState.role !== state.role) {
-      async.promise(getPermissions({ role: state.role }), (permissions, actor) => {
+      const promise = getPermissions({ role: state.role })
+      async.promise(promise, (permissions, actor) => {
         actor.set(() => ({ permissions }))
       })
     }
@@ -52,6 +54,12 @@ const Auth = createStoreUtils<typeof createAuthStore>(authStore)
 export function ChangeRolePage() {
   const state = Auth.useStore()
   const isChangingRole = Auth.useTransition(["auth", "role"])
+
+  // Auth.useErrorHandlers(error => {
+  //   toast.error(error.message, {
+  //     className: "bg-red-500 text-white",
+  //   })
+  // })
 
   return (
     <div className="">

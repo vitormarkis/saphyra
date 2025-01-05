@@ -17,6 +17,7 @@ export type GenericStore<
   registerSet: InnerReducerSet<TState>
   createReducer(props: CreateReducerInner<TState, TActions>): ReducerInner<TState, TActions>
   createSet(newState: TState & Partial<TState>): ReducerSet<TState>
+  registerErrorHandler(handler: StoreErrorHandler): () => void
 } & Subject
 
 export type GenericStoreClass<
@@ -86,3 +87,5 @@ export type ReducerInner<
   TState extends BaseState = BaseState,
   TActions extends DefaultActions & BaseAction = DefaultActions & BaseAction
 > = (props: ReducerInnerProps<TState, TActions>) => TState
+
+export type StoreErrorHandler = (error: unknown) => void

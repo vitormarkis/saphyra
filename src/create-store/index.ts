@@ -1,5 +1,6 @@
 import { Subject } from "../Subject"
 import { createAsync } from "./createAsync"
+import { defaultErrorHandler } from "./fn/default-error-handler"
 import { TransitionsStore } from "./transitions-store"
 import {
   Async,
@@ -13,6 +14,7 @@ import {
   ReducerInnerProps,
   ReducerSet,
   Setter,
+  StoreErrorHandler,
   TODO,
   TransitionsExtension,
 } from "./types"
@@ -33,13 +35,13 @@ type OnConstruct<
   TInitialProps,
   TState extends BaseState = TInitialProps & BaseState,
   TActions extends DefaultActions & BaseAction = DefaultActions & BaseAction
-> = (props: OnConstructProps<TInitialProps, TState, TActions>) => TState
+> = (props: OnConstructProps<TInitialProps, TState, TActions>, config?: StoreConstructorConfig) => TState
 
 function defaultOnConstruct<
   TInitialProps,
   TState extends BaseState = TInitialProps & BaseState,
   TActions extends DefaultActions & BaseAction = DefaultActions & BaseAction
->(props: OnConstructProps<TInitialProps, TState, TActions>) {
+>(props: OnConstructProps<TInitialProps, TState, TActions>, _config?: StoreConstructorConfig) {
   const state = props.initialProps as unknown as TState
   return state
 }
@@ -85,6 +87,10 @@ type CreateStoreOptions<
   reducer?: Reducer<TState, TActions>
 }
 
+export type StoreConstructorConfig = {
+  errorHandlers?: StoreErrorHandler[]
+}
+
 export function createStoreFactory<
   TInitialProps,
   TState extends BaseState = TInitialProps & BaseState,
@@ -98,43 +104,37 @@ export function createStoreFactory<
     TState,
     TActions
   >
-): (initialProps: TInitialProps) => GenericStore<TState, TActions> & TransitionsExtension {
+): (
+  initialProps: TInitialProps,
+  config?: StoreConstructorConfig
+) => GenericStore<TState, TActions> & TransitionsExtension {
   const StoreClass = class Store extends Subject {
     transitions = new TransitionsStore()
+    errorHandlers: Set<StoreErrorHandler>
 
     setStateCallbacks: Record<string, Array<(state: TState) => Partial<TState>>> = {}
 
     state: TState
 
-    constructor(initialProps: TInitialProps) {
+    constructor(initialProps: TInitialProps, config: StoreConstructorConfig = {}) {
       super()
       const store = this as GenericStore<TState, TActions> & TransitionsExtension
+      this.errorHandlers = config.errorHandlers
+        ? new Set(config.errorHandlers)
+        : new Set([defaultErrorHandler])
       // @ts-expect-error // TODO
       this.state = onConstruct({ initialProps, store })
     }
 
     handleError(error: unknown) {
-      function onError(error: string) {
-        alert(error)
-      }
+      this.errorHandlers.forEach(errorHandler => {
+        errorHandler(error)
+      })
+    }
 
-      if (!error) {
-        return onError("Unknown error!")
-      }
-
-      if (typeof error === "string") {
-        return onError(error)
-      }
-      if (typeof error === "object") {
-        if ("message" in error && typeof error.message === "string") {
-          return onError(error.message)
-        }
-        if ("code" in error && typeof error.code === "string") {
-          return onError(error.code)
-        }
-      }
-
-      return onError("Unknown error!")
+    registerErrorHandler(handler: StoreErrorHandler) {
+      this.errorHandlers.add(handler)
+      return () => this.errorHandlers.delete(handler)
     }
 
     registerSet: InnerReducerSet<TState> = (setter, currentState, transition, mergeType) => {
@@ -278,8 +278,8 @@ export function createStoreFactory<
     }
   }
 
-  return (initialProps: TInitialProps) => {
+  return (initialProps: TInitialProps, config: StoreConstructorConfig = {}) => {
     const Class = StoreClass
-    return new Class(initialProps) as unknown as GenericStore<TState, TActions> & TransitionsExtension
+    return new Class(initialProps, config) as unknown as GenericStore<TState, TActions> & TransitionsExtension
   }
 }
