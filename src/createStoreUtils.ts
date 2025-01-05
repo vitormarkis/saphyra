@@ -15,7 +15,7 @@ export function createStoreUtils<
     initialProps: TInitialProps,
     config?: StoreConstructorConfig
   ) => GenericStore<any, any> & TransitionsExtension
->(store: ReturnType<TStoreFactory>) {
+>(store?: ReturnType<TStoreFactory>) {
   type TStore = ReturnType<TStoreFactory>
   const Context = createContext<[TStore, React.Dispatch<React.SetStateAction<TStore>>] | null>(null)
 

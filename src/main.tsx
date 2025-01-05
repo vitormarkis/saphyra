@@ -8,8 +8,9 @@ import { createBrowserRouter, Outlet, RouterProvider } from "react-router-dom"
 import { Providers } from "./providers.tsx"
 import { GithubProfilePage } from "./pages/github-profile/page.tsx"
 import { ChangeRolePage } from "./pages/change-role/page.tsx"
+import { ZustandLikePage } from "./pages/zustand-like/page.tsx"
 
-const router = createBrowserRouter([
+export const routesManifest = [
   {
     path: "/",
     element: (
@@ -30,8 +31,14 @@ const router = createBrowserRouter([
         path: "/change-role",
         element: <ChangeRolePage />,
       },
+      {
+        path: "/zustand-like",
+        element: <ZustandLikePage />,
+      },
     ],
   },
-])
+]
+
+const router = createBrowserRouter(routesManifest)
 
 createRoot(document.getElementById("root")!).render(<RouterProvider router={router} />)
