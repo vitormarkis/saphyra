@@ -26,8 +26,6 @@ const createUserStore = createStoreFactory<UserStoreInitialProps>({
   },
 })
 
-type GithubProfilePageProps = {}
-
 const userStore = createUserStore({
   username: "",
   profile: null,
@@ -36,9 +34,9 @@ const userStore = createUserStore({
 
 export const User = createStoreUtils<typeof createUserStore>(userStore)
 
-export function GithubProfilePage({}: GithubProfilePageProps) {
+export function GithubProfilePage() {
   const username = User.useStore(s => s.username)
-  const state = User.useStore(undefined)
+  const state = User.useStore()
   const isFetchingUser = User.useTransition(["user", "fetch"])
 
   return (

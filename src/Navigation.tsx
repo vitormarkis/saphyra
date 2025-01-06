@@ -18,7 +18,12 @@ export function RootLayoutWrapper({ children }: RootLayoutWrapperProps) {
               <NavLink
                 to={route}
                 key={route}
-                className={({ isActive }) => cn("hover:bg-gray-100 w-full py-1 px-2 rounded-sm")}
+                className={({ isActive }) =>
+                  cn(
+                    "hover:bg-gray-100 w-full py-1 px-2 rounded-sm",
+                    isActive && "bg-blue-500 text-white hover:bg-blue-500 hover:text-white"
+                  )
+                }
               >
                 {capitalize(route?.replace("/", "").replaceAll("-", " "))}
               </NavLink>

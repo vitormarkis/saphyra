@@ -23,6 +23,7 @@ export function ZustandLikePage() {
       <form
         action=""
         className="flex-1"
+        onSubmit={e => e.preventDefault()}
       >
         <InputName />
         <InputEmail />
