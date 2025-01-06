@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react"
-import { createStoreFactory } from "./create-store"
-import { createStoreUtils } from "./createStoreUtils"
-import { sleep } from "./sleep"
-import { cn } from "./lib/utils"
+import { useEffect, useState, useSyncExternalStore } from "react"
+import { createStoreFactory } from "../../create-store"
+import { sleep } from "../../sleep"
+import { createStoreUtils } from "../../createStoreUtils"
+import { cn } from "../../lib/utils"
+import { Spinner } from "@blueprintjs/core"
 
 type TodosStoreInitialProps = {
   todos: Record<string, any>[]
@@ -46,7 +47,7 @@ const createTodosStore = createStoreFactory<TodosStoreInitialProps>({
 
 export const Todos = createStoreUtils<typeof createTodosStore>()
 
-export default function App() {
+export function HowTransitionsWorkPage() {
   let [todosStore, setTodosStore] = useState(() =>
     createTodosStore({ todos: [], count: 0, $direction: "down", currentTransition: null })
   )
@@ -62,14 +63,35 @@ export default function App() {
   )
 }
 
+const display = [
+  {
+    name: "Increment (general)",
+    transition: ["increment"],
+  },
+  {
+    name: "Increment (3)",
+    transition: ["increment", "three"],
+  },
+  {
+    name: "Increment (10)",
+    transition: ["increment", "ten"],
+  },
+]
+
 export function Content() {
   const [todosStore] = Todos.useUseState()
   const todosState = Todos.useStore()
   const isTransitioning = Todos.useTransition(["increment"])
 
+  const transitions = useSyncExternalStore(
+    cb => todosStore.transitions.subscribe(cb),
+    () => todosStore.transitions.state.transitions
+  )
+
   return (
     <div className="flex gap-4">
-      <div className="flex flex-col">
+      <pre className="flex-1">{JSON.stringify({ transitions }, null, 2)}</pre>
+      <div className="flex flex-col flex-1">
         <button
           onClick={() => {
             todosStore.dispatch({ type: "increment", transition: ["increment"] })
@@ -99,16 +121,39 @@ export function Content() {
           Decrement
         </button>
       </div>
-      <div className="flex">
+      <div className="flex flex-1">
         <div
           className={cn("size-10 ", {
             "bg-red-500": isTransitioning === true,
             "bg-emerald-500": isTransitioning === false,
           })}
         />
-        {/* <pre>{JSON.stringify({ allTransitions }, null, 2)}</pre> */}
-        <pre>{JSON.stringify(todosState, null, 2)}</pre>
+
+        <div className="flex flex-col">
+          <div>
+            <strong>Count: </strong>
+            <span>{todosState.count}</span>
+          </div>
+          {display.map(display => (
+            <DisplayTransition
+              key={display.name}
+              {...display}
+            />
+          ))}
+        </div>
       </div>
+    </div>
+  )
+}
+
+type DisplayTransitionProps = (typeof display)[number]
+
+export function DisplayTransition({ name, transition }: DisplayTransitionProps) {
+  const isTransitioning = Todos.useTransition(transition)
+  return (
+    <div className="flex gap-2">
+      <strong>{name}</strong>
+      {isTransitioning && <Spinner size={14} />}
     </div>
   )
 }

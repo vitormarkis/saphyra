@@ -13,6 +13,7 @@ type AuthStoreInitialProps = {
   permissions: string[]
   currentTransition: any[] | null
   username: string
+  _firstPermission: string
 }
 
 type AuthStoreActions = ChangeRole
@@ -22,7 +23,7 @@ type ChangeRole = {
 }
 
 const createAuthStore = createStoreFactory<AuthStoreInitialProps, AuthStoreInitialProps, AuthStoreActions>({
-  reducer({ prevState, state, action, async }) {
+  reducer({ prevState, state, action, async, set }) {
     if (action?.type === "change-role") {
       const promise = fetchRole({ roleName: action.role })
       async.promise(promise, (role, actor) => {
@@ -37,6 +38,8 @@ const createAuthStore = createStoreFactory<AuthStoreInitialProps, AuthStoreIniti
       })
     }
 
+    set(s => ({ _firstPermission: s.permissions[0] }))
+
     return state
   },
 })
@@ -46,10 +49,11 @@ const authStore = createAuthStore({
   permissions: PERMISSIONS()["user"],
   currentTransition: null,
   username: "",
+  _firstPermission: PERMISSIONS()["user"][0],
 })
 Object.assign(window, { authStore })
 
-const Auth = createStoreUtils<typeof createAuthStore>(authStore)
+export const Auth = createStoreUtils<typeof createAuthStore>(authStore)
 
 export function ChangeRolePage() {
   const state = Auth.useStore()

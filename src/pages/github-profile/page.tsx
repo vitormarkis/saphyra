@@ -17,9 +17,9 @@ async function fetchUser(username: string) {
 const createUserStore = createStoreFactory<UserStoreInitialProps>({
   reducer({ state, action, async }) {
     if (action.type === "fetch-user") {
-      async.promise(fetchUser(state.username), profile => ({
-        profile,
-      }))
+      async.promise(fetchUser(state.username), (profile, actor) => {
+        actor.set(() => ({ profile }))
+      })
     }
 
     return state
@@ -40,7 +40,7 @@ export function GithubProfilePage() {
   const isFetchingUser = User.useTransition(["user", "fetch"])
 
   return (
-    <div className="flex flex-col p-4">
+    <div className="flex flex-col p-4 overflow-hidden">
       <form
         action=""
         className="flex flex-col gap-2"
@@ -70,7 +70,7 @@ export function GithubProfilePage() {
         <pre>{JSON.stringify({ isFetchingUser }, null, 2)}</pre>
       </form>
       <strong className="font-bold">State</strong>
-      <pre>{JSON.stringify(state, null, 2)}</pre>
+      <pre className="overflow-auto">{JSON.stringify(state, null, 2)}</pre>
     </div>
   )
 }
