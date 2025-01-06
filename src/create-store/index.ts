@@ -1,5 +1,6 @@
 import { createDiffOnKeyChange } from "../diff"
 import { Subject } from "../Subject"
+import { RemoveUnderscoreProps } from "../types"
 import { createAsync } from "./createAsync"
 import { defaultErrorHandler } from "./fn/default-error-handler"
 import { TransitionsStore } from "./transitions-store"
@@ -17,6 +18,7 @@ import {
   ReducerSet,
   Setter,
   StoreErrorHandler,
+  StoreInstantiator,
   TODO,
   TransitionsExtension,
 } from "./types"
@@ -37,7 +39,10 @@ type OnConstruct<
   TInitialProps,
   TState extends BaseState = TInitialProps & BaseState,
   TActions extends DefaultActions & BaseAction = DefaultActions & BaseAction
-> = (props: OnConstructProps<TInitialProps, TState, TActions>, config?: StoreConstructorConfig) => TState
+> = (
+  props: OnConstructProps<TInitialProps, TState, TActions>,
+  config: StoreConstructorConfig
+) => RemoveUnderscoreProps<TState>
 
 function defaultOnConstruct<
   TInitialProps,
@@ -92,6 +97,7 @@ type CreateStoreOptions<
 
 export type StoreConstructorConfig = {
   errorHandlers?: StoreErrorHandler[]
+  notify: () => void
 }
 
 export function createStoreFactory<
@@ -107,10 +113,9 @@ export function createStoreFactory<
     TState,
     TActions
   >
-): (
-  initialProps: TInitialProps,
-  config?: StoreConstructorConfig
-) => GenericStore<TState, TActions> & TransitionsExtension {
+): StoreInstantiator<TInitialProps, GenericStore<TState, TActions> & TransitionsExtension> {
+  type TStore = GenericStore<TState, TActions> & TransitionsExtension
+
   const StoreClass = class Store extends Subject {
     transitions = new TransitionsStore()
     errorHandlers: Set<StoreErrorHandler>
@@ -119,31 +124,46 @@ export function createStoreFactory<
 
     state: TState
 
-    constructor(initialProps: TInitialProps, config: StoreConstructorConfig = {}) {
+    constructor(
+      initialProps: TInitialProps,
+      config: StoreConstructorConfig = {
+        notify: () => this.notify(),
+      }
+    ) {
       super()
-      const store = this as GenericStore<TState, TActions> & TransitionsExtension
+      const store = this as unknown as TStore
       this.errorHandlers = config.errorHandlers
         ? new Set(config.errorHandlers)
         : new Set([defaultErrorHandler])
 
-      // @ts-expect-error // TODO
-      const initialState = onConstruct({ initialProps, store })
+      try {
+        const initialState = onConstruct(
+          // @ts-expect-error // TODO
+          { initialProps, store },
+          {
+            notify: () => this.notify(),
+          }
+        ) as TState
 
-      const prevState = {} as TState
-      const reducer = store.createReducer({
-        async: createAsync(store, initialState, ["bootstrap"]),
-        set: this.createSet(initialState, "set", null),
-        prevState,
-        store,
-      })
+        const prevState = {} as TState
+        const reducer = store.createReducer({
+          async: createAsync(store, initialState, ["bootstrap"]),
+          set: this.createSet(initialState, "set", null),
+          prevState,
+          store,
+        })
 
-      const processedState = reducer({
-        action: { type: "noop" } as TActions,
-        state: initialState,
-        diff: this.createDiff(prevState, initialState),
-      })
+        const processedState = reducer({
+          action: { type: "noop" } as TActions,
+          state: initialState,
+          diff: this.createDiff(prevState, initialState),
+        })
 
-      this.state = processedState
+        this.state = processedState
+      } catch (error) {
+        this.handleError(error)
+        throw error
+      }
     }
 
     handleError(error: unknown) {
@@ -155,6 +175,22 @@ export function createStoreFactory<
     registerErrorHandler(handler: StoreErrorHandler) {
       this.errorHandlers.add(handler)
       return () => this.errorHandlers.delete(handler)
+    }
+
+    rerender() {
+      const store = this
+      const reducer = store.createReducer({
+        async: createAsync(store, store.state, null),
+        set: store.createSet(store.state, "set", null),
+        store,
+        prevState: store.state,
+      })
+      store.state = reducer({
+        action: { type: "noop" } as TActions,
+        diff: store.createDiff(store.state, store.state),
+        state: store.state,
+      })
+      store.notify()
     }
 
     registerSet: InnerReducerSet<TState> = (setter, currentState, transition, mergeType) => {
@@ -328,8 +364,12 @@ export function createStoreFactory<
     }
   }
 
-  return (initialProps: TInitialProps, config: StoreConstructorConfig = {}) => {
+  const storeInstantiator: StoreInstantiator<TInitialProps, TStore> = (
+    initialProps: TInitialProps,
+    config: StoreConstructorConfig = {} as StoreConstructorConfig
+  ): TStore => {
     const Class = StoreClass
-    return new Class(initialProps, config) as unknown as GenericStore<TState, TActions> & TransitionsExtension
+    return new Class(initialProps, config) as unknown as TStore
   }
+  return storeInstantiator
 }

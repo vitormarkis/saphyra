@@ -1,3 +1,4 @@
+import { StoreConstructorConfig } from "."
 import { Subject } from "../Subject"
 import { TransitionsStore } from "./transitions-store"
 
@@ -18,6 +19,7 @@ export type GenericStore<
   createReducer(props: CreateReducerInner<TState, TActions>): ReducerInner<TState, TActions>
   createSet(newState: TState & Partial<TState>): ReducerSet<TState>
   registerErrorHandler(handler: StoreErrorHandler): () => void
+  rerender(): void
 } & Subject
 
 export type GenericStoreClass<
@@ -92,3 +94,8 @@ export type ReducerInner<
 > = (props: ReducerInnerProps<TState, TActions>) => TState
 
 export type StoreErrorHandler = (error: unknown) => void
+
+export type StoreInstantiator<TInitialProps, TStore extends GenericStore<any, any>> = (
+  initialProps: TInitialProps,
+  config?: StoreConstructorConfig
+) => TStore

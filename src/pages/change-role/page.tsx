@@ -5,6 +5,7 @@ import { cn } from "../../lib/utils"
 import { fetchRole } from "./fn/fetch-role"
 import { getPermissions } from "./fn/get-permissions"
 import { PERMISSIONS } from "./const"
+import { RemoveUnderscoreProps } from "../../types"
 
 type SelectedRole = "user" | "admin"
 
@@ -15,10 +16,6 @@ type AuthStoreState = {
   username: string
   _welcomeMessage: string
   _firstPermission: string
-}
-
-type RemoveUnderscoreProps<T> = {
-  [K in keyof T as K extends `_${string}` ? never : K]: T[K]
 }
 
 type AuthStoreActions = ChangeRole

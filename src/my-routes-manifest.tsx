@@ -1,6 +1,7 @@
 import { ChangeRolePage } from "./pages/change-role/page"
 import { GithubProfilePage } from "./pages/github-profile/page"
 import { HowTransitionsWorkPage } from "./pages/how-transitions-work/page"
+import { MemoryGamePage } from "./pages/memory-game/page"
 import { ZustandLikePage } from "./pages/zustand-like/page"
 
 export const myRoutesManifest = [
@@ -19,5 +20,9 @@ export const myRoutesManifest = [
   {
     path: "/how-transitions-work",
     element: <HowTransitionsWorkPage />,
+  },
+  {
+    path: "/memory-game",
+    element: <MemoryGamePage />,
   },
 ]
