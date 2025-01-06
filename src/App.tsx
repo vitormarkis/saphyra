@@ -1,4 +1,4 @@
-import { useEffect, useState, useSyncExternalStore } from "react"
+import { useEffect, useState } from "react"
 import { createStoreFactory } from "./create-store"
 import { createStoreUtils } from "./createStoreUtils"
 import { sleep } from "./sleep"
@@ -25,15 +25,15 @@ const createTodosStore = createStoreFactory<TodosStoreInitialProps>({
     }
 
     if (action.type === "increment-ten") {
-      async.promise(sleep(3200), (_, s) => ({
-        count: s.count + 10,
-      }))
+      async.promise(sleep(3200), (_, actor) => {
+        actor.set(s => ({ count: s.count + 10 }))
+      })
     }
 
     if (action.type === "increment-three") {
-      async.promise(sleep(4000), (_, s) => ({
-        count: s.count + 3,
-      }))
+      async.promise(sleep(4000), (_, actor) => {
+        actor.set(s => ({ count: s.count + 3 }))
+      })
     }
 
     if (state.count !== prevState.count) {

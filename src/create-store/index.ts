@@ -213,8 +213,12 @@ export function createStoreFactory<
       this.notify()
     }
 
-    createSet(newState: TState & Partial<TState>, mergeType: "reducer" | "set" = "set"): ReducerSet<TState> {
-      return setState => this.registerSet(setState, newState, null, mergeType)
+    createSet(
+      newState: TState & Partial<TState>,
+      mergeType: "reducer" | "set" = "set",
+      transition: any[] | null | undefined = null
+    ): ReducerSet<TState> {
+      return setState => this.registerSet(setState, newState, transition, mergeType)
     }
 
     createReducer({
@@ -244,6 +248,7 @@ export function createStoreFactory<
 
       const store = this
       if (action.transition != null && isNewTransition) {
+        store.transitions.addKey(action.transition)
         newState.currentTransition = action.transition
         store.transitions.events.done.once(action.transition.join(":"), error => {
           if (!action.transition) throw new Error("Impossible to reach this point")
@@ -260,7 +265,7 @@ export function createStoreFactory<
       const reducer = this.createReducer({
         async: createAsync(store, newState, action.transition),
         prevState: this.state,
-        set: this.createSet(newState),
+        set: this.createSet(newState, "set", action.transition),
         store,
       })
 
@@ -272,6 +277,8 @@ export function createStoreFactory<
         this.state = processedState
         this.notify()
       } else {
+        store.transitions.doneKey(action.transition, null)
+
         // the observers will be notified
         // when the transition is done
       }

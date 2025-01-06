@@ -5,7 +5,7 @@ import { NavLink } from "react-router-dom"
 
 type RootLayoutWrapperProps = {} & PropsWithChildren
 
-const routes = myRoutesManifest.map(route => route.path)
+const routes = ["/", ...myRoutesManifest.map(route => route.path)]
 
 export function RootLayoutWrapper({ children }: RootLayoutWrapperProps) {
   return (
@@ -25,7 +25,7 @@ export function RootLayoutWrapper({ children }: RootLayoutWrapperProps) {
                   )
                 }
               >
-                {capitalize(route?.replace("/", "").replaceAll("-", " "))}
+                {route === "/" ? "Home" : capitalize(route?.replace("/", "").replaceAll("-", " "))}
               </NavLink>
             ))}
           </nav>
