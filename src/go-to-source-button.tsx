@@ -4,11 +4,11 @@ import { useLocation, Link } from "react-router-dom"
 type GoToSourceButtonProps = {}
 
 export function GoToSourceButton({}: GoToSourceButtonProps) {
-  const href = "https://github.com/vitormarkis/auth-machine/blob/create-store/src/pages$$$/page.tsx"
+  const href = "https://github.com/vitormarkis/auth-machine/blob/main/src/pages$$$/page.tsx"
   const { pathname } = useLocation()
   const finalHref =
     pathname === "/"
-      ? "https://github.com/vitormarkis/auth-machine/blob/create-store/src/App.tsx"
+      ? "https://github.com/vitormarkis/auth-machine/blob/main/src/App.tsx"
       : href.replace("$$$", pathname)
 
   return (

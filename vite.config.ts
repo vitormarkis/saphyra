@@ -17,4 +17,15 @@ export default defineConfig({
       plugins: [tailwindcss()],
     },
   },
+
+  build: {
+    rollupOptions: {
+      // external: ["@blueprintjs/icons/lib/css/blueprint-icons.css", "normalize.css"],
+      output: {
+        manualChunks: {
+          "@blueprintjs/core": ["@blueprintjs/core"],
+        },
+      },
+    },
+  },
 })
