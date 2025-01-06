@@ -8,12 +8,17 @@ import { PERMISSIONS } from "./const"
 
 type SelectedRole = "user" | "admin"
 
-type AuthStoreInitialProps = {
+type AuthStoreState = {
   role: "user" | "admin"
   permissions: string[]
   currentTransition: any[] | null
   username: string
+  _welcomeMessage: string
   _firstPermission: string
+}
+
+type RemoveUnderscoreProps<T> = {
+  [K in keyof T as K extends `_${string}` ? never : K]: T[K]
 }
 
 type AuthStoreActions = ChangeRole
@@ -22,8 +27,12 @@ type ChangeRole = {
   role: SelectedRole
 }
 
-const createAuthStore = createStoreFactory<AuthStoreInitialProps, AuthStoreInitialProps, AuthStoreActions>({
-  reducer({ prevState, state, action, async, set }) {
+const createAuthStore = createStoreFactory<
+  RemoveUnderscoreProps<AuthStoreState>,
+  AuthStoreState,
+  AuthStoreActions
+>({
+  reducer({ prevState, state, action, async, set, diff }) {
     if (action?.type === "change-role") {
       const promise = fetchRole({ roleName: action.role })
       async.promise(promise, (role, actor) => {
@@ -40,6 +49,10 @@ const createAuthStore = createStoreFactory<AuthStoreInitialProps, AuthStoreIniti
 
     set(s => ({ _firstPermission: s.permissions[0] }))
 
+    if (diff(["username", "role"])) {
+      set(s => ({ _welcomeMessage: `Welcome ${s.username}! Your role is [${s.role}].` }))
+    }
+
     return state
   },
 })
@@ -49,7 +62,6 @@ const authStore = createAuthStore({
   permissions: PERMISSIONS()["user"],
   currentTransition: null,
   username: "",
-  _firstPermission: PERMISSIONS()["user"][0],
 })
 Object.assign(window, { authStore })
 

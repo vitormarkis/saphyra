@@ -47,6 +47,8 @@ export type Async<
   timer(callback: (actor: AsyncActor<TState, TActions>) => void): void
 }
 
+export type Diff<TState> = (keys: (keyof TState)[]) => boolean
+
 export type TransitionsExtension = {
   transitions: TransitionsStore
 }
@@ -81,6 +83,7 @@ export type ReducerInnerProps<
 > = {
   action: TActions
   state: TState
+  diff: Diff<TState>
 }
 
 export type ReducerInner<

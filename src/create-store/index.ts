@@ -1,3 +1,4 @@
+import { createDiffOnKeyChange } from "../diff"
 import { Subject } from "../Subject"
 import { createAsync } from "./createAsync"
 import { defaultErrorHandler } from "./fn/default-error-handler"
@@ -8,6 +9,7 @@ import {
   BaseState,
   CreateReducerInner,
   DefaultActions,
+  Diff,
   GenericStore,
   InnerReducerSet,
   ReducerInner,
@@ -61,6 +63,7 @@ type ReducerProps<
   store: GenericStore<TState, TActions> & Record<string, any>
   set: ReducerSet<TState>
   async: Async<TState>
+  diff: Diff<TState>
 }
 
 type Reducer<
@@ -122,8 +125,25 @@ export function createStoreFactory<
       this.errorHandlers = config.errorHandlers
         ? new Set(config.errorHandlers)
         : new Set([defaultErrorHandler])
+
       // @ts-expect-error // TODO
-      this.state = onConstruct({ initialProps, store })
+      const initialState = onConstruct({ initialProps, store })
+
+      const prevState = {} as TState
+      const reducer = store.createReducer({
+        async: createAsync(store, initialState, ["bootstrap"]),
+        set: this.createSet(initialState, "set", null),
+        prevState,
+        store,
+      })
+
+      const processedState = reducer({
+        action: { type: "noop" } as TActions,
+        state: initialState,
+        diff: this.createDiff(prevState, initialState),
+      })
+
+      this.state = processedState
     }
 
     handleError(error: unknown) {
@@ -154,6 +174,9 @@ export function createStoreFactory<
       /**
        * Re-running the reducer since the promise onSuccess
        * callback only sets the state without running the reducer
+       *
+       * re-running the reducer is what derives the states
+       * and make sure the store state is always in a valid state
        */
       if (mergeType === "reducer") {
         const store = this
@@ -169,6 +192,7 @@ export function createStoreFactory<
         const processedState = reducer({
           action: { type: "noop" } as TActions,
           state: newState,
+          diff: this.createDiff(currentState, newState),
         })
 
         newState = {
@@ -182,8 +206,20 @@ export function createStoreFactory<
       }
     }
 
-    setState(newState: Partial<TState>) {
-      this.state = { ...this.state, ...newState }
+    setState(newPartialState: Partial<TState>) {
+      const store = this
+      const newState = { ...this.state, ...newPartialState }
+      const reducer = store.createReducer({
+        store,
+        prevState: store.state,
+        async: createAsync(this, newState, null),
+        set: store.createSet(newState, "set", null),
+      })
+      this.state = reducer({
+        action: { type: "noop" } as TActions,
+        diff: this.createDiff(store.state, newState),
+        state: newState,
+      })
       this.notify()
     }
 
@@ -227,16 +263,22 @@ export function createStoreFactory<
       set,
       store,
     }: CreateReducerInner<TState, TActions>): ReducerInner<TState, TActions> {
-      return function reducer({ action, state }: ReducerInnerProps<TState, TActions>): TState {
+      return function reducer({ action, state, diff }: ReducerInnerProps<TState, TActions>): TState {
         return userReducer({
           action,
           prevState,
           async,
-          set,
           state,
           store,
+          set,
+          diff,
         })
       }
+    }
+
+    createDiff(oldState: TState, newState: TState) {
+      const [, diff] = createDiffOnKeyChange(oldState, newState)
+      return diff
     }
 
     dispatch(action: TActions) {
@@ -272,6 +314,7 @@ export function createStoreFactory<
       const processedState = reducer({
         action,
         state: newState,
+        diff: this.createDiff(this.state, newState),
       })
       if (action.transition == null) {
         this.state = processedState
