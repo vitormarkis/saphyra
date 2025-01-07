@@ -197,8 +197,6 @@ export function createStoreFactory<
     }
 
     registerSet: InnerReducerSet<TState> = (setter, currentState, transition, mergeType) => {
-      const onDemandSetters: Setter<TState>[] = []
-
       if (transition) {
         const transitionKey = transition.join(":")
         this.setStateCallbacks[transitionKey] ??= []
@@ -229,10 +227,7 @@ export function createStoreFactory<
           action: { type: "noop" } as TActions,
           state: newState,
           diff: this.createDiff(currentState, newState),
-          set: setter => {
-            onDemandSetters.push(setter)
-            return store.registerSet(setter, newState, transition, "set")
-          },
+          set: this.createSet(newState, "set", transition),
           async: createAsync(store, newState, transition),
           prevState: currentState,
         })

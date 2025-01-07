@@ -2,6 +2,9 @@ import { PropsWithChildren, useEffect, useState } from "react"
 import { createStoreFactory } from "../../../create-store"
 import { createStoreUtils } from "../../../createStoreUtils"
 import { MemoryCard } from "../card/type"
+import { reduceGroupById } from "./fn/reduce-group-by-id"
+import { filterMatched, filterVisible } from "./fn/filter-cards"
+import { flatMapCreateCards } from "./fn/flat-map-create-cards"
 
 type CardsContent = readonly [string, string, string, string, string, string, string, string]
 
@@ -31,9 +34,7 @@ type MemoryGameActions =
 
 const createMemoryGame = createStoreFactory<MemoryGameInitialProps, MemoryGameState, MemoryGameActions>({
   onConstruct({ initialProps }) {
-    const cards = initialProps.cards.flatMap(cardContent => {
-      return [MemoryCard.create(cardContent), MemoryCard.create(cardContent)]
-    })
+    const cards = initialProps.cards.flatMap(flatMapCreateCards)
     return {
       cards,
       currentTransition: null,
@@ -53,10 +54,11 @@ const createMemoryGame = createStoreFactory<MemoryGameInitialProps, MemoryGameSt
     if (action.type === "match-cards") {
       const cardsToMatch = state._visibleCardsIdList.map(id => state._cardById[id])
 
-      cardsToMatch.forEach((cardToMatch, index) => {
+      cardsToMatch.forEach((card, index) => {
         const otherIdx = index === 0 ? 1 : 0
-        const cardToMatchOther = cardsToMatch[otherIdx]
-        const [, updatedCard] = cardToMatch.match(cardToMatchOther)
+        const otherCard = cardsToMatch[otherIdx]
+        const updatedCard = card.match(otherCard)
+
         state._cardById = {
           ...state._cardById,
           [updatedCard.id]: updatedCard,
@@ -66,19 +68,15 @@ const createMemoryGame = createStoreFactory<MemoryGameInitialProps, MemoryGameSt
 
     if (diff(["cards"])) {
       state._cardIdList = state.cards.map(card => card.id)
-      state._cardById = state.cards.reduce((acc, card) => ({ ...acc, [card.id]: card }), {})
+      state._cardById = state.cards.reduce(...reduceGroupById())
     }
 
     if (diff(["_cardById"])) {
-      state._visibleCardsIdList = Object.values(state._cardById).reduce((acc, item) => {
-        return item.state === "visible" ? [...acc, item.id] : acc
-      }, [] as string[])
+      state._visibleCardsIdList = filterVisible(state._cardById)
     }
 
     if (diff(["_cardById"])) {
-      state._matchedCardsIdList = Object.values(state._cardById).reduce((acc, item) => {
-        return item.state === "matched" ? [...acc, item.id] : acc
-      }, [] as string[])
+      state._matchedCardsIdList = filterMatched(state._cardById)
     }
 
     if (diff(["_visibleCardsIdList"])) {

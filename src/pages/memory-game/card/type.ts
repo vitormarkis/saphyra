@@ -50,14 +50,14 @@ export class MemoryCard {
     return MemoryCard.restore(this.value, this.state, this.matchedWithId, this.id)
   }
 
-  match(card: MemoryCard): [boolean, MemoryCard] {
+  match(card: MemoryCard): MemoryCard {
     if (this.value === card.value) {
       this.state = "matched"
       this.matchedWithId = card.id
-      return [true, this.clone()]
+      return this.clone()
     } else {
       this.state = "hidden"
-      return [false, this]
+      return this
     }
   }
 }
