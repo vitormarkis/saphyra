@@ -2,6 +2,7 @@ import { createDiffOnKeyChange } from "../diff"
 import { Subject } from "../Subject"
 import { RemoveUnderscoreProps } from "../types"
 import { createAsync } from "./createAsync"
+import { _noTransitionError } from "./errors"
 import { defaultErrorHandler } from "./fn/default-error-handler"
 import { TransitionsStore } from "./transitions-store"
 import {
@@ -11,6 +12,7 @@ import {
   CreateReducerInner,
   DefaultActions,
   Diff,
+  Dispatch,
   GenericStore,
   InnerReducerSet,
   ReducerInner,
@@ -69,6 +71,7 @@ type ReducerProps<
   set: ReducerSet<TState>
   async: Async<TState>
   diff: Diff<TState>
+  dispatch: Dispatch<TActions>
 }
 
 type Reducer<
@@ -97,7 +100,6 @@ type CreateStoreOptions<
 
 export type StoreConstructorConfig = {
   errorHandlers?: StoreErrorHandler[]
-  notify: () => void
 }
 
 export function createStoreFactory<
@@ -124,12 +126,7 @@ export function createStoreFactory<
 
     state: TState
 
-    constructor(
-      initialProps: TInitialProps,
-      config: StoreConstructorConfig = {
-        notify: () => this.notify(),
-      }
-    ) {
+    constructor(initialProps: TInitialProps, config: StoreConstructorConfig) {
       super()
       const store = this as unknown as TStore
       this.errorHandlers = config.errorHandlers
@@ -147,16 +144,19 @@ export function createStoreFactory<
 
         const prevState = {} as TState
         const reducer = store.createReducer({
-          async: createAsync(store, initialState, ["bootstrap"]),
-          set: this.createSet(initialState, "set", null),
-          prevState,
           store,
+          dispatch: (action: TActions) => {
+            console.log("dispatch", action)
+          },
         })
 
         const processedState = reducer({
           action: { type: "noop" } as TActions,
           state: initialState,
           diff: this.createDiff(prevState, initialState),
+          async: createAsync(store, initialState, ["bootstrap"]),
+          set: this.createSet(initialState, "set", null),
+          prevState,
         })
 
         this.state = processedState
@@ -180,15 +180,18 @@ export function createStoreFactory<
     rerender() {
       const store = this
       const reducer = store.createReducer({
-        async: createAsync(store, store.state, null),
-        set: store.createSet(store.state, "set", null),
         store,
-        prevState: store.state,
+        dispatch: (action: TActions) => {
+          console.log("dispatch", action)
+        },
       })
       store.state = reducer({
         action: { type: "noop" } as TActions,
         diff: store.createDiff(store.state, store.state),
         state: store.state,
+        async: createAsync(store, store.state, null),
+        set: store.createSet(store.state, "set", null),
+        prevState: store.state,
       })
       store.notify()
     }
@@ -217,18 +220,21 @@ export function createStoreFactory<
       if (mergeType === "reducer") {
         const store = this
         const reducer = this.createReducer({
-          async: createAsync(store, newState, transition),
-          prevState: currentState,
-          set: setter => {
-            onDemandSetters.push(setter)
-            return store.registerSet(setter, newState, transition, "set")
-          },
           store,
+          dispatch: (action: TActions) => {
+            console.log("dispatch", action)
+          },
         })
         const processedState = reducer({
           action: { type: "noop" } as TActions,
           state: newState,
           diff: this.createDiff(currentState, newState),
+          set: setter => {
+            onDemandSetters.push(setter)
+            return store.registerSet(setter, newState, transition, "set")
+          },
+          async: createAsync(store, newState, transition),
+          prevState: currentState,
         })
 
         newState = {
@@ -247,22 +253,26 @@ export function createStoreFactory<
       const newState = { ...this.state, ...newPartialState }
       const reducer = store.createReducer({
         store,
-        prevState: store.state,
-        async: createAsync(this, newState, null),
-        set: store.createSet(newState, "set", null),
+        dispatch: (action: TActions) => {
+          console.log("dispatch", action)
+        },
       })
       this.state = reducer({
         action: { type: "noop" } as TActions,
         diff: this.createDiff(store.state, newState),
         state: newState,
+        prevState: store.state,
+        async: createAsync(this, newState, null),
+        set: store.createSet(newState, "set", null),
       })
+
       this.notify()
     }
 
     private applyTransition(transition: any[] | null | undefined) {
       if (!transition) {
         debugger
-        throw new Error("No transition provided.")
+        throw _noTransitionError
       }
       const transitionKey = transition.join(":")
       const setters = this.setStateCallbacks[transitionKey]
@@ -271,17 +281,11 @@ export function createStoreFactory<
         throw new Error("Impossible to reach this point")
       }
       this.setStateCallbacks[transitionKey] = []
-      const newState = setters.reduce((acc: TState, setter) => ({ ...acc, ...setter(acc) }), this.state)
+      const newState = setters.reduce((acc: TState, setter) => {
+        const newState = setter(acc)
+        return { ...acc, ...newState }
+      }, this.state)
       this.state = newState
-      // const store = this
-      // this.state = userReducer({
-      //   store,
-      //   action: { type: "noop" } as TActions,
-      //   prevState: this.state,
-      //   async: createAsync(store, newState, transition),
-      //   set: this.createSet(newState),
-      //   state: newState,
-      // })
       this.notify()
     }
 
@@ -293,21 +297,24 @@ export function createStoreFactory<
       return setState => this.registerSet(setState, newState, transition, mergeType)
     }
 
-    createReducer({
-      async,
-      prevState,
-      set,
-      store,
-    }: CreateReducerInner<TState, TActions>): ReducerInner<TState, TActions> {
-      return function reducer({ action, state, diff }: ReducerInnerProps<TState, TActions>): TState {
+    createReducer({ store, dispatch }: CreateReducerInner<TState, TActions>): ReducerInner<TState, TActions> {
+      return function reducer({
+        async,
+        set,
+        action,
+        prevState,
+        state,
+        diff,
+      }: ReducerInnerProps<TState, TActions>): TState {
         return userReducer({
           action,
           prevState,
           async,
           state,
           store,
-          set,
           diff,
+          set,
+          dispatch,
         })
       }
     }
@@ -317,46 +324,67 @@ export function createStoreFactory<
       return diff
     }
 
-    dispatch(action: TActions) {
-      const newState = { ...this.state }
-
+    private handleRegisterTransition(
+      newState: TState,
+      initialAction: TActions,
+      store: GenericStore<TState, TActions> & TransitionsExtension
+    ) {
       const currentTransitionName = this.state.currentTransition?.join(":")
-      const actionTransitionName = action.transition?.join(":")
+      const actionTransitionName = initialAction.transition?.join(":")
       const isNewTransition = currentTransitionName !== actionTransitionName
 
-      const store = this
-      if (action.transition != null && isNewTransition) {
-        store.transitions.addKey(action.transition)
-        newState.currentTransition = action.transition
-        store.transitions.events.done.once(action.transition.join(":"), error => {
-          if (!action.transition) throw new Error("Impossible to reach this point")
+      if (initialAction.transition != null && isNewTransition) {
+        store.transitions.addKey(initialAction.transition)
+        newState.currentTransition = initialAction.transition
+        store.transitions.events.done.once(initialAction.transition.join(":"), error => {
+          if (!initialAction.transition) throw new Error("Impossible to reach this point")
           if (error) {
-            console.log(`%cTransition failed! [${action.transition.join(":")}]`, "color: red")
+            console.log(`%cTransition failed! [${initialAction.transition.join(":")}]`, "color: red")
             store.handleError(error)
           } else {
-            console.log(`%cTransition completed! [${action.transition.join(":")}]`, "color: lightgreen")
-            store.applyTransition(action.transition)
+            console.log(
+              `%cTransition completed! [${initialAction.transition.join(":")}]`,
+              "color: lightgreen"
+            )
+            this.applyTransition(initialAction.transition)
           }
         })
       }
+    }
 
+    dispatch(initialAction: TActions) {
+      const store = this
+      let newState = { ...this.state }
+      this.handleRegisterTransition(newState, initialAction, store)
+
+      const actionsQueue: TActions[] = [initialAction]
       const reducer = this.createReducer({
-        async: createAsync(store, newState, action.transition),
-        prevState: this.state,
-        set: this.createSet(newState, "set", action.transition),
         store,
+        dispatch: (action: TActions) => {
+          actionsQueue.push(action)
+        },
       })
 
-      const processedState = reducer({
-        action,
-        state: newState,
-        diff: this.createDiff(this.state, newState),
-      })
-      if (action.transition == null) {
-        this.state = processedState
+      let prevState = this.state
+      for (const action of actionsQueue) {
+        const futurePrevState = { ...newState }
+        const context: ReducerInnerProps<TState, TActions> = {
+          action,
+          prevState: prevState,
+          state: newState,
+          async: createAsync(store, newState, action.transition),
+          set: this.createSet(newState, "set", action.transition),
+          diff: this.createDiff(prevState, newState),
+        }
+        reducer(context)
+        prevState = futurePrevState
+      }
+
+      if (initialAction.transition == null) {
+        this.state = newState
         this.notify()
       } else {
-        store.transitions.doneKey(action.transition, null)
+        store.transitions.doneKey(initialAction.transition, null)
 
         // the observers will be notified
         // when the transition is done

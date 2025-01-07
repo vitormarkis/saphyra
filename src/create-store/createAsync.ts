@@ -9,7 +9,7 @@ import {
   TransitionsExtension,
 } from "./types"
 
-const _noTransitionError = new Error("No transition provided.")
+export const _noTransitionError = new Error("No transition provided.")
 
 /**
  * Comportamento deve ser mudado no futuro caso a store comece a

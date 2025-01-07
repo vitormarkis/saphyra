@@ -39,7 +39,7 @@ const createMemoryGame = createStoreFactory<MemoryGameInitialProps, MemoryGameSt
       currentTransition: null,
     }
   },
-  reducer({ prevState, state, action, store, diff }) {
+  reducer({ prevState, state, action, store, diff, dispatch }) {
     console.log("fn")
     if (action.type === "tap-card") {
       const card = state._cardById[action.cardId]
@@ -90,10 +90,8 @@ const createMemoryGame = createStoreFactory<MemoryGameInitialProps, MemoryGameSt
     }
 
     if (state._visibleCardsIdList.length === 2) {
-      setTimeout(() => {
-        store.dispatch({
-          type: "match-cards",
-        })
+      dispatch({
+        type: "match-cards",
       })
     }
 

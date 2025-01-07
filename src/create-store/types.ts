@@ -20,6 +20,7 @@ export type GenericStore<
   createSet(newState: TState & Partial<TState>): ReducerSet<TState>
   registerErrorHandler(handler: StoreErrorHandler): () => void
   rerender(): void
+  handleError(error: unknown): void
 } & Subject
 
 export type GenericStoreClass<
@@ -73,16 +74,18 @@ export type CreateReducerInner<
   TState extends BaseState = BaseState,
   TActions extends DefaultActions & BaseAction = DefaultActions & BaseAction
 > = {
-  prevState: TState
   store: GenericStore<TState, TActions> & Record<string, any> & TransitionsExtension
-  set: ReducerSet<TState>
-  async: Async<TState>
+  dispatch: Dispatch<TActions>
 }
 
 export type ReducerInnerProps<
   TState extends BaseState = BaseState,
   TActions extends DefaultActions & BaseAction = DefaultActions & BaseAction
 > = {
+  set: ReducerSet<TState>
+  async: Async<TState>
+
+  prevState: TState
   action: TActions
   state: TState
   diff: Diff<TState>
