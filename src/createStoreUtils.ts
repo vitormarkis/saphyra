@@ -65,7 +65,7 @@ export function createStoreUtils<
 
 export type StoreUtils<
   TState extends BaseState = BaseState,
-  TActions extends DefaultActions & BaseAction = DefaultActions & BaseAction
+  TActions extends DefaultActions & BaseAction<TState> = DefaultActions & BaseAction<TState>
 > = {
   Provider: React.Provider<any>
   useStore: <R = TState>(

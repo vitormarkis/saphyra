@@ -3,8 +3,9 @@ import { createStoreFactory } from "./create-store"
 import { createStoreUtils } from "./createStoreUtils"
 import { sleep } from "./sleep"
 import { cn } from "./lib/utils"
+import { BaseState } from "./create-store/types"
 
-type TodosStoreInitialProps = {
+type TodosStoreInitialProps = BaseState & {
   todos: Record<string, any>[]
   count: number
   $direction: "up" | "down"
@@ -78,8 +79,15 @@ export function Content() {
           Increment
         </button>
         <button
-          onClick={() => {
-            todosStore.dispatch({ type: "increment-ten", transition: ["increment", "ten"] })
+          onClick={async () => {
+            const incrementTenResolver = Promise.withResolvers<TodosStoreInitialProps>()
+            todosStore.dispatch({
+              type: "increment-ten",
+              transition: ["increment", "ten"],
+              onTransitionEnd: incrementTenResolver.resolve,
+            })
+            const { count } = await incrementTenResolver.promise
+            console.log("new count", count)
           }}
         >
           Increment (10)

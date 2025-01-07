@@ -17,11 +17,11 @@ export const _noTransitionError = new Error("No transition provided.")
  */
 function createTransitionDispatch<
   TState extends BaseState = BaseState,
-  TActions extends DefaultActions & BaseAction = DefaultActions & BaseAction
+  TActions extends DefaultActions & BaseAction<TState> = DefaultActions & BaseAction<TState>
 >(
   store: GenericStore<TState, TActions> & TransitionsExtension,
   transition: any[] | null | undefined
-): Dispatch<TActions> {
+): Dispatch<TState, TActions> {
   return function dispatch(action: TActions) {
     store.dispatch({
       ...action,
@@ -32,7 +32,7 @@ function createTransitionDispatch<
 
 export function createAsync<
   TState extends BaseState = BaseState,
-  TActions extends DefaultActions & BaseAction = DefaultActions & BaseAction
+  TActions extends DefaultActions & BaseAction<TState> = DefaultActions & BaseAction<TState>
 >(
   store: GenericStore<TState, any> & TransitionsExtension,
   state: TState,

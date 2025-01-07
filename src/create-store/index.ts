@@ -31,7 +31,7 @@ import {
 type OnConstructProps<
   TInitialProps,
   TState extends BaseState = TInitialProps & BaseState,
-  TActions extends DefaultActions & BaseAction = DefaultActions & BaseAction
+  TActions extends DefaultActions & BaseAction<TState> = DefaultActions & BaseAction<TState>
 > = {
   initialProps: TInitialProps
   store: GenericStore<TState, TActions> & Record<string, any>
@@ -40,7 +40,7 @@ type OnConstructProps<
 type OnConstruct<
   TInitialProps,
   TState extends BaseState = TInitialProps & BaseState,
-  TActions extends DefaultActions & BaseAction = DefaultActions & BaseAction
+  TActions extends DefaultActions & BaseAction<TState> = DefaultActions & BaseAction<TState>
 > = (
   props: OnConstructProps<TInitialProps, TState, TActions>,
   config: StoreConstructorConfig
@@ -49,7 +49,7 @@ type OnConstruct<
 function defaultOnConstruct<
   TInitialProps,
   TState extends BaseState = TInitialProps & BaseState,
-  TActions extends DefaultActions & BaseAction = DefaultActions & BaseAction
+  TActions extends DefaultActions & BaseAction<TState> = DefaultActions & BaseAction<TState>
 >(props: OnConstructProps<TInitialProps, TState, TActions>, _config?: StoreConstructorConfig) {
   const state = props.initialProps as unknown as TState
   return state
@@ -62,7 +62,7 @@ function defaultOnConstruct<
  */
 type ReducerProps<
   TState extends BaseState = BaseState,
-  TActions extends DefaultActions & BaseAction = DefaultActions & BaseAction
+  TActions extends DefaultActions & BaseAction<TState> = DefaultActions & BaseAction<TState>
 > = {
   prevState: TState
   state: TState
@@ -71,17 +71,17 @@ type ReducerProps<
   set: ReducerSet<TState>
   async: Async<TState>
   diff: Diff<TState>
-  dispatch: Dispatch<TActions>
+  dispatch: Dispatch<TState, TActions>
 }
 
 type Reducer<
   TState extends BaseState = BaseState,
-  TActions extends DefaultActions & BaseAction = DefaultActions & BaseAction
+  TActions extends DefaultActions & BaseAction<TState> = DefaultActions & BaseAction<TState>
 > = (props: ReducerProps<TState, TActions>) => TState
 
 function defaultReducer<
   TState extends BaseState = BaseState,
-  TActions extends DefaultActions & BaseAction = DefaultActions & BaseAction
+  TActions extends DefaultActions & BaseAction<TState> = DefaultActions & BaseAction<TState>
 >(props: ReducerProps<TState, TActions>) {
   return props.state
 }
@@ -92,7 +92,7 @@ function defaultReducer<
 type CreateStoreOptions<
   TInitialProps,
   TState extends BaseState = TInitialProps & BaseState,
-  TActions extends DefaultActions & BaseAction = DefaultActions & BaseAction
+  TActions extends DefaultActions & BaseAction<TState> = DefaultActions & BaseAction<TState>
 > = {
   onConstruct?: OnConstruct<TInitialProps, TState>
   reducer?: Reducer<TState, TActions>
@@ -105,7 +105,7 @@ export type StoreConstructorConfig = {
 export function createStoreFactory<
   TInitialProps,
   TState extends BaseState = TInitialProps & BaseState,
-  TActions extends DefaultActions & BaseAction = DefaultActions & BaseAction
+  TActions extends DefaultActions & BaseAction<TState> = DefaultActions & BaseAction<TState>
 >(
   {
     onConstruct = defaultOnConstruct,
@@ -264,7 +264,7 @@ export function createStoreFactory<
       this.notify()
     }
 
-    private applyTransition(transition: any[] | null | undefined) {
+    private applyTransition(transition: any[] | null | undefined, onTransitionEnd?: (state: TState) => void) {
       if (!transition) {
         debugger
         throw _noTransitionError
@@ -281,6 +281,7 @@ export function createStoreFactory<
         return { ...acc, ...newState }
       }, this.state)
       this.state = newState
+      onTransitionEnd?.(newState)
       this.notify()
     }
 
@@ -341,7 +342,7 @@ export function createStoreFactory<
               `%cTransition completed! [${initialAction.transition.join(":")}]`,
               "color: lightgreen"
             )
-            this.applyTransition(initialAction.transition)
+            this.applyTransition(initialAction.transition, initialAction.onTransitionEnd)
           }
         })
       }

@@ -4,16 +4,17 @@ import { TransitionsStore } from "./transitions-store"
 
 export type TODO = any
 
-export type Dispatch<TActions extends DefaultActions & BaseAction = DefaultActions & BaseAction> = (
-  action: TActions
-) => void
+export type Dispatch<
+  TState extends BaseState = BaseState,
+  TActions extends DefaultActions & BaseAction<TState> = DefaultActions & BaseAction<TState>
+> = (action: TActions) => void
 
 export type GenericStore<
   TState extends BaseState = BaseState,
-  TActions extends DefaultActions & BaseAction = DefaultActions & BaseAction
+  TActions extends DefaultActions & BaseAction<TState> = DefaultActions & BaseAction<TState>
 > = {
   state: TState
-  dispatch: Dispatch<TActions>
+  dispatch: Dispatch<TState, TActions>
   setState(newState: Partial<TState>): void
   registerSet: InnerReducerSet<TState>
   createReducer(props: CreateReducerInner<TState, TActions>): ReducerInner<TState, TActions>
@@ -26,17 +27,20 @@ export type GenericStore<
 export type GenericStoreClass<
   TInitialProps,
   TState extends BaseState = BaseState,
-  TActions extends DefaultActions & BaseAction = DefaultActions & BaseAction
+  TActions extends DefaultActions & BaseAction<TState> = DefaultActions & BaseAction<TState>
 > = {
   new (initialProps: TInitialProps): GenericStore<TState, TActions>
 }
 
 export type DefaultActions = { type: string }
-export type BaseAction = { transition?: any[] }
+export type BaseAction<TState extends BaseState = BaseState> = {
+  transition?: any[]
+  onTransitionEnd?: (state: TState) => void
+}
 
 export type AsyncActor<
   TState extends BaseState = BaseState,
-  TActions extends DefaultActions & BaseAction = DefaultActions & BaseAction
+  TActions extends DefaultActions & BaseAction<TState> = DefaultActions & BaseAction<TState>
 > = {
   set: (setter: Setter<TState>) => void
   dispatch(action: TActions): void
@@ -44,7 +48,7 @@ export type AsyncActor<
 
 export type Async<
   TState extends BaseState = BaseState,
-  TActions extends DefaultActions & BaseAction = DefaultActions & BaseAction
+  TActions extends DefaultActions & BaseAction<TState> = DefaultActions & BaseAction<TState>
 > = {
   promise<T>(promise: Promise<T>, onSuccess: (value: T, actor: AsyncActor<TState, TActions>) => void): void
   timer(callback: (actor: AsyncActor<TState, TActions>) => void): void
@@ -72,15 +76,15 @@ export type InnerReducerSet<TState> = (
 
 export type CreateReducerInner<
   TState extends BaseState = BaseState,
-  TActions extends DefaultActions & BaseAction = DefaultActions & BaseAction
+  TActions extends DefaultActions & BaseAction<TState> = DefaultActions & BaseAction<TState>
 > = {
   store: GenericStore<TState, TActions> & Record<string, any> & TransitionsExtension
-  dispatch: Dispatch<TActions>
+  dispatch: Dispatch<TState, TActions>
 }
 
 export type ReducerInnerProps<
   TState extends BaseState = BaseState,
-  TActions extends DefaultActions & BaseAction = DefaultActions & BaseAction
+  TActions extends DefaultActions & BaseAction<TState> = DefaultActions & BaseAction<TState>
 > = {
   set: ReducerSet<TState>
   async: Async<TState>
@@ -93,7 +97,7 @@ export type ReducerInnerProps<
 
 export type ReducerInner<
   TState extends BaseState = BaseState,
-  TActions extends DefaultActions & BaseAction = DefaultActions & BaseAction
+  TActions extends DefaultActions & BaseAction<TState> = DefaultActions & BaseAction<TState>
 > = (props: ReducerInnerProps<TState, TActions>) => TState
 
 export type StoreErrorHandler = (error: unknown) => void
