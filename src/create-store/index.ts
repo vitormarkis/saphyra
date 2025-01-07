@@ -1,6 +1,6 @@
 import { createDiffOnKeyChange } from "../diff"
 import { Subject } from "../Subject"
-import { RemoveUnderscoreProps } from "../types"
+import { RemoveDollarSignProps } from "../types"
 import { createAsync } from "./createAsync"
 import { _noTransitionError } from "./errors"
 import { defaultErrorHandler } from "./fn/default-error-handler"
@@ -44,7 +44,7 @@ type OnConstruct<
 > = (
   props: OnConstructProps<TInitialProps, TState, TActions>,
   config: StoreConstructorConfig
-) => RemoveUnderscoreProps<TState>
+) => RemoveDollarSignProps<TState>
 
 function defaultOnConstruct<
   TInitialProps,

@@ -15,12 +15,12 @@ export type MemoryGameInitialProps = {
 type MemoryGameState = {
   cards: MemoryCard[]
   currentTransition: null
-  _cardIdList: string[]
-  _cardById: Record<string, MemoryCard>
-  _visibleCardsIdList: string[]
-  _visibleCardsIdListSet: Set<string>
-  _matchedCardsIdList: string[]
-  _matchedCardsIdListSet: Set<string>
+  $cardIdList: string[]
+  $cardById: Record<string, MemoryCard>
+  $visibleCardsIdList: string[]
+  $visibleCardsIdListSet: Set<string>
+  $matchedCardsIdList: string[]
+  $matchedCardsIdListSet: Set<string>
 }
 
 type MemoryGameActions =
@@ -43,51 +43,51 @@ const createMemoryGame = createStoreFactory<MemoryGameInitialProps, MemoryGameSt
   reducer({ prevState, state, action, store, diff, dispatch }) {
     console.log("fn")
     if (action.type === "tap-card") {
-      const card = state._cardById[action.cardId]
+      const card = state.$cardById[action.cardId]
 
-      state._cardById = {
-        ...state._cardById,
+      state.$cardById = {
+        ...state.$cardById,
         [card.id]: card.tap(),
       }
     }
 
     if (action.type === "match-cards") {
-      const cardsToMatch = state._visibleCardsIdList.map(id => state._cardById[id])
+      const cardsToMatch = state.$visibleCardsIdList.map(id => state.$cardById[id])
 
       cardsToMatch.forEach((card, index) => {
         const otherIdx = index === 0 ? 1 : 0
         const otherCard = cardsToMatch[otherIdx]
         const updatedCard = card.match(otherCard)
 
-        state._cardById = {
-          ...state._cardById,
+        state.$cardById = {
+          ...state.$cardById,
           [updatedCard.id]: updatedCard,
         }
       })
     }
 
     if (diff(["cards"])) {
-      state._cardIdList = state.cards.map(card => card.id)
-      state._cardById = state.cards.reduce(...reduceGroupById())
+      state.$cardIdList = state.cards.map(card => card.id)
+      state.$cardById = state.cards.reduce(...reduceGroupById())
     }
 
-    if (diff(["_cardById"])) {
-      state._visibleCardsIdList = filterVisible(state._cardById)
+    if (diff(["$cardById"])) {
+      state.$visibleCardsIdList = filterVisible(state.$cardById)
     }
 
-    if (diff(["_cardById"])) {
-      state._matchedCardsIdList = filterMatched(state._cardById)
+    if (diff(["$cardById"])) {
+      state.$matchedCardsIdList = filterMatched(state.$cardById)
     }
 
-    if (diff(["_visibleCardsIdList"])) {
-      state._visibleCardsIdListSet = new Set(state._visibleCardsIdList)
+    if (diff(["$visibleCardsIdList"])) {
+      state.$visibleCardsIdListSet = new Set(state.$visibleCardsIdList)
     }
 
-    if (diff(["_matchedCardsIdList"])) {
-      state._matchedCardsIdListSet = new Set(state._matchedCardsIdList)
+    if (diff(["$matchedCardsIdList"])) {
+      state.$matchedCardsIdListSet = new Set(state.$matchedCardsIdList)
     }
 
-    if (state._visibleCardsIdList.length === 2) {
+    if (state.$visibleCardsIdList.length === 2) {
       dispatch({
         type: "match-cards",
       })
