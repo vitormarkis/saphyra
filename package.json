@@ -12,6 +12,7 @@
   "dependencies": {
     "@blueprintjs/core": "^5.14.2",
     "@blueprintjs/icons": "^5.16.0",
+    "@tailwindcss/container-queries": "^0.1.1",
     "@types/node": "^22.8.6",
     "clsx": "^2.1.1",
     "normalize.css": "^8.0.1",

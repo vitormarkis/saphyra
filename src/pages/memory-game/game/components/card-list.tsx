@@ -9,7 +9,7 @@ export function MemoryGameCardList({ children }: MemoryGameCardListProps) {
   const cardIdList: string[] = JSON.parse(cardIdListStr)
 
   return (
-    <ul className="grid grid-cols-4 grid-rows-4 flex-1 gap-2">
+    <ul className="grid grid-cols-4 grid-rows-4 flex-1 gap-2 max-h-[24rem]">
       {cardIdList.map(cardId => (
         <li key={cardId}>
           <MemoryCardIdProvider id={cardId}>{children}</MemoryCardIdProvider>

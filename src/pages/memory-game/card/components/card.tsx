@@ -17,7 +17,7 @@ export function MemoryGameCard({}: MemoryGameCardProps) {
       }}
       className="flex w-full items-center justify-center h-full border border-black border-dashed rounded-md bg-slate-50 hover:bg-slate-200 dark:bg-slate-900 dark:border-neutral-700 dark:hover:border-neutral-700 dark:hover:bg-slate-800 outline-none"
     >
-      <span className="scale-150">
+      <span className="scale-[2.3]">
         <MemoryGameCardContent />
       </span>
     </button>
