@@ -1,13 +1,15 @@
-export function filterMatched(cardById: Record<string, any>) {
-  return filter(cardById, "matched")
+import { MemoryCard } from "../../card/type"
+
+export function filterMatched(cards: MemoryCard[]) {
+  return filter(cards, "matched")
 }
 
-export function filterVisible(cardById: Record<string, any>) {
-  return filter(cardById, "visible")
+export function filterVisible(cards: MemoryCard[]) {
+  return filter(cards, "visible")
 }
 
-export function filter<T extends Record<string, any>>(arr: T, state: string) {
-  return Object.values(arr).reduce((acc, item) => {
+export function filter<T extends any[]>(arr: T, state: string) {
+  return arr.reduce((acc, item) => {
     return item.state === state ? [...acc, item.id] : acc
   }, [] as string[])
 }

@@ -57,7 +57,7 @@ export class MemoryCard {
       return this.clone()
     } else {
       this.state = "hidden"
-      return this
+      return this.clone()
     }
   }
 }

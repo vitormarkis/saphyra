@@ -5,6 +5,7 @@ import { MemoryCard } from "../card/type"
 import { reduceGroupById } from "./fn/reduce-group-by-id"
 import { filterMatched, filterVisible } from "./fn/filter-cards"
 import { flatMapCreateCards } from "./fn/flat-map-create-cards"
+import { updateCard } from "./fn/update-card"
 
 type CardsContent = readonly [string, string, string, string, string, string, string, string]
 
@@ -45,10 +46,7 @@ const createMemoryGame = createStoreFactory<MemoryGameInitialProps, MemoryGameSt
     if (action.type === "tap-card") {
       const card = state.$cardById[action.cardId]
 
-      state.$cardById = {
-        ...state.$cardById,
-        [card.id]: card.tap(),
-      }
+      state.cards = updateCard(state.cards, card.tap())
     }
 
     if (action.type === "match-cards") {
@@ -59,24 +57,15 @@ const createMemoryGame = createStoreFactory<MemoryGameInitialProps, MemoryGameSt
         const otherCard = cardsToMatch[otherIdx]
         const updatedCard = card.match(otherCard)
 
-        state.$cardById = {
-          ...state.$cardById,
-          [updatedCard.id]: updatedCard,
-        }
+        state.cards = updateCard(state.cards, updatedCard)
       })
     }
 
     if (diff(["cards"])) {
       state.$cardIdList = state.cards.map(card => card.id)
       state.$cardById = state.cards.reduce(...reduceGroupById())
-    }
-
-    if (diff(["$cardById"])) {
-      state.$visibleCardsIdList = filterVisible(state.$cardById)
-    }
-
-    if (diff(["$cardById"])) {
-      state.$matchedCardsIdList = filterMatched(state.$cardById)
+      state.$visibleCardsIdList = filterVisible(state.cards)
+      state.$matchedCardsIdList = filterMatched(state.cards)
     }
 
     if (diff(["$visibleCardsIdList"])) {
