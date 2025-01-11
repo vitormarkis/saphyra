@@ -1,4 +1,4 @@
-import { PropsWithChildren } from "react"
+import { PropsWithChildren, useEffect, useState } from "react"
 import { capitalize, cn } from "./lib/utils"
 import { myRoutesManifest } from "./my-routes-manifest"
 import { NavLink } from "react-router-dom"
@@ -8,9 +8,17 @@ type RootLayoutWrapperProps = {} & PropsWithChildren
 const routes = ["/", ...myRoutesManifest.map(route => route.path)]
 
 export function RootLayoutWrapper({ children }: RootLayoutWrapperProps) {
+  const [isSidebarVisible, setIsSidebarVisible] = useState(
+    !(import.meta.env.VITE_SIDEBAR_VISIBLE === "false")
+  )
+
+  useEffect(() => {
+    Object.assign(window, { toggleSidebar: () => setIsSidebarVisible(s => !s) })
+  }, [])
+
   return (
     <div className="container-1 flex gap-4 h-screen p-4 ">
-      <div className="flex flex-col text-sm basis-[320px]">
+      <div className={cn("flex flex-col text-sm basis-[320px]", !isSidebarVisible && "hidden")}>
         <div className="border border-dashed container-2 h-full flex flex-col px-4 py-6 text-sm rounded-md ">
           <h3 className="font-bold text-normal">Showcases</h3>
           <nav className="flex flex-col py-6 gap-1">

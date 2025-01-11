@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useSyncExternalStore } from "react"
+import { createContext, memo, ReactNode, useContext, useEffect, useSyncExternalStore } from "react"
 import {
   BaseAction,
   BaseState,
@@ -7,6 +7,7 @@ import {
   StoreInstantiator,
   TransitionsExtension,
 } from "./create-store/types"
+import { Devtools, DevtoolsPropsWithoutStore } from "./devtools/devtools"
 
 function defaultSelector<T>(data: T) {
   return data
@@ -54,8 +55,18 @@ export function createStoreUtils<
     }, [store])
   }
 
+  const LocalDevtools = memo(<T,>(props: DevtoolsPropsWithoutStore<T>) => {
+    return (
+      <Devtools
+        store={getDefaultStore()}
+        {...props}
+      />
+    )
+  })
+
   return {
     Provider: Context.Provider,
+    Devtools: LocalDevtools,
     useStore,
     useUseState,
     useTransition,
@@ -68,6 +79,7 @@ export type StoreUtils<
   TActions extends DefaultActions & BaseAction<TState> = DefaultActions & BaseAction<TState>
 > = {
   Provider: React.Provider<any>
+  Devtools: React.MemoExoticComponent<<T>(props: DevtoolsPropsWithoutStore<T>) => ReactNode>
   useStore: <R = TState>(
     selector?: (data: TState) => R,
     store?: GenericStore<TState, TActions> & TransitionsExtension

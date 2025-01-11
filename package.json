@@ -12,15 +12,19 @@
   "dependencies": {
     "@blueprintjs/core": "^5.14.2",
     "@blueprintjs/icons": "^5.16.0",
+    "@radix-ui/react-tabs": "^1.1.2",
     "@tailwindcss/container-queries": "^0.1.1",
     "@types/node": "^22.8.6",
+    "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "lucide-react": "^0.471.0",
     "normalize.css": "^8.0.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^7.1.1",
     "sonner": "^1.5.0",
-    "tailwind-merge": "^2.5.2"
+    "tailwind-merge": "^2.6.0",
+    "tailwindcss-animate": "^1.0.7"
   },
   "devDependencies": {
     "@eslint/js": "^9.9.0",

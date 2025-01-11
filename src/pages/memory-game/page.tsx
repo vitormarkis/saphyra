@@ -19,14 +19,14 @@ export function MemoryGamePage({}: MemoryGamePageProps) {
             <MemoryGameCard />
           </MemoryGameCardList>
         </MemoryGame>
-        <MemoryGame
+        {/* <MemoryGame
           index={1}
           cards={CARDS_2}
         >
           <MemoryGameCardList>
             <MemoryGameCard />
           </MemoryGameCardList>
-        </MemoryGame>
+        </MemoryGame> */}
         {/* <MemoryGame
         index={1}
         cards={["a", "b"]}

@@ -6,6 +6,7 @@ import { reduceGroupById } from "./fn/reduce-group-by-id"
 import { filterMatched, filterVisible } from "./fn/filter-cards"
 import { flatMapCreateCards } from "./fn/flat-map-create-cards"
 import { updateCard } from "./fn/update-card"
+import { handleExpandNode } from "~/lib/utils"
 
 type CardsContent = readonly [string, string, string, string, string, string, string, string]
 
@@ -94,11 +95,21 @@ type MemoryGameProviderProps = {
   MemoryGameInitialProps
 
 export function MemoryGame({ children, index, ...initialState }: MemoryGameProviderProps) {
+  const [expandedNodes, setExpandedNodes] = useState(new Set<string>())
   const memoryGameState = useState(() => createMemoryGame(initialState))
 
   useEffect(() => {
     Object.assign(window, { [`memoryGame${index}`]: memoryGameState[0] })
   }, [])
 
-  return <Game.Provider value={memoryGameState}>{children}</Game.Provider>
+  return (
+    <Game.Provider value={memoryGameState}>
+      {children}
+      <Game.Devtools
+        expandedNodes={expandedNodes}
+        onExpandNode={handleExpandNode(setExpandedNodes)}
+        onAllNodesChange={setExpandedNodes}
+      />
+    </Game.Provider>
+  )
 }

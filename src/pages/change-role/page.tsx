@@ -14,8 +14,8 @@ type AuthStoreState = {
   permissions: string[]
   currentTransition: any[] | null
   username: string
-  _welcomeMessage: string
-  _firstPermission: string
+  $welcomeMessage: string
+  $firstPermission: string
 }
 
 type AuthStoreActions = ChangeRole
@@ -44,10 +44,10 @@ const createAuthStore = createStoreFactory<
       })
     }
 
-    set(s => ({ _firstPermission: s.permissions[0] }))
+    set(s => ({ $firstPermission: s.permissions[0] }))
 
     if (diff(["username", "role"])) {
-      set(s => ({ _welcomeMessage: `Welcome ${s.username}! Your role is [${s.role}].` }))
+      set(s => ({ $welcomeMessage: `Welcome ${s.username}! Your role is [${s.role}].` }))
     }
 
     return state
@@ -107,9 +107,10 @@ export function ChangeRolePage() {
         {isChangingRole ? <Spinner size={16} /> : null}
       </div>
 
-      <pre className={cn("disabled:opacity-30 disabled:cursor-not-allowed")}>
+      {/* <pre className={cn("disabled:opacity-30 disabled:cursor-not-allowed")}>
         {JSON.stringify(state, null, 2)}
-      </pre>
+      </pre> */}
+      <Auth.Devtools />
     </div>
   )
 }

@@ -24,3 +24,17 @@ export function capitalize(str?: string) {
 export function randomString() {
   return Math.random().toString(36).substring(2, 15)
 }
+
+export function handleExpandNode(
+  setExpandedNodes: (setter: (expandedNodes: Set<string>) => Set<string>) => void
+) {
+  return (nodeId: string) => {
+    setExpandedNodes(expandedNodes => {
+      const newExpandedNodes = new Set(expandedNodes)
+      if (newExpandedNodes.has(nodeId)) {
+        return new Set([...expandedNodes].filter(id => id !== nodeId))
+      }
+      return new Set([...expandedNodes, nodeId])
+    })
+  }
+}

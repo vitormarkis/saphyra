@@ -1,4 +1,4 @@
-import { randomString } from "../../../lib/utils"
+import { randomString } from "~/lib/utils"
 
 export class MemoryCard {
   id: string

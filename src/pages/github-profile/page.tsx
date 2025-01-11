@@ -40,10 +40,10 @@ export function GithubProfilePage() {
   const isFetchingUser = User.useTransition(["user", "fetch"])
 
   return (
-    <div className="flex flex-col p-4 overflow-hidden">
+    <div className="flex flex-col p-4 overflow-hidden h-full">
       <form
         action=""
-        className="flex flex-col gap-2"
+        className="flex flex-col gap-2 h-full"
         onSubmit={e => {
           e.preventDefault()
           userStore.dispatch({ type: "fetch-user", transition: ["user", "fetch"] })
@@ -67,10 +67,8 @@ export function GithubProfilePage() {
         >
           Fetch user
         </button>
-        <pre>{JSON.stringify({ isFetchingUser }, null, 2)}</pre>
+        <User.Devtools />
       </form>
-      <strong className="font-bold">State</strong>
-      <pre className="overflow-auto">{JSON.stringify(state, null, 2)}</pre>
     </div>
   )
 }

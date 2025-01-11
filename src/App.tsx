@@ -6,7 +6,6 @@ import { cn } from "./lib/utils"
 import { BaseState } from "./create-store/types"
 
 type TodosStoreInitialProps = BaseState & {
-  todos: Record<string, any>[]
   count: number
   $direction: "up" | "down"
   currentTransition: null
@@ -26,13 +25,13 @@ const createTodosStore = createStoreFactory<TodosStoreInitialProps>({
     }
 
     if (action.type === "increment-ten") {
-      async.promise(sleep(3200), (_, actor) => {
+      async.promise(sleep(2000), (_, actor) => {
         actor.set(s => ({ count: s.count + 10 }))
       })
     }
 
     if (action.type === "increment-three") {
-      async.promise(sleep(4000), (_, actor) => {
+      async.promise(sleep(1000), (_, actor) => {
         actor.set(s => ({ count: s.count + 3 }))
       })
     }
@@ -49,7 +48,7 @@ export const Todos = createStoreUtils<typeof createTodosStore>()
 
 export default function App() {
   let [todosStore, setTodosStore] = useState(() =>
-    createTodosStore({ todos: [], count: 0, $direction: "down", currentTransition: null })
+    createTodosStore({ count: 0, $direction: "down", currentTransition: null })
   )
 
   useEffect(() => {
@@ -59,13 +58,13 @@ export default function App() {
   return (
     <Todos.Provider value={[todosStore, setTodosStore]}>
       <Content />
+      <Todos.Devtools />
     </Todos.Provider>
   )
 }
 
 export function Content() {
   const [todosStore] = Todos.useUseState()
-  const todosState = Todos.useStore()
   const isTransitioning = Todos.useTransition(["increment"])
 
   return (
@@ -114,8 +113,6 @@ export function Content() {
             "bg-emerald-500": isTransitioning === false,
           })}
         />
-        {/* <pre>{JSON.stringify({ allTransitions }, null, 2)}</pre> */}
-        <pre>{JSON.stringify(todosState, null, 2)}</pre>
       </div>
     </div>
   )
