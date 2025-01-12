@@ -22,6 +22,11 @@ button {
   .container-2 {
     @apply bg-gray-950 text-white border-gray-800;
   }
+
+  input,
+  select {
+    @apply border border-slate-600 h-9 text-white bg-gray-700 outline-none focus:ring-0 ring-0;
+  }
 }
 
 @media (prefers-color-scheme: light) {

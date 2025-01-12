@@ -31,16 +31,18 @@ export class MemoryCard {
   }
 
   tap(): MemoryCard {
-    if (this.state === "hidden") {
-      this.state = "visible"
+    const card = this.clone()
+    if (card.state === "hidden") {
+      card.state = "visible"
     }
 
-    return this.clone()
+    return card
   }
 
   flip() {
-    if (this.state === "visible") {
-      this.state = "hidden"
+    const card = this.clone()
+    if (card.state === "visible") {
+      card.state = "hidden"
     }
 
     throw new Error("Cannot flip a non visible card")
@@ -51,13 +53,13 @@ export class MemoryCard {
   }
 
   match(card: MemoryCard): MemoryCard {
-    if (this.value === card.value) {
-      this.state = "matched"
-      this.matchedWithId = card.id
-      return this.clone()
+    const newCard = this.clone()
+    if (newCard.value === card.value) {
+      newCard.state = "matched"
+      newCard.matchedWithId = card.id
     } else {
-      this.state = "hidden"
-      return this.clone()
+      newCard.state = "hidden"
     }
+    return newCard
   }
 }

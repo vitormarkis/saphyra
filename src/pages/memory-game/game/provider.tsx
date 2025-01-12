@@ -7,6 +7,7 @@ import { filterMatched, filterVisible } from "./fn/filter-cards"
 import { flatMapCreateCards } from "./fn/flat-map-create-cards"
 import { updateCard } from "./fn/update-card"
 import { handleExpandNode } from "~/lib/utils"
+import { useHistory } from "~/hooks/use-history"
 
 type CardsContent = readonly [string, string, string, string, string, string, string, string]
 
@@ -42,12 +43,11 @@ const createMemoryGame = createStoreFactory<MemoryGameInitialProps, MemoryGameSt
       currentTransition: null,
     }
   },
-  reducer({ prevState, state, action, store, diff, dispatch }) {
+  reducer({ prevState, state, action, store, diff, dispatch, set }) {
     console.log("fn")
     if (action.type === "tap-card") {
       const card = state.$cardById[action.cardId]
-
-      state.cards = updateCard(state.cards, card.tap())
+      set(s => ({ cards: updateCard(s.cards, card.tap()) }))
     }
 
     if (action.type === "match-cards") {
@@ -56,25 +56,23 @@ const createMemoryGame = createStoreFactory<MemoryGameInitialProps, MemoryGameSt
       cardsToMatch.forEach((card, index) => {
         const otherIdx = index === 0 ? 1 : 0
         const otherCard = cardsToMatch[otherIdx]
-        const updatedCard = card.match(otherCard)
-
-        state.cards = updateCard(state.cards, updatedCard)
+        set(s => ({ cards: updateCard(s.cards, card.match(otherCard)) }))
       })
     }
 
     if (diff(["cards"])) {
-      state.$cardIdList = state.cards.map(card => card.id)
-      state.$cardById = state.cards.reduce(...reduceGroupById())
-      state.$visibleCardsIdList = filterVisible(state.cards)
-      state.$matchedCardsIdList = filterMatched(state.cards)
+      set(s => ({ $cardIdList: s.cards.map(card => card.id) }))
+      set(s => ({ $cardById: s.cards.reduce(...reduceGroupById()) }))
+      set(s => ({ $visibleCardsIdList: filterVisible(s.cards) }))
+      set(s => ({ $matchedCardsIdList: filterMatched(s.cards) }))
     }
 
     if (diff(["$visibleCardsIdList"])) {
-      state.$visibleCardsIdListSet = new Set(state.$visibleCardsIdList)
+      set(s => ({ $visibleCardsIdListSet: new Set(s.$visibleCardsIdList) }))
     }
 
     if (diff(["$matchedCardsIdList"])) {
-      state.$matchedCardsIdListSet = new Set(state.$matchedCardsIdList)
+      set(s => ({ $matchedCardsIdListSet: new Set(s.$matchedCardsIdList) }))
     }
 
     if (state.$visibleCardsIdList.length === 2) {
@@ -98,9 +96,13 @@ export function MemoryGame({ children, index, ...initialState }: MemoryGameProvi
   const [expandedNodes, setExpandedNodes] = useState(new Set<string>())
   const memoryGameState = useState(() => createMemoryGame(initialState))
 
+  const [memoryGame] = memoryGameState
+
   useEffect(() => {
-    Object.assign(window, { [`memoryGame${index}`]: memoryGameState[0] })
+    Object.assign(window, { [`memoryGame${index}`]: memoryGame })
   }, [])
+
+  useHistory(memoryGame)
 
   return (
     <Game.Provider value={memoryGameState}>

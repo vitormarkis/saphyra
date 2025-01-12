@@ -6,6 +6,7 @@ import { fetchRole } from "./fn/fetch-role"
 import { PERMISSIONS } from "./const"
 import { RemoveDollarSignProps } from "../../types"
 import { fetchPermissions } from "~/fetchPermissions"
+import { useHistory } from "~/hooks/use-history"
 
 type SelectedRole = "user" | "admin"
 
@@ -73,6 +74,8 @@ export function ChangeRolePage() {
   //     className: "bg-red-500 text-white",
   //   })
   // })
+
+  useHistory(authStore)
 
   return (
     <div className="">

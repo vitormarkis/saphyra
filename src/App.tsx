@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react"
+import { Fragment, useEffect, useState } from "react"
 import { createStoreFactory } from "./create-store"
 import { createStoreUtils } from "./createStoreUtils"
 import { sleep } from "./sleep"
 import { cn } from "./lib/utils"
 import { BaseState } from "./create-store/types"
+import { useHistory } from "~/hooks/use-history"
 
 type TodosStoreInitialProps = BaseState & {
   count: number
@@ -25,13 +26,13 @@ const createTodosStore = createStoreFactory<TodosStoreInitialProps>({
     }
 
     if (action.type === "increment-ten") {
-      async.promise(sleep(2000), (_, actor) => {
+      async.promise(sleep(3000), (_, actor) => {
         actor.set(s => ({ count: s.count + 10 }))
       })
     }
 
     if (action.type === "increment-three") {
-      async.promise(sleep(1000), (_, actor) => {
+      async.promise(sleep(1800), (_, actor) => {
         actor.set(s => ({ count: s.count + 3 }))
       })
     }
@@ -51,6 +52,8 @@ export default function App() {
     createTodosStore({ count: 0, $direction: "down", currentTransition: null })
   )
 
+  useHistory(todosStore)
+
   useEffect(() => {
     Object.assign(window, { todosStore })
   }, [])
@@ -58,7 +61,9 @@ export default function App() {
   return (
     <Todos.Provider value={[todosStore, setTodosStore]}>
       <Content />
-      <Todos.Devtools />
+      <div className="mt-4">
+        <Todos.Devtools />
+      </div>
     </Todos.Provider>
   )
 }
@@ -68,52 +73,57 @@ export function Content() {
   const isTransitioning = Todos.useTransition(["increment"])
 
   return (
-    <div className="flex gap-4">
-      <div className="flex flex-col">
-        <button
-          onClick={() => {
-            todosStore.dispatch({ type: "increment", transition: ["increment"] })
-          }}
-        >
-          Increment
-        </button>
-        <button
-          onClick={async () => {
-            const incrementTenResolver = Promise.withResolvers<TodosStoreInitialProps>()
-            todosStore.dispatch({
-              type: "increment-ten",
-              transition: ["increment", "ten"],
-              onTransitionEnd: incrementTenResolver.resolve,
-            })
-            const { count } = await incrementTenResolver.promise
-            console.log("new count", count)
-          }}
-        >
-          Increment (10)
-        </button>
-        <button
-          onClick={() => {
-            todosStore.dispatch({ type: "increment-three", transition: ["increment", "three"] })
-          }}
-        >
-          Increment (3)
-        </button>
-        <button
-          onClick={() => {
-            todosStore.dispatch({ type: "decrement" })
-          }}
-        >
-          Decrement
-        </button>
+    <Fragment>
+      <span className="bg-lime-50 text-lime-800/80 rounded-sm px-2 py-1 text-xs/none h-fit mb-2 w-fit">
+        Mess around and press CTRL Z and CTRL Y to undo and redo 🥲
+      </span>
+      <div className="flex gap-4">
+        <div className="flex flex-col">
+          <button
+            onClick={() => {
+              todosStore.dispatch({ type: "increment", transition: ["increment"] })
+            }}
+          >
+            Increment
+          </button>
+          <button
+            onClick={async () => {
+              const incrementTenResolver = Promise.withResolvers<TodosStoreInitialProps>()
+              todosStore.dispatch({
+                type: "increment-ten",
+                transition: ["increment", "ten"],
+                onTransitionEnd: incrementTenResolver.resolve,
+              })
+              const { count } = await incrementTenResolver.promise
+              console.log("new count", count)
+            }}
+          >
+            Increment (10)
+          </button>
+          <button
+            onClick={() => {
+              todosStore.dispatch({ type: "increment-three", transition: ["increment", "three"] })
+            }}
+          >
+            Increment (3)
+          </button>
+          <button
+            onClick={() => {
+              todosStore.dispatch({ type: "decrement" })
+            }}
+          >
+            Decrement
+          </button>
+        </div>
+        <div className="flex">
+          <div
+            className={cn("size-10 ", {
+              "bg-red-500": isTransitioning === true,
+              "bg-emerald-500": isTransitioning === false,
+            })}
+          />
+        </div>
       </div>
-      <div className="flex">
-        <div
-          className={cn("size-10 ", {
-            "bg-red-500": isTransitioning === true,
-            "bg-emerald-500": isTransitioning === false,
-          })}
-        />
-      </div>
-    </div>
+    </Fragment>
   )
 }
