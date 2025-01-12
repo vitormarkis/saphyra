@@ -74,7 +74,7 @@ type ReducerProps<
   dispatch: Dispatch<TState, TActions>
 }
 
-type Reducer<
+export type Reducer<
   TState extends BaseState = BaseState,
   TActions extends DefaultActions & BaseAction<TState> = DefaultActions & BaseAction<TState>
 > = (props: ReducerProps<TState, TActions>) => TState
@@ -406,7 +406,9 @@ export function createStoreFactory<
           set: scheduleSetter,
           diff: this.createDiff(prevState, newState),
         }
-        reducer(context)
+        const producedState = reducer(context)
+        // looks redundant but user might return prev state
+        newState = producedState
         prevState = futurePrevState
       }
 
@@ -415,7 +417,6 @@ export function createStoreFactory<
         this.notify()
       } else {
         store.transitions.doneKey(initialAction.transition, null)
-
         // the observers will be notified
         // when the transition is done
       }

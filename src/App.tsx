@@ -1,10 +1,10 @@
+import { Spinner } from "@blueprintjs/core"
 import { Fragment, useEffect, useState } from "react"
+import { useHistory } from "~/hooks/use-history"
 import { createStoreFactory } from "./create-store"
+import { BaseState } from "./create-store/types"
 import { createStoreUtils } from "./createStoreUtils"
 import { sleep } from "./sleep"
-import { cn } from "./lib/utils"
-import { BaseState } from "./create-store/types"
-import { useHistory } from "~/hooks/use-history"
 
 type TodosStoreInitialProps = BaseState & {
   count: number
@@ -26,13 +26,13 @@ const createTodosStore = createStoreFactory<TodosStoreInitialProps>({
     }
 
     if (action.type === "increment-ten") {
-      async.promise(sleep(3000), (_, actor) => {
+      async.promise(sleep(3000, "incrementing a lot"), (_, actor) => {
         actor.set(s => ({ count: s.count + 10 }))
       })
     }
 
     if (action.type === "increment-three") {
-      async.promise(sleep(1800), (_, actor) => {
+      async.promise(sleep(1800, "incrementing a little bit"), (_, actor) => {
         actor.set(s => ({ count: s.count + 3 }))
       })
     }
@@ -74,17 +74,24 @@ export function Content() {
 
   return (
     <Fragment>
-      <span className="bg-lime-50 text-lime-800/80 rounded-sm px-2 py-1 text-xs/none h-fit mb-2 w-fit">
-        Mess around and press CTRL Z and CTRL Y to undo and redo 🥲
+      <span className="bg-lime-50 dark:bg-lime-950 text-lime-800/80 border dark:border-lime-800 dark:text-lime-50 border-lime-300 rounded-sm px-2 py-1 text-xs/none h-fit mb-2 w-fit">
+        Mess around and press CTRL Z and CTRL Y to undo and redo
       </span>
       <div className="flex gap-4">
-        <div className="flex flex-col">
+        <div className="flex gap-2 @2xl:flex-row flex-col">
           <button
             onClick={() => {
               todosStore.dispatch({ type: "increment", transition: ["increment"] })
             }}
           >
             Increment
+          </button>
+          <button
+            onClick={() => {
+              todosStore.dispatch({ type: "decrement" })
+            }}
+          >
+            Decrement
           </button>
           <button
             onClick={async () => {
@@ -98,31 +105,17 @@ export function Content() {
               console.log("new count", count)
             }}
           >
-            Increment (10)
+            Increment (10) [async]
           </button>
           <button
             onClick={() => {
               todosStore.dispatch({ type: "increment-three", transition: ["increment", "three"] })
             }}
           >
-            Increment (3)
-          </button>
-          <button
-            onClick={() => {
-              todosStore.dispatch({ type: "decrement" })
-            }}
-          >
-            Decrement
+            Increment (3) [async]
           </button>
         </div>
-        <div className="flex">
-          <div
-            className={cn("size-10 ", {
-              "bg-red-500": isTransitioning === true,
-              "bg-emerald-500": isTransitioning === false,
-            })}
-          />
-        </div>
+        <div className="flex">{isTransitioning && <Spinner size={14} />}</div>
       </div>
     </Fragment>
   )
