@@ -47,14 +47,20 @@ export const GenericStructureDisplayer = memo(
           })
           return renderer(ctx)
         },
+        checkIsObject: (item): item is Record<string, any> => {
+          if (item == null) return false
+          return typeof item === "object"
+        },
       })(source)
     }, [source])
 
     useEffect(() => {
       const hasChangedItem = checkHasChangedSetItem(allNodes, prevAllNodes.current)
-      prevAllNodes.current = allNodes
       if (!hasChangedItem) return
       onAllNodesChange?.(allNodes)
+      return () => {
+        prevAllNodes.current = allNodes
+      }
     }, [allNodes, onAllNodesChange])
 
     const expandNode = useCallback(

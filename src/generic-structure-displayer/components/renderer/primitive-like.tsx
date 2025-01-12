@@ -5,18 +5,13 @@ import { KeyContainer } from "./common/key-container"
 type LabelPrimitiveLikeProps = { ctx: RendererContext }
 
 export function LabelPrimitiveLike({ ctx }: LabelPrimitiveLikeProps) {
-  const { key, isItem, idx } = ctx
+  const { key, isItem } = ctx
   return (
-    <div
-      className={cn(
-        "flex w-full items-center font-mono gap-1"
-        // idx != null && idx % 2 === 1 && "bg-gray-50 dark:bg-gray-900"
-      )}
-    >
+    <>
       {!isItem && (
         <>
           <KeyContainer>{key}</KeyContainer>
-          {" : "}
+          <span>{" : "}</span>
         </>
       )}
       <span
@@ -31,6 +26,6 @@ export function LabelPrimitiveLike({ ctx }: LabelPrimitiveLikeProps) {
       >
         {JSON.stringify(ctx.value, null, 2)}
       </span>
-    </div>
+    </>
   )
 }

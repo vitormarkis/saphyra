@@ -8,8 +8,10 @@ type LabelObjectLikeProps = {
 export function LabelObjectLike({ ctx }: LabelObjectLikeProps) {
   const { key } = ctx
   return (
-    <div className="flex gap-1 font-mono">
-      <KeyContainer>{key}</KeyContainer>
-    </div>
+    <>
+      <div className="flex gap-1 font-mono h-full">
+        <KeyContainer>{key}</KeyContainer>
+      </div>
+    </>
   )
 }

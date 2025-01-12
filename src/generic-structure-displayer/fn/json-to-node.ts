@@ -1,20 +1,31 @@
 import { defaultRenderer } from "./default-renderer"
 import { ChildNode, Renderer } from "./types"
 
-export function isObject(item: unknown): item is Record<string, any> {
+export type CheckIsObject = (item: unknown) => item is Record<string, any>
+
+export function defaultCheckIsObject(item: unknown): item is Record<string, any> {
   if (!item) return false
   return Object.getPrototypeOf(item) === Object.prototype
 }
 
 export interface JsonToNodeInterface {
   renderer: Renderer
+  /**
+   * By default, it only consider objects literals as objects,
+   * but you can override this behavior to accept any object
+   * types e.g class instances
+   */
+  checkIsObject?: CheckIsObject
 }
 
 export function createJsonToNode(
-  { renderer = defaultRenderer }: JsonToNodeInterface = {
+  { renderer = defaultRenderer, checkIsObject = defaultCheckIsObject }: JsonToNodeInterface = {
     renderer: defaultRenderer,
+    checkIsObject: defaultCheckIsObject,
   }
 ) {
+  const getType = createGetType(checkIsObject)
+
   function getChildNodes(value: any, currentPath: string): ChildNode[] | null {
     if (Array.isArray(value)) {
       const nodes = value.flatMap((value, index) => {
@@ -22,7 +33,7 @@ export function createJsonToNode(
       })
       return nodes
     }
-    if (isObject(value)) return jsonToNode(value, currentPath)
+    if (checkIsObject(value)) return jsonToNode(value, currentPath)
     return null
   }
 
@@ -40,7 +51,7 @@ export function createJsonToNode(
       return renderer({ node, path: currentPath, value, key, type, isItem, idx })
     }
 
-    if (isObject(state) || Array.isArray(state)) {
+    if (checkIsObject(state) || Array.isArray(state)) {
       const content = Object.entries(state).map(([key, value]) => {
         let currentPath = getPath(key, path, state)
         return generateNode(value, currentPath)
@@ -69,7 +80,6 @@ export function createJsonToNode(
         }
         const key = getKey(path)
         const type = getType(state)
-        debugger
         const isItem = true
         const idx = isItem ? getIdx(key) : null
         return [renderer({ node, path, value: state, key, type, isItem, idx })]
@@ -112,14 +122,16 @@ function getIdx(path: string) {
   return Number(path?.replace("[", "").replace("]", ""))
 }
 
-function getType(value: unknown) {
-  if (typeof value === "string") return "string"
-  if (typeof value === "number") return "number"
-  if (typeof value === "boolean") return "boolean"
-  if (value === null) return "null"
-  if (Array.isArray(value)) return "array"
-  if (isObject(value)) return "object"
-  if (value instanceof Date) return "date"
-  return "object"
-  // throw new Error(`Unknown type [${value}], please provide this one in the source code.`)
+function createGetType(checkIsObject: CheckIsObject) {
+  return function getType(value: unknown) {
+    if (typeof value === "string") return "string"
+    if (typeof value === "number") return "number"
+    if (typeof value === "boolean") return "boolean"
+    if (value === null) return "null"
+    if (Array.isArray(value)) return "array"
+    if (checkIsObject(value)) return "object"
+    if (value instanceof Date) return "date"
+    return "object"
+    // throw new Error(`Unknown type [${value}], please provide this one in the source code.`)
+  }
 }

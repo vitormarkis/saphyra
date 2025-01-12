@@ -108,7 +108,6 @@ export function MemoryGame({ children, index, ...initialState }: MemoryGameProvi
       <Game.Devtools
         expandedNodes={expandedNodes}
         onExpandNode={handleExpandNode(setExpandedNodes)}
-        onAllNodesChange={setExpandedNodes}
       />
     </Game.Provider>
   )
