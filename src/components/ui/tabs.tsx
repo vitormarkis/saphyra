@@ -12,7 +12,10 @@ const Tabs = React.forwardRef<React.ElementRef<typeof TabsPrimitive.Root>, TabsP
   return (
     <TabsPrimitive.Root
       ref={ref}
-      className={cn("border border-gray-200 flex flex-col flex-1 overflow-hidden", className)}
+      className={cn(
+        "border border-gray-200 dark:border-gray-800 flex flex-col flex-1 overflow-hidden",
+        className
+      )}
       {...props}
     />
   )
@@ -24,7 +27,10 @@ const TabsList = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <TabsPrimitive.List
     ref={ref}
-    className={cn("inline-flex h-6 items-center justify-start bg-gray-200 flex-1 shrink-0", className)}
+    className={cn(
+      "inline-flex h-6 items-center justify-start bg-gray-200 flex-1 shrink-0 dark:bg-gray-800",
+      className
+    )}
     {...props}
   />
 ))
@@ -37,7 +43,9 @@ const TabsTrigger = React.forwardRef<
   <TabsPrimitive.Trigger
     ref={ref}
     className={cn(
-      "inline-flex items-center justify-center whitespace-nowrap px-3 h-full text-sm transition-all disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-white text-gray-500 bg-gray-200 data-[state=active]:text-black border-none outline-none",
+      "inline-flex items-center justify-center whitespace-nowrap px-3 h-full text-sm transition-all disabled:pointer-events-none disabled:opacity-50 border-none outline-none",
+      "data-[state=active]:bg-white text-gray-600 bg-gray-200 data-[state=active]:text-black",
+      "dark:data-[state=active]:bg-black dark:text-gray-400 dark:bg-gray-800 dark:data-[state=active]:text-white",
       className
     )}
     {...props}

@@ -16,11 +16,11 @@ export function LabelPrimitiveLike({ ctx }: LabelPrimitiveLikeProps) {
       )}
       <span
         className={cn("whitespace-nowrap rounded-sm px-1 border", {
-          "bg-yellow-50 text-yellow-800 border-yellow-700/20 dark:bg-yellow-800/20 dark:text-yellow-200/90 dark:border-yellow-600/40":
+          "bg-yellow-50 text-yellow-800 border-yellow-700/20 dark:bg-yellow-800/20 dark:text-yellow-200/90 dark:border-yellow-700/20":
             ctx.type === "string",
-          "bg-purple-50 text-purple-800 border-purple-700/20 dark:bg-purple-800/20 dark:text-purple-200/90 dark:border-purple-600/40":
+          "bg-purple-50 text-purple-800 border-purple-700/20 dark:bg-purple-800/20 dark:text-purple-200/90 dark:border-purple-700/20":
             ctx.type === "null",
-          "bg-amber-50 text-amber-800 border-amber-700/20 dark:bg-amber-800/20 dark:text-amber-200/90 dark:border-amber-600/40":
+          "bg-lime-50 text-lime-800 border-lime-700/20 dark:bg-lime-800/20 dark:text-lime-200/90 dark:border-lime-700/20":
             ctx.type === "number",
         })}
       >
