@@ -37,7 +37,7 @@ export function createStoreUtils<
     const finalSelector = selector ?? (defaultSelector as (data: TState) => R)
     return useSyncExternalStore(
       cb => store.subscribe(cb),
-      () => finalSelector(store.state)
+      () => finalSelector(store.getState())
     )
   }
 

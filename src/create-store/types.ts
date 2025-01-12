@@ -14,6 +14,7 @@ export type GenericStore<
   TActions extends DefaultActions & BaseAction<TState> = DefaultActions & BaseAction<TState>
 > = {
   state: TState
+  getState(): TState
   dispatch: Dispatch<TState, TActions>
   setState(newState: Partial<TState>): void
   registerSet: InnerReducerSet<TState>

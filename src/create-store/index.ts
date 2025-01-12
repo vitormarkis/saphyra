@@ -1,3 +1,4 @@
+import _ from "lodash"
 import { createDiffOnKeyChange } from "../diff"
 import { Subject } from "../Subject"
 import { RemoveDollarSignProps } from "../types"
@@ -25,32 +26,41 @@ import {
   TransitionsExtension,
 } from "./types"
 
+export type ExternalProps = Record<string, any> | null
+
 /**
  * On construct
  */
 type OnConstructProps<
   TInitialProps,
   TState extends BaseState = TInitialProps & BaseState,
-  TActions extends DefaultActions & BaseAction<TState> = DefaultActions & BaseAction<TState>
+  TActions extends DefaultActions & BaseAction<TState> = DefaultActions & BaseAction<TState>,
+  TExternalProps extends ExternalProps = ExternalProps
 > = {
   initialProps: TInitialProps
   store: GenericStore<TState, TActions> & Record<string, any>
+  externalProps: TExternalProps
 }
 
 type OnConstruct<
   TInitialProps,
   TState extends BaseState = TInitialProps & BaseState,
-  TActions extends DefaultActions & BaseAction<TState> = DefaultActions & BaseAction<TState>
+  TActions extends DefaultActions & BaseAction<TState> = DefaultActions & BaseAction<TState>,
+  TExternalProps extends ExternalProps = ExternalProps
 > = (
-  props: OnConstructProps<TInitialProps, TState, TActions>,
-  config: StoreConstructorConfig
+  props: OnConstructProps<TInitialProps, TState, TActions, TExternalProps>,
+  config?: StoreConstructorConfig
 ) => RemoveDollarSignProps<TState>
 
 function defaultOnConstruct<
   TInitialProps,
   TState extends BaseState = TInitialProps & BaseState,
-  TActions extends DefaultActions & BaseAction<TState> = DefaultActions & BaseAction<TState>
->(props: OnConstructProps<TInitialProps, TState, TActions>, _config?: StoreConstructorConfig) {
+  TActions extends DefaultActions & BaseAction<TState> = DefaultActions & BaseAction<TState>,
+  TExternalProps extends ExternalProps = ExternalProps
+>(
+  props: OnConstructProps<TInitialProps, TState, TActions, TExternalProps>,
+  _config?: StoreConstructorConfig
+) {
   const state = props.initialProps as unknown as TState
   return state
 }
@@ -86,34 +96,45 @@ function defaultReducer<
   return props.state
 }
 
+export type ExternalPropsFn<TExternalProps> = (() => Promise<TExternalProps>) | null
+
+const defaultExternalPropsFn: (<TExternalProps>() => Promise<TExternalProps>) | null = null
+
 /**
  * Create store options
  */
 type CreateStoreOptions<
   TInitialProps,
   TState extends BaseState = TInitialProps & BaseState,
-  TActions extends DefaultActions & BaseAction<TState> = DefaultActions & BaseAction<TState>
+  TActions extends DefaultActions & BaseAction<TState> = DefaultActions & BaseAction<TState>,
+  TExternalProps extends ExternalProps = ExternalProps
 > = {
-  onConstruct?: OnConstruct<TInitialProps, TState>
+  onConstruct?: OnConstruct<TInitialProps, TState, TActions, TExternalProps>
   reducer?: Reducer<TState, TActions>
+  externalPropsFn?: ExternalPropsFn<TExternalProps>
 }
 
 export type StoreConstructorConfig = {
   errorHandlers?: StoreErrorHandler[]
 }
 
+const BOOTSTRAP_TRANSITION = ["bootstrap"]
+
 export function createStoreFactory<
   TInitialProps,
   TState extends BaseState = TInitialProps & BaseState,
-  TActions extends DefaultActions & BaseAction<TState> = DefaultActions & BaseAction<TState>
+  TActions extends DefaultActions & BaseAction<TState> = DefaultActions & BaseAction<TState>,
+  TExternalProps extends ExternalProps = ExternalProps
 >(
   {
-    onConstruct = defaultOnConstruct,
-    reducer: userReducer = defaultReducer,
-  }: CreateStoreOptions<TInitialProps, TState, TActions> = {} as CreateStoreOptions<
+    onConstruct = defaultOnConstruct<TInitialProps, TState, TActions, TExternalProps>,
+    externalPropsFn = defaultExternalPropsFn<TExternalProps>,
+    reducer: userReducer = defaultReducer<TState, TActions>,
+  }: CreateStoreOptions<TInitialProps, TState, TActions, TExternalProps> = {} as CreateStoreOptions<
     TInitialProps,
     TState,
-    TActions
+    TActions,
+    TExternalProps
   >
 ): StoreInstantiator<TInitialProps, GenericStore<TState, TActions> & TransitionsExtension> {
   type TStore = GenericStore<TState, TActions> & TransitionsExtension
@@ -135,40 +156,93 @@ export function createStoreFactory<
         ? new Set(config.errorHandlers)
         : new Set([defaultErrorHandler])
 
-      try {
-        const initialState = onConstruct(
-          // @ts-expect-error // TODO
-          { initialProps, store },
-          {
-            notify: () => this.notify(),
-          }
-        ) as TState
+      const prevState = {} as TState
+      this.state = prevState
+      const isAsync = externalPropsFn != null
 
-        const prevState = {} as TState
-        const reducer = store.createReducer({
-          store,
-          dispatch: (action: TActions) => {
-            console.log("dispatch", action)
-          },
+      if (isAsync) {
+        const bootstrapAction = {
+          type: "bootstrap",
+          transition: BOOTSTRAP_TRANSITION,
+        } as TActions
+        this.handleRegisterTransition(prevState, bootstrapAction, store)
+
+        async function handleConstruction() {
+          if (!externalPropsFn) throw new Error("Impossible! externalPropsFn is not defined")
+          const externalProps = await externalPropsFn()
+          const initialState = onConstruct({
+            initialProps,
+            store,
+            externalProps,
+          })
+
+          return initialState
+        }
+
+        const async = createAsync(store, prevState, BOOTSTRAP_TRANSITION)
+
+        async.promise(handleConstruction(), (pureState, actor) => {
+          const reducer = store.createReducer({
+            store,
+            dispatch: (action: TActions) => {
+              console.log("dispatch", action)
+            },
+          })
+
+          const initialState = pureState as TState
+
+          const processedState = reducer({
+            action: { type: "noop" } as TActions,
+            state: initialState,
+            diff: this.createDiff(prevState, initialState),
+            async: createAsync(store, initialState, BOOTSTRAP_TRANSITION),
+            set: this.createSetScheduler(initialState, "set", null),
+            prevState,
+          })
+
+          const isSameAsPrev = Object.is(processedState, prevState)
+          console.log(isSameAsPrev)
+
+          actor.set(() => _.cloneDeep(processedState))
+          store.transitions.doneKey(BOOTSTRAP_TRANSITION, null)
         })
+      } else {
+        try {
+          const initialState = onConstruct({
+            initialProps,
+            store,
+            externalProps: {} as TExternalProps,
+          }) as TState
 
-        const processedState = reducer({
-          action: { type: "noop" } as TActions,
-          state: initialState,
-          diff: this.createDiff(prevState, initialState),
-          async: createAsync(store, initialState, ["bootstrap"]),
-          set: this.createSetScheduler(initialState, "set", null),
-          prevState,
-        })
+          const reducer = store.createReducer({
+            store,
+            dispatch: (action: TActions) => {
+              console.log("dispatch", action)
+            },
+          })
 
-        this.state = processedState
-      } catch (error) {
-        this.handleError(error)
-        throw error
+          const processedState = reducer({
+            action: { type: "noop" } as TActions,
+            state: initialState,
+            diff: this.createDiff(prevState, initialState),
+            async: createAsync(store, initialState, BOOTSTRAP_TRANSITION),
+            set: this.createSetScheduler(initialState, "set", null),
+            prevState,
+          })
+
+          this.state = processedState
+        } catch (error) {
+          this.handleError(error)
+          throw error
+        }
       }
 
       this.history = [this.state]
       this.historyRedo = []
+    }
+
+    getState() {
+      return this.state
     }
 
     handleError(error: unknown) {

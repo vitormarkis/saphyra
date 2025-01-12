@@ -13,6 +13,6 @@ export function useMemoryCard<R = MemoryCard>(selector?: (data: MemoryCard) => R
   const finalSelector = selector ?? (defaultSelector as (data: MemoryCard) => R)
   return useSyncExternalStore(
     cb => store.subscribe(cb),
-    () => finalSelector(store.state.$cardById[cardId])
+    () => finalSelector(store.getState().$cardById[cardId])
   )
 }

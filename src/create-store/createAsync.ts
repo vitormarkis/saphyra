@@ -9,7 +9,7 @@ import {
   TransitionsExtension,
 } from "./types"
 
-export const _noTransitionError = new Error("No transition provided.")
+export const errorNoTransition = () => new Error("No transition provided.")
 
 /**
  * Comportamento deve ser mudado no futuro caso a store comece a
@@ -56,13 +56,13 @@ export function createAsync<
     promise: Promise<T>,
     onSuccess: (value: T, actor: AsyncActor<TState, TActions>) => void
   ) => {
-    if (!transition) throw _noTransitionError
+    if (!transition) throw errorNoTransition()
     store.transitions.addKey(transition)
 
     async function handlePromise(promise: Promise<T>) {
-      if (!transition) throw _noTransitionError
+      if (!transition) throw errorNoTransition()
       try {
-        if (!transition) throw _noTransitionError
+        if (!transition) throw errorNoTransition()
         const value = await promise
         onSuccess(value, {
           dispatch,
@@ -79,7 +79,7 @@ export function createAsync<
   }
 
   const timer = (callback: (actor: AsyncActor<TState, TActions>) => void, time = 0) => {
-    if (!transition) throw _noTransitionError
+    if (!transition) throw errorNoTransition()
     store.transitions.addKey(transition)
     setTimeout(() => {
       try {

@@ -22,7 +22,7 @@ export function Devtools<T>({
 }: DevtoolsProps<T>) {
   const state = useSyncExternalStore(
     cb => store.subscribe(cb),
-    () => store.state
+    () => store.getState()
   )
 
   const transitions_state = useSyncExternalStore(
