@@ -3,9 +3,9 @@ import { createStoreFactory } from "../../create-store"
 import { createStoreUtils } from "../../createStoreUtils"
 import { cn } from "../../lib/utils"
 import { fetchRole } from "./fn/fetch-role"
-import { getPermissions } from "./fn/get-permissions"
 import { PERMISSIONS } from "./const"
 import { RemoveDollarSignProps } from "../../types"
+import { fetchPermissions } from "~/fetchPermissions"
 
 type SelectedRole = "user" | "admin"
 
@@ -38,7 +38,7 @@ const createAuthStore = createStoreFactory<
     }
 
     if (prevState.role !== state.role) {
-      const promise = getPermissions({ role: state.role })
+      const promise = fetchPermissions({ role: state.role })
       async.promise(promise, (permissions, actor) => {
         actor.set(() => ({ permissions }))
       })

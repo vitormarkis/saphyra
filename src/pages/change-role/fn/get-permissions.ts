@@ -2,11 +2,11 @@ import { sleep } from "../../../sleep"
 import { SelectedRole } from "../../../types"
 import { PERMISSIONS } from "../const"
 
-type GetPermissionsProps = {
+type FetchPermissionsProps = {
   role: SelectedRole
 }
 
-export async function getPermissions({ role }: GetPermissionsProps) {
+export async function fetchPermissions({ role }: FetchPermissionsProps) {
   await sleep(1000, "fetching permissions")
   const unlucky = Math.random() < 0.35
   if (unlucky) {
