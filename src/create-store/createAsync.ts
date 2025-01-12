@@ -78,7 +78,7 @@ export function createAsync<
     handlePromise(promise)
   }
 
-  const timer = (callback: (actor: AsyncActor<TState, TActions>) => void) => {
+  const timer = (callback: (actor: AsyncActor<TState, TActions>) => void, time = 0) => {
     if (!transition) throw _noTransitionError
     store.transitions.addKey(transition)
     setTimeout(() => {
@@ -92,7 +92,7 @@ export function createAsync<
         console.log("%cSomething went wrong! Rolling back the store state. [TODO]", "color: palevioletred")
         store.transitions.doneKey(transition, error)
       }
-    }, 0)
+    }, time)
   }
 
   return {
