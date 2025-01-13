@@ -19,10 +19,10 @@ const useSimpleForm = SimpleForm.useStore
 
 export function ZustandLikePage() {
   return (
-    <div className="flex">
+    <div className="flex gap-6">
       <form
         action=""
-        className="flex-1"
+        className="flex-1 flex flex-col gap-2"
         onSubmit={e => e.preventDefault()}
       >
         <InputName />
