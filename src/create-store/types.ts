@@ -18,10 +18,12 @@ export type GenericStore<
   setState(newState: Partial<TState>): void
   registerSet: InnerReducerSet<TState>
   createReducer(props: CreateReducerInner<TState, TActions>): ReducerInner<TState, TActions>
-  createSet(newState: TState & Partial<TState>): ReducerSet<TState>
+  createSetScheduler(newState: TState & Partial<TState>): ReducerSet<TState>
   registerErrorHandler(handler: StoreErrorHandler): () => void
   rerender(): void
   handleError(error: unknown): void
+  undo(): void
+  redo(): void
 } & Subject
 
 export type GenericStoreClass<

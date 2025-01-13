@@ -74,7 +74,7 @@ type ReducerProps<
   dispatch: Dispatch<TState, TActions>
 }
 
-type Reducer<
+export type Reducer<
   TState extends BaseState = BaseState,
   TActions extends DefaultActions & BaseAction<TState> = DefaultActions & BaseAction<TState>
 > = (props: ReducerProps<TState, TActions>) => TState
@@ -119,6 +119,8 @@ export function createStoreFactory<
   type TStore = GenericStore<TState, TActions> & TransitionsExtension
 
   const StoreClass = class Store extends Subject {
+    history: Array<TState>
+    historyRedo: Array<TState>
     transitions = new TransitionsStore()
     errorHandlers: Set<StoreErrorHandler>
 
@@ -155,7 +157,7 @@ export function createStoreFactory<
           state: initialState,
           diff: this.createDiff(prevState, initialState),
           async: createAsync(store, initialState, ["bootstrap"]),
-          set: this.createSet(initialState, "set", null),
+          set: this.createSetScheduler(initialState, "set", null),
           prevState,
         })
 
@@ -164,6 +166,9 @@ export function createStoreFactory<
         this.handleError(error)
         throw error
       }
+
+      this.history = [this.state]
+      this.historyRedo = []
     }
 
     handleError(error: unknown) {
@@ -175,6 +180,23 @@ export function createStoreFactory<
     registerErrorHandler(handler: StoreErrorHandler) {
       this.errorHandlers.add(handler)
       return () => this.errorHandlers.delete(handler)
+    }
+
+    undo() {
+      if (this.history.length <= 1) return
+      this.historyRedo = [...this.historyRedo, this.history.pop()!]
+      const previousState = this.history.at(-1)!
+      if (!previousState) debugger
+      this.state = { ...previousState }
+      this.notify()
+    }
+
+    redo() {
+      if (this.historyRedo.length <= 0) return
+      this.history = [...this.history, this.historyRedo.pop()!]
+      const nextState = this.history.at(-1)!
+      this.state = { ...nextState }
+      this.notify()
     }
 
     rerender() {
@@ -190,7 +212,7 @@ export function createStoreFactory<
         diff: store.createDiff(store.state, store.state),
         state: store.state,
         async: createAsync(store, store.state, null),
-        set: store.createSet(store.state, "set", null),
+        set: store.createSetScheduler(store.state, "set", null),
         prevState: store.state,
       })
       store.notify()
@@ -227,7 +249,7 @@ export function createStoreFactory<
           action: { type: "noop" } as TActions,
           state: newState,
           diff: this.createDiff(currentState, newState),
-          set: this.createSet(newState, "set", transition),
+          set: this.createSetScheduler(newState, "set", transition),
           async: createAsync(store, newState, transition),
           prevState: currentState,
         })
@@ -258,7 +280,7 @@ export function createStoreFactory<
         state: newState,
         prevState: store.state,
         async: createAsync(this, newState, null),
-        set: store.createSet(newState, "set", null),
+        set: store.createSetScheduler(newState, "set", null),
       })
 
       this.notify()
@@ -273,7 +295,9 @@ export function createStoreFactory<
       const setters = this.setStateCallbacks[transitionKey]
       if (!setters) {
         debugger
-        throw new Error("Impossible to reach this point")
+        throw new Error(
+          "No setters found for this transition. It's most likely you didn't use the `set` function in your reducer."
+        )
       }
       this.setStateCallbacks[transitionKey] = []
       const newState = setters.reduce((acc: TState, setter) => {
@@ -281,11 +305,13 @@ export function createStoreFactory<
         return { ...acc, ...newState }
       }, this.state)
       this.state = newState
+      this.history.push(newState)
+      this.historyRedo = []
       onTransitionEnd?.(newState)
       this.notify()
     }
 
-    createSet(
+    createSetScheduler(
       newState: TState & Partial<TState>,
       mergeType: "reducer" | "set" = "set",
       transition: any[] | null | undefined = null
@@ -330,21 +356,24 @@ export function createStoreFactory<
       const isNewTransition = currentTransitionName !== actionTransitionName
 
       if (initialAction.transition != null && isNewTransition) {
+        const transitionAlreadyRunning = store.transitions.get(initialAction.transition)
         store.transitions.addKey(initialAction.transition)
         newState.currentTransition = initialAction.transition
-        store.transitions.events.done.once(initialAction.transition.join(":"), error => {
-          if (!initialAction.transition) throw new Error("Impossible to reach this point")
-          if (error) {
-            console.log(`%cTransition failed! [${initialAction.transition.join(":")}]`, "color: red")
-            store.handleError(error)
-          } else {
-            console.log(
-              `%cTransition completed! [${initialAction.transition.join(":")}]`,
-              "color: lightgreen"
-            )
-            this.applyTransition(initialAction.transition, initialAction.onTransitionEnd)
-          }
-        })
+        if (!transitionAlreadyRunning) {
+          store.transitions.events.done.once(initialAction.transition.join(":"), error => {
+            if (!initialAction.transition) throw new Error("Impossible to reach this point")
+            if (error) {
+              console.log(`%cTransition failed! [${initialAction.transition.join(":")}]`, "color: red")
+              store.handleError(error)
+            } else {
+              console.log(
+                `%cTransition completed! [${initialAction.transition.join(":")}]`,
+                "color: lightgreen"
+              )
+              this.applyTransition(initialAction.transition, initialAction.onTransitionEnd)
+            }
+          })
+        }
       }
     }
 
@@ -357,22 +386,29 @@ export function createStoreFactory<
       const reducer = this.createReducer({
         store,
         dispatch: (action: TActions) => {
-          actionsQueue.push(action)
+          actionsQueue.push({
+            ...action,
+            transition: initialAction.transition ?? null,
+          })
         },
       })
 
       let prevState = this.state
       for (const action of actionsQueue) {
+        const scheduleSetter = this.createSetScheduler(newState, "set", action.transition)
+
         const futurePrevState = { ...newState }
         const context: ReducerInnerProps<TState, TActions> = {
           action,
           prevState: prevState,
           state: newState,
           async: createAsync(store, newState, action.transition),
-          set: this.createSet(newState, "set", action.transition),
+          set: scheduleSetter,
           diff: this.createDiff(prevState, newState),
         }
-        reducer(context)
+        const producedState = reducer(context)
+        // looks redundant but user might return prev state
+        newState = producedState
         prevState = futurePrevState
       }
 
@@ -381,7 +417,6 @@ export function createStoreFactory<
         this.notify()
       } else {
         store.transitions.doneKey(initialAction.transition, null)
-
         // the observers will be notified
         // when the transition is done
       }

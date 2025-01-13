@@ -11,7 +11,7 @@ body {
 }
 
 button {
-  @apply bg-blue-500 text-white border border-blue-600 hover:bg-blue-600 hover:border-blue-700 focus:outline-none font-medium text-sm transition-all px-4 h-7 rounded-sm outline-none;
+  @apply bg-blue-500 text-white border border-blue-600 hover:bg-blue-600 hover:border-blue-700 focus:outline-none font-medium text-sm transition-all px-4 h-7 rounded-sm outline-none whitespace-nowrap;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -21,6 +21,11 @@ button {
 
   .container-2 {
     @apply bg-gray-950 text-white border-gray-800;
+  }
+
+  input,
+  select {
+    @apply border border-slate-600 h-9 text-white bg-gray-700 outline-none focus:ring-0 ring-0;
   }
 }
 
