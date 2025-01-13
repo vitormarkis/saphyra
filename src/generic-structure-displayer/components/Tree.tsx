@@ -5,8 +5,8 @@ import { TreeContext } from "./Tree.context"
 type TreeProps = ChildNode
 
 export function Tree(childNode: TreeProps) {
-  const { expandedNodes } = useContext(TreeContext)
-  const isExpanded = expandedNodes.has(childNode.id)
+  const { expandedNodes, allExpanded } = useContext(TreeContext)
+  const isExpanded = allExpanded ?? expandedNodes.has(childNode.id)
 
   return (
     <div className="flex flex-col text-xs gap-1 cursor-default">

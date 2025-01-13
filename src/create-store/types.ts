@@ -1,4 +1,5 @@
-import { StoreConstructorConfig } from "."
+import { RemoveDollarSignProps } from "~/types"
+import { ExternalProps, StoreConstructorConfig } from "."
 import { Subject } from "../Subject"
 import { TransitionsStore } from "./transitions-store"
 
@@ -11,8 +12,10 @@ export type Dispatch<
 
 export type GenericStore<
   TState extends BaseState = BaseState,
-  TActions extends DefaultActions & BaseAction<TState> = DefaultActions & BaseAction<TState>
+  TActions extends DefaultActions & BaseAction<TState> = DefaultActions & BaseAction<TState>,
+  TExternalProps extends ExternalProps = ExternalProps
 > = {
+  __externalProps: TExternalProps
   state: TState
   getState(): TState
   dispatch: Dispatch<TState, TActions>
@@ -106,6 +109,6 @@ export type ReducerInner<
 export type StoreErrorHandler = (error: unknown) => void
 
 export type StoreInstantiator<TInitialProps, TStore extends GenericStore<any, any>> = (
-  initialProps: TInitialProps,
+  initialProps: RemoveDollarSignProps<TInitialProps>,
   config?: StoreConstructorConfig
 ) => TStore

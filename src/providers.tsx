@@ -14,11 +14,13 @@ export function Providers({ children }: ProvidersProps) {
     Object.assign(window, { navigate })
   }, [])
 
+  const displayGoToSourceButton = !(import.meta.env.VITE_SHOW_GO_TO_SOURCE === "false")
+
   return (
     <>
       {children}
       <Toaster />
-      <GoToSourceButton />
+      {displayGoToSourceButton && <GoToSourceButton />}
     </>
   )
 }

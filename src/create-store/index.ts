@@ -38,7 +38,7 @@ type OnConstructProps<
   TExternalProps extends ExternalProps = ExternalProps
 > = {
   initialProps: TInitialProps
-  store: GenericStore<TState, TActions> & Record<string, any>
+  store: GenericStore<TState, TActions, TExternalProps> & Record<string, any>
   externalProps: TExternalProps
 }
 
@@ -62,7 +62,7 @@ function defaultOnConstruct<
   _config?: StoreConstructorConfig
 ) {
   const state = props.initialProps as unknown as TState
-  return state
+  return { ...state, ...props.externalProps }
 }
 
 //
@@ -72,12 +72,13 @@ function defaultOnConstruct<
  */
 type ReducerProps<
   TState extends BaseState = BaseState,
-  TActions extends DefaultActions & BaseAction<TState> = DefaultActions & BaseAction<TState>
+  TActions extends DefaultActions & BaseAction<TState> = DefaultActions & BaseAction<TState>,
+  TExternalProps extends ExternalProps = ExternalProps
 > = {
   prevState: TState
   state: TState
   action: TActions
-  store: GenericStore<TState, TActions> & Record<string, any>
+  store: GenericStore<TState, TActions, TExternalProps> & Record<string, any>
   set: ReducerSet<TState>
   async: Async<TState>
   diff: Diff<TState>
@@ -110,7 +111,7 @@ type CreateStoreOptions<
   TExternalProps extends ExternalProps = ExternalProps
 > = {
   onConstruct?: OnConstruct<TInitialProps, TState, TActions, TExternalProps>
-  reducer?: Reducer<TState, TActions>
+  reducer?: Reducer<TState & TExternalProps, TActions>
   externalPropsFn?: ExternalPropsFn<TExternalProps>
 }
 
@@ -129,15 +130,15 @@ export function createStoreFactory<
   {
     onConstruct = defaultOnConstruct<TInitialProps, TState, TActions, TExternalProps>,
     externalPropsFn = defaultExternalPropsFn<TExternalProps>,
-    reducer: userReducer = defaultReducer<TState, TActions>,
+    reducer: userReducer = defaultReducer<TState & TExternalProps, TActions>,
   }: CreateStoreOptions<TInitialProps, TState, TActions, TExternalProps> = {} as CreateStoreOptions<
     TInitialProps,
     TState,
     TActions,
     TExternalProps
   >
-): StoreInstantiator<TInitialProps, GenericStore<TState, TActions> & TransitionsExtension> {
-  type TStore = GenericStore<TState, TActions> & TransitionsExtension
+): StoreInstantiator<TInitialProps, GenericStore<TState, TActions, TExternalProps> & TransitionsExtension> {
+  type TStore = GenericStore<TState, TActions, TExternalProps> & TransitionsExtension
 
   const StoreClass = class Store extends Subject {
     history: Array<TState>
@@ -148,6 +149,8 @@ export function createStoreFactory<
     setStateCallbacks: Record<string, Array<(state: TState) => Partial<TState>>> = {}
 
     state: TState
+
+    __externalProps: TExternalProps = {} as TExternalProps
 
     constructor(initialProps: TInitialProps, config: StoreConstructorConfig) {
       super()
@@ -423,7 +426,7 @@ export function createStoreFactory<
     private handleRegisterTransition(
       newState: TState,
       initialAction: TActions,
-      store: GenericStore<TState, TActions> & TransitionsExtension
+      store: GenericStore<TState, TActions, TExternalProps> & TransitionsExtension
     ) {
       const currentTransitionName = this.state.currentTransition?.join(":")
       const actionTransitionName = initialAction.transition?.join(":")
@@ -498,7 +501,7 @@ export function createStoreFactory<
   }
 
   const storeInstantiator: StoreInstantiator<TInitialProps, TStore> = (
-    initialProps: TInitialProps,
+    initialProps: RemoveDollarSignProps<TInitialProps>,
     config: StoreConstructorConfig = {} as StoreConstructorConfig
   ): TStore => {
     const Class = StoreClass

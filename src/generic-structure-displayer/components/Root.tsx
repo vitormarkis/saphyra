@@ -12,6 +12,7 @@ export type GenericStructureDisplayerProps<T> = {
   onExpandNode?: (nodeId: string) => void
   allNodes?: Set<string>
   onAllNodesChange?: (allNodes: Set<string>) => void
+  allExpanded?: boolean
 }
 
 const renderer: Renderer = ctx => {
@@ -32,6 +33,7 @@ export const GenericStructureDisplayer = memo(
     allNodes: allNodesProp,
     onExpandNode,
     onAllNodesChange,
+    allExpanded,
   }: GenericStructureDisplayerProps<T>) => {
     const [expandedNodesInner, setExpandedNodesInner] = useState<Set<string>>(new Set())
     const [allNodesInner, setAllNodes] = useState<Set<string>>(new Set())
@@ -85,6 +87,7 @@ export const GenericStructureDisplayer = memo(
         value={{
           expandedNodes: expandedNodesProp ?? expandedNodesInner,
           expandNode,
+          allExpanded,
         }}
       >
         <ul className="flex gap-1 flex-col overflow-auto">

@@ -19,6 +19,7 @@ export function Devtools<T>({
   onAllNodesChange,
   expandedNodes,
   onExpandNode,
+  allExpanded,
 }: DevtoolsProps<T>) {
   const state = useSyncExternalStore(
     cb => store.subscribe(cb),
@@ -48,6 +49,7 @@ export function Devtools<T>({
           onAllNodesChange={onAllNodesChange}
           expandedNodes={expandedNodes}
           onExpandNode={onExpandNode}
+          allExpanded={allExpanded}
         />
       </TabsContent>
       <TabsContent value="transitions">

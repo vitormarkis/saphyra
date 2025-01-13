@@ -13,7 +13,7 @@ const Tabs = React.forwardRef<React.ElementRef<typeof TabsPrimitive.Root>, TabsP
     <TabsPrimitive.Root
       ref={ref}
       className={cn(
-        "border border-gray-200 dark:border-gray-800 flex flex-col flex-1 overflow-hidden",
+        "border border-gray-200 dark:border-gray-800 flex flex-col flex-1 overflow-hidden h-full",
         className
       )}
       {...props}

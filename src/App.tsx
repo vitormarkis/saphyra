@@ -49,7 +49,11 @@ export const Todos = createStoreUtils<typeof createTodosStore>()
 
 export default function App() {
   let [todosStore, setTodosStore] = useState(() =>
-    createTodosStore({ count: 0, $direction: "down", currentTransition: null })
+    createTodosStore({
+      count: 0,
+      $direction: "down",
+      currentTransition: null,
+    })
   )
 
   useHistory(todosStore)

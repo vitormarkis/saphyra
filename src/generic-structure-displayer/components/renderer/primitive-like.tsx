@@ -15,13 +15,13 @@ export function LabelPrimitiveLike({ ctx }: LabelPrimitiveLikeProps) {
         </>
       )}
       <span
-        className={cn("whitespace-nowrap rounded-sm px-1 border", {
-          "bg-yellow-50 text-yellow-800 border-yellow-700/20 dark:bg-yellow-800/20 dark:text-yellow-200/90 dark:border-yellow-700/20":
+        className={cn("whitespace-nowrap rounded-sm px-1 ", {
+          "bg-rose-50 text-rose-400 dark:bg-sky-200/5 dark:text-sky-400/90 dark:border-sky-700/20":
             ctx.type === "string",
-          "bg-purple-50 text-purple-800 border-purple-700/20 dark:bg-purple-800/20 dark:text-purple-200/90 dark:border-purple-700/20":
+          "bg-purple-50 text-purple-800 border-purple-700/20 dark:bg-purple-800/20 dark:text-purple-200/90  dark:border-purple-700/20":
             ctx.type === "null",
-          "bg-lime-50 text-lime-800 border-lime-700/20 dark:bg-lime-800/20 dark:text-lime-200/90 dark:border-lime-700/20":
-            ctx.type === "number",
+          "bg-blue-50 text-blue-800 border-blue-700/20 dark:bg-purple-800/20 dark:text-purple-200/90 dark:border-purple-700/20":
+            ctx.type === "number" || ctx.type === "boolean",
         })}
       >
         {JSON.stringify(ctx.value, null, 2)}
