@@ -78,11 +78,12 @@ export function ChangeRolePage() {
   useHistory(authStore)
 
   return (
-    <div className="">
+    <div className="flex flex-col gap-4 h-full">
       <div className="flex items-center gap-2">
         <input
           type="text"
           value={state.username}
+          placeholder="Your username..."
           onChange={e => {
             const value = e.target.value
             authStore.setState({ username: value })
@@ -113,7 +114,20 @@ export function ChangeRolePage() {
       {/* <pre className={cn("disabled:opacity-30 disabled:cursor-not-allowed")}>
         {JSON.stringify(state, null, 2)}
       </pre> */}
-      <Auth.Devtools />
+      <Auth.Devtools allExpanded />
+      <div className=" bg-fuchsia-300/10 dark:bg-fuchsia-700/10 border px-4 py-2 rounded-md border-fuchsia-500/20">
+        <h3 className="text-lg font-bold dark:text-fuchsia-200 text-fuchsia-600">Explanation:</h3>
+        <p className="dark:[&_strong]:text-white dark:[&_i]:text-fuchsia-300/50 dark:text-fuchsia-300 [&_strong]:text-fuchsia-700 [&_i]:text-fuchsia-800/50 text-fuchsia-500">
+          Changing role is a transaction. It fetches the role, and based on the role info, fetch the
+          permissions. If one of the requests fails, the transaction is <strong>rolled back</strong> and the{" "}
+          <strong>no changes are made</strong>.
+          <br />
+          <br />
+          It is made this way to prevent your store state to end up in a invalid state{" "}
+          <i>(e.g: user role, but admin permissions, or vice versa).</i> Firing a transition is changing your
+          app from the current, valid state, to another valid state.
+        </p>
+      </div>
     </div>
   )
 }
