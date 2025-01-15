@@ -43,7 +43,7 @@ const createMemoryGame = createStoreFactory<MemoryGameInitialProps, MemoryGameSt
       currentTransition: null,
     }
   },
-  reducer({ prevState, state, action, store, diff, dispatch, set }) {
+  reducer({ state, action, diff, dispatch, set }) {
     console.log("fn")
     if (action.type === "tap-card") {
       const card = state.$cardById[action.cardId]

@@ -10,7 +10,7 @@ import { myRoutesManifest } from "./my-routes-manifest.tsx"
 import { Providers } from "./providers.tsx"
 
 function onThemeChange(event: any, theme: string) {
-  if (event.matches && import.meta.env.VITE_THEME_MODE === "system") {
+  if (event.matches) {
     if (theme === "dark") {
       document.documentElement.classList.add("dark")
     } else {

@@ -1,19 +1,19 @@
 import { useState, useSyncExternalStore } from "react"
-import { GenericStore, TransitionsExtension } from "../create-store/types"
+import { StoreInstantiatorGeneric } from "../create-store/types"
 import {
   GenericStructureDisplayer,
   GenericStructureDisplayerProps,
 } from "../generic-structure-displayer/components/Root"
 
-export type DevtoolsProps<T> = {
-  store: GenericStore<any, any> & TransitionsExtension
+export type DevtoolsProps<T extends StoreInstantiatorGeneric = StoreInstantiatorGeneric> = {
+  store: ReturnType<T>
 } & Omit<GenericStructureDisplayerProps<T>, "source">
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs"
 
 export type DevtoolsPropsWithoutStore<T> = Omit<GenericStructureDisplayerProps<T>, "source">
 
-export function Devtools<T>({
+export function Devtools<T extends StoreInstantiatorGeneric = StoreInstantiatorGeneric>({
   store,
   allNodes,
   onAllNodesChange,

@@ -95,7 +95,7 @@ type ValueDislayerProps = {
 }
 
 export function ValueDislayer({ valueName }: ValueDislayerProps) {
-  const value: string = useSimpleForm(s => s[valueName])
+  const value: string = useSimpleForm(s => s[valueName as keyof SimpleForm])
 
   return (
     <div className="flex gap-2">

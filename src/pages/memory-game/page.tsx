@@ -5,7 +5,6 @@ import { MemoryGame } from "./game/provider"
 type MemoryGamePageProps = {}
 
 const CARDS = ["👹", "👺", "👻", "👼", "👽", "👾", "🤖", "😺"] as const
-const CARDS_2 = ["✅", "❌", "🔴", "🟢", "🟡", "🟠", "🟣", "🟤"] as const
 
 export function MemoryGamePage({}: MemoryGamePageProps) {
   return (

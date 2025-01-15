@@ -1,61 +1,68 @@
+import { EventEmitter, EventsTuple } from "~/create-store/event-emitter"
 import { RemoveDollarSignProps } from "~/types"
-import { ExternalProps, StoreConstructorConfig } from "."
-import { Subject } from "../Subject"
+import { StoreConstructorConfig } from "."
 import { TransitionsStore } from "./transitions-store"
+import { Subject, SubjectType } from "~/Subject"
 
 export type TODO = any
 
-export type Dispatch<
-  TState extends BaseState = BaseState,
-  TActions extends DefaultActions & BaseAction<TState> = DefaultActions & BaseAction<TState>
-> = (action: TActions) => void
+export type Dispatch<TState extends BaseState, TActions extends DefaultActions & BaseAction<TState>> = (
+  action: TActions & BaseAction<TState>
+) => void
 
-export type GenericStore<
-  TState extends BaseState = BaseState,
-  TActions extends DefaultActions & BaseAction<TState> = DefaultActions & BaseAction<TState>,
-  TExternalProps extends ExternalProps = ExternalProps
-> = {
-  __externalProps: TExternalProps
+export type HistoryExtension<TState extends BaseState> = {
+  history: Array<TState>
+  historyRedo: Array<TState>
+}
+
+export type GenericStoreValues<TState extends BaseState, TEvents extends EventsTuple = EventsTuple> = {
+  events: EventEmitter<TEvents>
   state: TState
+  errorHandlers: Set<StoreErrorHandler>
+  setStateCallbacks: Record<string, Array<(state: TState) => Partial<TState>>>
+} & TransitionsExtension &
+  HistoryExtension<TState>
+
+export type GenericStoreMethods<
+  TState extends BaseState,
+  TActions extends DefaultActions & BaseAction<TState>,
+  TEvents extends EventsTuple
+> = {
   getState(): TState
   dispatch: Dispatch<TState, TActions>
   setState(newState: Partial<TState>): void
   registerSet: InnerReducerSet<TState>
-  createReducer(props: CreateReducerInner<TState, TActions>): ReducerInner<TState, TActions>
-  createSetScheduler(newState: TState & Partial<TState>): ReducerSet<TState>
+  createSetScheduler(
+    newState: TState & Partial<TState>,
+    mergeType: "reducer" | "set",
+    transition: any[] | null | undefined
+  ): ReducerSet<TState>
   registerErrorHandler(handler: StoreErrorHandler): () => void
   rerender(): void
   handleError(error: unknown): void
   undo(): void
   redo(): void
-} & Subject
-
-export type GenericStoreClass<
-  TInitialProps,
-  TState extends BaseState = BaseState,
-  TActions extends DefaultActions & BaseAction<TState> = DefaultActions & BaseAction<TState>
-> = {
-  new (initialProps: TInitialProps): GenericStore<TState, TActions>
+  rebuild(): () => SomeStore<TState, TActions, TEvents>
 }
 
-export type DefaultActions = { type: string }
-export type BaseAction<TState extends BaseState = BaseState> = {
-  transition?: any[]
+export type SomeStore<
+  TState extends BaseState,
+  TActions extends DefaultActions & BaseAction<TState>,
+  TEvents extends EventsTuple
+> = GenericStoreValues<TState, TEvents> & GenericStoreMethods<TState, TActions, TEvents> & SubjectType
+
+export type DefaultActions = { type: string; transition?: any[] }
+export type BaseAction<TState extends BaseState> = {
   onTransitionEnd?: (state: TState) => void
+  transition?: any[]
 }
 
-export type AsyncActor<
-  TState extends BaseState = BaseState,
-  TActions extends DefaultActions & BaseAction<TState> = DefaultActions & BaseAction<TState>
-> = {
+export type AsyncActor<TState extends BaseState, TActions extends DefaultActions & BaseAction<TState>> = {
   set: (setter: Setter<TState>) => void
-  dispatch(action: TActions): void
+  dispatch(action: TActions & BaseAction<TState>): void
 }
 
-export type Async<
-  TState extends BaseState = BaseState,
-  TActions extends DefaultActions & BaseAction<TState> = DefaultActions & BaseAction<TState>
-> = {
+export type Async<TState extends BaseState, TActions extends DefaultActions & BaseAction<TState>> = {
   promise<T>(promise: Promise<T>, onSuccess: (value: T, actor: AsyncActor<TState, TActions>) => void): void
   timer(callback: (actor: AsyncActor<TState, TActions>) => void): void
 }
@@ -80,35 +87,21 @@ export type InnerReducerSet<TState> = (
   mergeType: "reducer" | "set"
 ) => void
 
-export type CreateReducerInner<
-  TState extends BaseState = BaseState,
-  TActions extends DefaultActions & BaseAction<TState> = DefaultActions & BaseAction<TState>
-> = {
-  store: GenericStore<TState, TActions> & Record<string, any> & TransitionsExtension
-  dispatch: Dispatch<TState, TActions>
-}
-
-export type ReducerInnerProps<
-  TState extends BaseState = BaseState,
-  TActions extends DefaultActions & BaseAction<TState> = DefaultActions & BaseAction<TState>
-> = {
-  set: ReducerSet<TState>
-  async: Async<TState>
-
-  prevState: TState
-  action: TActions
-  state: TState
-  diff: Diff<TState>
-}
-
-export type ReducerInner<
-  TState extends BaseState = BaseState,
-  TActions extends DefaultActions & BaseAction<TState> = DefaultActions & BaseAction<TState>
-> = (props: ReducerInnerProps<TState, TActions>) => TState
-
 export type StoreErrorHandler = (error: unknown) => void
 
-export type StoreInstantiator<TInitialProps, TStore extends GenericStore<any, any>> = (
+export type SomeStoreGeneric = SomeStore<any, any, any>
+
+export type StoreInstantiator<
+  TInitialProps,
+  TState extends BaseState,
+  TActions extends DefaultActions & BaseAction<TState>,
+  TEvents extends EventsTuple
+> = (
   initialProps: RemoveDollarSignProps<TInitialProps>,
   config?: StoreConstructorConfig
-) => TStore
+) => SomeStore<TState, TActions, TEvents>
+
+export type StoreInstantiatorGeneric = StoreInstantiator<any, any, any, any>
+
+export type ExtractEvents<T> = T extends SomeStore<any, any, infer E> ? E : never
+export type ExtractActions<T> = T extends SomeStore<any, infer A, any> ? A : never

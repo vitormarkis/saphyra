@@ -6,18 +6,27 @@ import { BaseState } from "./create-store/types"
 import { createStoreUtils } from "./createStoreUtils"
 import { sleep } from "./sleep"
 
-type TodosStoreInitialProps = BaseState & {
+type CounterState = BaseState & {
   count: number
   $direction: "up" | "down"
-  currentTransition: null
 }
 
-const createTodosStore = createStoreFactory<TodosStoreInitialProps>({
-  onConstruct({ initialProps, store }) {
-    store.uncontrolledState = {}
-    return initialProps
-  },
-  reducer({ prevState, state, action, async, set, store }) {
+type CounterActions =
+  | {
+      type: "increment"
+    }
+  | {
+      type: "decrement"
+    }
+  | {
+      type: "increment-ten"
+    }
+  | {
+      type: "increment-three"
+    }
+
+const createTodosStore = createStoreFactory<CounterState, CounterState, CounterActions>({
+  reducer({ prevState, state, action, async, set }) {
     if (action.type === "increment") {
       set(s => ({ count: s.count + 1 }))
     }
@@ -51,7 +60,6 @@ export default function App() {
   let [todosStore, setTodosStore] = useState(() =>
     createTodosStore({
       count: 0,
-      $direction: "down",
       currentTransition: null,
     })
   )
@@ -99,13 +107,13 @@ export function Content() {
           </button>
           <button
             onClick={async () => {
-              const incrementTenResolver = Promise.withResolvers<TodosStoreInitialProps>()
-              todosStore.dispatch({
-                type: "increment-ten",
-                transition: ["increment", "ten"],
-                onTransitionEnd: incrementTenResolver.resolve,
+              const { count } = await new Promise<CounterState>(resolve => {
+                todosStore.dispatch({
+                  type: "increment-ten",
+                  transition: ["increment", "ten"],
+                  onTransitionEnd: resolve,
+                })
               })
-              const { count } = await incrementTenResolver.promise
               console.log("new count", count)
             }}
           >

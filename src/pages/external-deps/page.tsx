@@ -7,6 +7,7 @@ import { cn } from "~/lib/utils"
 import { Posts, postsStore } from "~/pages/external-deps/store"
 import { PostType } from "./types"
 import { postsController, PostsController } from "~/pages/external-deps/store.controller"
+import { IconComment } from "~/generic-structure-displayer/components/IconComment"
 
 export function ExternalDepsPage() {
   const isBootstraping = Posts.useTransition(["bootstrap"], postsStore)
@@ -46,20 +47,15 @@ type PostListProps = {}
 
 export function PostList({}: PostListProps) {
   const posts = Posts.useStore(s => s.posts)
-  const isPending = Posts.useTransition(["post"])
+  const likedPostsAmount = Posts.useStore(s => s.likedPosts.length)
+  // const isPending = Posts.useTransition(["post"])
 
   return (
     <div className="flex flex-col ">
       <div className="flex justify-between mb-4">
         <div className="flex items-center gap-2">
-          {isPending && (
-            <>
-              <strong>Loading</strong>
-              <span>
-                <Spinner size={16} />
-              </span>
-            </>
-          )}
+          <strong>Liked posts:</strong>
+          <span>{likedPostsAmount}</span>
         </div>
         <div className="h-full flex [&>*]:border-r [&>*]:border-r-gray-800 [&>*:last-child]:border-r-0 ">
           <label
@@ -103,47 +99,76 @@ export function Post({ post }: PostProps) {
   const isLiked = Posts.useStore(s => s.likedPosts.includes(post.id))
   // const isLikingSomePost = false
   const isLikingSomePost = Posts.useTransition(["post"])
+  const isPostPending = Posts.useTransition(["post", post.id])
   const batchLikes = PostsController.useStore(s => s.batchLikes)
 
   return (
     <li
       className={cn(
-        "flex flex-col whitespace-nowrap overflow-hidden p-2 relative group cursor-default border rounded-md",
+        "flex flex-col whitespace-nowrap overflow-hidden group/wrapper p-2 relative cursor-default border rounded-md",
         "border-gray-200 bg-gray-50",
         "dark:border-gray-800 dark:bg-gray-950",
-        isLiked && "ring-2 border-rose-300 ring-rose-50 dark:border-rose-400/40 dark:ring-rose-500/10"
+        isLiked && "ring-2 border-rose-300 ring-rose-50 dark:border-rose-400/40 dark:ring-rose-500/10",
+        isPostPending && "opacity-40"
       )}
     >
       <div
-        role="button"
-        aria-busy={isLikingSomePost}
-        onClick={() => {
-          posts.dispatch({
-            type: "like-post",
-            postId: post.id,
-            // @ts-ignore TODO
-            transition: ["post", ...(batchLikes ? [] : [post.id]), "like"],
-          })
-        }}
         className={cn(
-          "absolute top-0 right-0 rounded-bl-md p-1 opacity-0 group-hover:opacity-100 transition-all ease-[0,1,0.5,1] duration-200 select-none",
-          "aria-busy:group-hover:bg-gray-300 dark:aria-busy:group-hover:bg-gray-900",
-          "hover:bg-gray-200 bg-gray-100",
-          "dark:hover:bg-gray-800 dark:bg-gray-900"
+          "flex absolute overflow-hidden top-0 right-0 rounded-bl-md opacity-0 group-hover/wrapper:opacity-100 transition-all ease-[0,1,0.5,1] duration-200 select-none"
         )}
       >
-        {isLiked ? (
-          <IconHeartFull
+        <div
+          role="button"
+          onClick={() => {
+            posts.dispatch({
+              type: "comment-in-post",
+              postId: post.id,
+            })
+          }}
+          className={cn(
+            "bg-gray-600 p-1 aspect-square group",
+            "aria-busy:group-hover:bg-gray-300 dark:aria-busy:group-hover:bg-gray-900",
+            "hover:bg-gray-200 bg-gray-100",
+            "dark:hover:bg-gray-800 dark:bg-gray-900"
+          )}
+        >
+          <IconComment
             aria-busy={isLikingSomePost}
             className="dark:aria-busy:fill-rose-700/80 group-active:translate-y-0.5 w-4 h-4 fill-rose-600 dark:fill-rose-400"
-          />
-        ) : (
-          <IconHeart
-            aria-busy={isLikingSomePost}
-            className="dark:aria-busy:text-gray-500 group-active:translate-y-0.5 w-4 h-4"
-          />
-        )}
+          />{" "}
+        </div>
+        <div
+          role="button"
+          aria-busy={isLikingSomePost}
+          onClick={() => {
+            posts.dispatch({
+              type: "like-post",
+              postId: post.id,
+              // @ts-ignore TODO
+              transition: ["post", ...(batchLikes ? [] : [post.id]), "like"],
+            })
+          }}
+          className={cn(
+            "bg-gray-600 p-1 aspect-square group",
+            "aria-busy:group-hover:bg-gray-300 dark:aria-busy:group-hover:bg-gray-900",
+            "hover:bg-gray-200 bg-gray-100",
+            "dark:hover:bg-gray-800 dark:bg-gray-900"
+          )}
+        >
+          {isLiked ? (
+            <IconHeartFull
+              aria-busy={isLikingSomePost}
+              className="dark:aria-busy:fill-rose-700/80 group-active:translate-y-0.5 w-4 h-4 fill-rose-600 dark:fill-rose-400"
+            />
+          ) : (
+            <IconHeart
+              aria-busy={isLikingSomePost}
+              className="dark:aria-busy:text-gray-500 group-active:translate-y-0.5 w-4 h-4"
+            />
+          )}
+        </div>
       </div>
+
       <h3 className="font-bold">{post.title}</h3>
       <p className="text-sm text-gray-400 dark:text-gray-600">{post.body}</p>
     </li>

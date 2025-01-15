@@ -1,9 +1,6 @@
-import { GenericStore, TransitionsExtension } from "../types"
+import { SomeStoreGeneric } from "../types"
 
-export function subscribeSubStore(
-  store: GenericStore<any, any> & TransitionsExtension,
-  rerender: () => void
-) {
+export function subscribeSubStore(store: SomeStoreGeneric, rerender: () => void) {
   return store.subscribe(() => {
     rerender()
   })

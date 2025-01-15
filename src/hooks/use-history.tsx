@@ -1,11 +1,6 @@
 import { useEffect } from "react"
-import {
-  BaseAction,
-  BaseState,
-  DefaultActions,
-  GenericStore,
-  TransitionsExtension,
-} from "~/create-store/types"
+import { EventsTuple } from "~/create-store/event-emitter"
+import { BaseAction, BaseState, DefaultActions, SomeStore } from "~/create-store/types"
 
 type Eventable = {
   addEventListener(type: string, listener: (event: KeyboardEvent) => void): void
@@ -14,8 +9,9 @@ type Eventable = {
 
 export function useHistory<
   TState extends BaseState = BaseState,
-  TActions extends DefaultActions & BaseAction<TState> = DefaultActions & BaseAction<TState>
->(store: GenericStore<TState, TActions> & TransitionsExtension, el: Eventable = document) {
+  TActions extends DefaultActions & BaseAction<TState> = DefaultActions & BaseAction<TState>,
+  TEvents extends EventsTuple = EventsTuple
+>(store: SomeStore<TState, TActions, TEvents>, el: Eventable = document) {
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "z" && event.ctrlKey) {

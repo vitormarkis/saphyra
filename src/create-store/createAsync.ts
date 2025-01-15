@@ -1,13 +1,5 @@
-import {
-  Async,
-  AsyncActor,
-  BaseAction,
-  BaseState,
-  DefaultActions,
-  Dispatch,
-  GenericStore,
-  TransitionsExtension,
-} from "./types"
+import { EventsTuple } from "~/create-store/event-emitter"
+import { Async, AsyncActor, BaseAction, BaseState, DefaultActions, Dispatch, SomeStore } from "./types"
 
 export const errorNoTransition = () => new Error("No transition provided.")
 
@@ -16,10 +8,11 @@ export const errorNoTransition = () => new Error("No transition provided.")
  * dar suporte a subtransitions dentro de transitions
  */
 function createTransitionDispatch<
-  TState extends BaseState = BaseState,
-  TActions extends DefaultActions & BaseAction<TState> = DefaultActions & BaseAction<TState>
+  TState extends BaseState,
+  TActions extends DefaultActions & BaseAction<TState>,
+  TEvents extends EventsTuple
 >(
-  store: GenericStore<TState, TActions> & TransitionsExtension,
+  store: SomeStore<TState, TActions, TEvents>,
   transition: any[] | null | undefined
 ): Dispatch<TState, TActions> {
   return function dispatch(action: TActions) {
@@ -32,12 +25,13 @@ function createTransitionDispatch<
 
 export function createAsync<
   TState extends BaseState = BaseState,
-  TActions extends DefaultActions & BaseAction<TState> = DefaultActions & BaseAction<TState>
+  TActions extends DefaultActions & BaseAction<TState> = DefaultActions & BaseAction<TState>,
+  TEvents extends EventsTuple = EventsTuple
 >(
-  store: GenericStore<TState, any> & TransitionsExtension,
+  store: SomeStore<TState, TActions, TEvents>,
   state: TState,
   transition: any[] | null | undefined
-): Async<TState> {
+): Async<TState, TActions> {
   type AsyncInner = Async<TState, TActions>
   type AsyncActorInner = AsyncActor<TState, TActions>
   const dispatch: AsyncActorInner["dispatch"] = createTransitionDispatch(store, transition)

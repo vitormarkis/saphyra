@@ -38,3 +38,7 @@ export function handleExpandNode(
     })
   }
 }
+
+export function isAsyncFunction<Fn extends { constructor: { name: string } }>(fn: Fn) {
+  return fn.constructor.name === "AsyncFunction"
+}

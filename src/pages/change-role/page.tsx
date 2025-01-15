@@ -28,7 +28,8 @@ type ChangeRole = {
 const createAuthStore = createStoreFactory<
   RemoveDollarSignProps<AuthStoreState>,
   AuthStoreState,
-  AuthStoreActions
+  AuthStoreActions,
+  { vitor: [name: "markis"] }
 >({
   reducer({ prevState, state, action, async, set, diff }) {
     if (action?.type === "change-role") {
@@ -99,7 +100,6 @@ export function ChangeRolePage() {
             authStore.dispatch({
               type: "change-role",
               role: selectedRole,
-              // @ts-expect-error TODO
               transition: ["auth", "role"],
             })
           }}
