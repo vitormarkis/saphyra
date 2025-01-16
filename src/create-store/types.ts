@@ -51,7 +51,10 @@ export type SomeStore<
   TEvents extends EventsTuple
 > = GenericStoreValues<TState, TEvents> & GenericStoreMethods<TState, TActions, TEvents> & SubjectType
 
-export type DefaultActions = { type: string; transition?: any[] }
+export type DefaultActions = {
+  type: string
+  transition?: any[]
+}
 export type BaseAction<TState extends BaseState> = {
   onTransitionEnd?: (state: TState) => void
   transition?: any[]
@@ -64,7 +67,7 @@ export type AsyncActor<TState extends BaseState, TActions extends DefaultActions
 
 export type Async<TState extends BaseState, TActions extends DefaultActions & BaseAction<TState>> = {
   promise<T>(promise: Promise<T>, onSuccess: (value: T, actor: AsyncActor<TState, TActions>) => void): void
-  timer(callback: (actor: AsyncActor<TState, TActions>) => void): void
+  timer(callback: (actor: AsyncActor<TState, TActions>) => void, time?: number): void
 }
 
 export type Diff<TState> = (keys: (keyof TState)[]) => boolean

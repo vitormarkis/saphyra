@@ -1,6 +1,5 @@
 import { createStoreFactory } from "~/create-store"
 import { createStoreUtils } from "~/createStoreUtils"
-import { sleep } from "~/sleep"
 import { fetchPosts } from "./fn/fetch-posts"
 import { likePost } from "./fn/like-post"
 import { reduceGroupById } from "./fn/reduce-group-by-user-id"
@@ -34,12 +33,12 @@ type PostsActions =
 
 const createPostsStore = createStoreFactory<PostsInitialProps, PostsState, PostsActions>({
   async onConstruct() {
-    const [posts, likedPosts] = await Promise.all([fetchPosts(), fetchLikedPosts()])
-    await sleep(700)
+    const posts = await fetchPosts()
+    const likedPosts = await fetchLikedPosts()
 
     return {
-      posts,
       likedPosts,
+      posts,
       commentingPostId: null,
       currentTransition: null,
       newTodoTitle: "",
@@ -72,6 +71,6 @@ const createPostsStore = createStoreFactory<PostsInitialProps, PostsState, Posts
   },
 })
 
-export const Posts = createStoreUtils<typeof createPostsStore>()
-
 export const postsStore = createPostsStore({})
+
+export const Posts = createStoreUtils(postsStore)

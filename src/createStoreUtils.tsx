@@ -7,9 +7,9 @@ function defaultSelector<T>(data: T) {
 }
 
 export function createStoreUtils<
-  TStoreInstantiator extends StoreInstantiatorGeneric = StoreInstantiatorGeneric
->(store?: ReturnType<TStoreInstantiator>) {
-  type TStore = ReturnType<TStoreInstantiator>
+  TStoreInstantiator extends StoreInstantiatorGeneric = StoreInstantiatorGeneric,
+  TStore extends ReturnType<TStoreInstantiator> = ReturnType<TStoreInstantiator>
+>(store?: TStore) {
   type TState = TStore["state"]
 
   const Context = createContext<[TStore, React.Dispatch<React.SetStateAction<TStore>>] | null>(null)

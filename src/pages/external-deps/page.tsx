@@ -8,9 +8,10 @@ import { Posts, postsStore } from "~/pages/external-deps/store"
 import { PostType } from "./types"
 import { postsController, PostsController } from "~/pages/external-deps/store.controller"
 import { IconComment } from "~/generic-structure-displayer/components/IconComment"
+import { EditingPost } from "~/pages/external-deps/components/editing-post"
 
 export function ExternalDepsPage() {
-  const isBootstraping = Posts.useTransition(["bootstrap"], postsStore)
+  const isBootstraping = Posts.useTransition(["bootstrap"])
 
   useHistory(postsStore)
 
@@ -48,10 +49,17 @@ type PostListProps = {}
 export function PostList({}: PostListProps) {
   const posts = Posts.useStore(s => s.posts)
   const likedPostsAmount = Posts.useStore(s => s.likedPosts.length)
+  const isCommentingPost = Posts.useStore(s => s.commentingPostId != null)
   // const isPending = Posts.useTransition(["post"])
 
   return (
-    <div className="flex flex-col ">
+    <div className="flex flex-col relative">
+      {isCommentingPost && (
+        <div className="inset-0 absolute backdrop-blur-sm z-10 p-4">
+          <EditingPost />
+        </div>
+      )}
+
       <div className="flex justify-between mb-4">
         <div className="flex items-center gap-2">
           <strong>Liked posts:</strong>
@@ -71,7 +79,9 @@ export function PostList({}: PostListProps) {
               type="checkbox"
               checked={PostsController.useStore(s => s.batchLikes)}
               onChange={e => {
-                postsController.setState({ batchLikes: e.target.checked })
+                postsController.setState({
+                  batchLikes: e.target.checked,
+                })
               }}
               className="h-4 w-4 rounded-sm"
             />
@@ -108,7 +118,8 @@ export function Post({ post }: PostProps) {
         "flex flex-col whitespace-nowrap overflow-hidden group/wrapper p-2 relative cursor-default border rounded-md",
         "border-gray-200 bg-gray-50",
         "dark:border-gray-800 dark:bg-gray-950",
-        isLiked && "ring-2 border-rose-300 ring-rose-50 dark:border-rose-400/40 dark:ring-rose-500/10",
+        isLiked &&
+          "ring-2 border-rose-300 ring-rose-50 dark:border-rose-400/40 dark:ring-rose-500/10",
         isPostPending && "opacity-40"
       )}
     >
