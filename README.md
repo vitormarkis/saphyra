@@ -4,6 +4,13 @@ O XXX é uma biblioteca de gerenciamento de estado minimalista assim como Zustan
 
 XXX não é tão simples como Zustand, e nem tão robusto como XState, ele fica entre os dois mais como uma caixa de ferramentas provendo primitivos para você criar sua store declarativa.
 
+### Filosofia:
+Existe uma definição de boa abstração que sempre levo comigo, "abstrações que sequestram o problema, resolvem, e te dão uma API para interagir com o problema são abstrações ruins, ao passo que abstrações que te dão primitivos para você resolver o problema são abstrações boas". Boas soluções são criadas em cima de boas abstrações.
+
+Esse é um dos motivos pelo qual não consigo usar XState, porque ele sequestra o problema e expõe uma API específica, se você quer resolver o problema, precisa ser por meio da API deles. Você não sente que está escrevendo Javascript, e sim dando comandos para uma interface a fim de gerar uma store, que no fim também será uma interface que receberá comandos de usuários.
+
+O Zustand é um exemplo de primitivo poderoso pra resolver problemas, mas uma feature é muito mais do que ter um objeto reativo na UI.
+
 ### Funcionalidade out of the box/first class support
 
 Reducer API +
@@ -36,6 +43,12 @@ Se você possui uma feature não tão complexa, criar uma store imperativa pode 
 ... - loading states (transitions)
 
 ### Quando usar XXX?
+
+### Por que transitions em vez de métodos assíncronos?
+- timers
+- promises derivadas, devem ser escritas 1 vez, dado um cenário. Nao devem derivar em métodos
+- um método é um escopo fechado, voce pressupoe que tudo o que vai acontecer estará dentro dele, mas a gente tem casos como o do "change-role" onde ao mudanca de rola, cascateia outra operacao assincrona buscando permissions, e isso voce so consegue visualizar com um reducer
+- 
 
 ### Como XXX se parece?
 

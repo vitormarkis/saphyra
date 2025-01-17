@@ -32,15 +32,13 @@ const createAuthStore = createStoreFactory<
 >({
   reducer({ prevState, state, action, async, set, diff }) {
     if (action?.type === "change-role") {
-      const promise = fetchRole({ roleName: action.role })
-      async.promise(promise, (role, actor) => {
+      async.promise(fetchRole({ roleName: action.role }), (role, actor) => {
         actor.set(() => ({ role }))
       })
     }
 
     if (prevState.role !== state.role) {
-      const promise = fetchPermissions({ role: state.role })
-      async.promise(promise, (permissions, actor) => {
+      async.promise(fetchPermissions({ role: state.role }), (permissions, actor) => {
         actor.set(() => ({ permissions }))
       })
     }
