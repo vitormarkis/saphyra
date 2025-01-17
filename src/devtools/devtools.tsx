@@ -5,15 +5,28 @@ import {
   GenericStructureDisplayerProps,
 } from "../generic-structure-displayer/components/Root"
 
-export type DevtoolsProps<T extends StoreInstantiatorGeneric = StoreInstantiatorGeneric> = {
+export type DevtoolsProps<
+  T extends StoreInstantiatorGeneric = StoreInstantiatorGeneric
+> = {
   store: ReturnType<T>
 } & Omit<GenericStructureDisplayerProps<T>, "source">
 
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs"
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "~/components/ui/tabs"
+import { useLocation } from "react-router-dom"
 
-export type DevtoolsPropsWithoutStore<T> = Omit<GenericStructureDisplayerProps<T>, "source">
+export type DevtoolsPropsWithoutStore<T> = Omit<
+  GenericStructureDisplayerProps<T>,
+  "source"
+>
 
-export function Devtools<T extends StoreInstantiatorGeneric = StoreInstantiatorGeneric>({
+export function Devtools<
+  T extends StoreInstantiatorGeneric = StoreInstantiatorGeneric
+>({
   store,
   allNodes,
   onAllNodesChange,
@@ -21,6 +34,15 @@ export function Devtools<T extends StoreInstantiatorGeneric = StoreInstantiatorG
   onExpandNode,
   allExpanded,
 }: DevtoolsProps<T>) {
+  const { pathname } = useLocation()
+  const defaultTab =
+    sessionStorage.getItem(`${pathname}.devtools-tab`) ??
+    "state"
+
+  const saveCurrentTab = (tab: string) => {
+    sessionStorage.setItem(`${pathname}.devtools-tab`, tab)
+  }
+
   const state = useSyncExternalStore(
     cb => store.subscribe(cb),
     () => store.getState()
@@ -31,16 +53,22 @@ export function Devtools<T extends StoreInstantiatorGeneric = StoreInstantiatorG
     () => store.transitions.state
   )
 
-  const [transitionsExpandedNodes, setTransitionsExpandedNodes] = useState<Set<string>>(new Set())
+  const [
+    transitionsExpandedNodes,
+    setTransitionsExpandedNodes,
+  ] = useState<Set<string>>(new Set())
 
   return (
     <Tabs
-      defaultValue="state"
+      defaultValue={defaultTab}
       className="min-h-0 basis-0  grow"
+      onValueChange={saveCurrentTab}
     >
       <TabsList className="grow-0 basis-auto">
         <TabsTrigger value="state">State</TabsTrigger>
-        <TabsTrigger value="transitions">Transitions</TabsTrigger>
+        <TabsTrigger value="transitions">
+          Transitions
+        </TabsTrigger>
       </TabsList>
       <TabsContent value="state">
         <GenericStructureDisplayer
