@@ -1,12 +1,11 @@
 import { Spinner } from "@blueprintjs/core"
-import { createStoreFactory } from "../../create-store"
 import { createStoreUtils } from "../../createStoreUtils"
 import { cn } from "../../lib/utils"
 import { fetchRole } from "./fn/fetch-role"
 import { PERMISSIONS } from "./const"
-import { RemoveDollarSignProps } from "../../types"
 import { fetchPermissions } from "~/fetchPermissions"
 import { useHistory } from "~/hooks/use-history"
+import { newStoreDef } from "~/create-store"
 
 type SelectedRole = "user" | "admin"
 
@@ -25,12 +24,7 @@ type ChangeRole = {
   role: SelectedRole
 }
 
-const createAuthStore = createStoreFactory<
-  RemoveDollarSignProps<AuthStoreState>,
-  AuthStoreState,
-  AuthStoreActions,
-  { vitor: [name: "markis"] }
->({
+const newAuthStore = newStoreDef<AuthStoreState, AuthStoreState, AuthStoreActions, { vitor: [name: "markis"] }>({
   reducer({ prevState, state, action, diff, set, async }) {
     if (action?.type === "change-role") {
       async.promise(fetchRole({ roleName: action.role }), (role, actor) => {
@@ -54,7 +48,7 @@ const createAuthStore = createStoreFactory<
   },
 })
 
-const authStore = createAuthStore({
+const authStore = newAuthStore({
   role: "user",
   permissions: PERMISSIONS()["user"],
   currentTransition: null,
@@ -62,7 +56,7 @@ const authStore = createAuthStore({
 })
 Object.assign(window, { authStore })
 
-export const Auth = createStoreUtils<typeof createAuthStore>(authStore)
+export const Auth = createStoreUtils<typeof newAuthStore>(authStore)
 
 export function ChangeRolePage() {
   const state = Auth.useStore()

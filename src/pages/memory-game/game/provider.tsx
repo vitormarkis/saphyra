@@ -1,5 +1,5 @@
 import { PropsWithChildren, useEffect, useState } from "react"
-import { createStoreFactory } from "../../../create-store"
+import { newStoreDef } from "../../../create-store"
 import { createStoreUtils } from "../../../createStoreUtils"
 import { MemoryCard } from "../card/type"
 import { reduceGroupById } from "./fn/reduce-group-by-id"
@@ -35,7 +35,7 @@ type MemoryGameActions =
       type: "match-cards"
     }
 
-const createMemoryGame = createStoreFactory<MemoryGameInitialProps, MemoryGameState, MemoryGameActions>({
+const newMemoryGame = newStoreDef<MemoryGameInitialProps, MemoryGameState, MemoryGameActions>({
   onConstruct({ initialProps }) {
     const cards = initialProps.cards.flatMap(flatMapCreateCards)
     return {
@@ -85,7 +85,7 @@ const createMemoryGame = createStoreFactory<MemoryGameInitialProps, MemoryGameSt
   },
 })
 
-export const Game = createStoreUtils<typeof createMemoryGame>()
+export const Game = createStoreUtils<typeof newMemoryGame>()
 
 type MemoryGameProviderProps = {
   index: number
@@ -94,7 +94,7 @@ type MemoryGameProviderProps = {
 
 export function MemoryGame({ children, index, ...initialState }: MemoryGameProviderProps) {
   const [expandedNodes, setExpandedNodes] = useState(new Set<string>())
-  const memoryGameState = useState(() => createMemoryGame(initialState))
+  const memoryGameState = useState(() => newMemoryGame(initialState))
 
   const [memoryGame] = memoryGameState
 

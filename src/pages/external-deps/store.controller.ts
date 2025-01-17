@@ -1,11 +1,11 @@
-import { createStoreFactory } from "~/create-store"
+import { newStoreDef } from "~/create-store"
 import { createStoreUtils } from "~/createStoreUtils"
 
 type PostsControllerState = {
   batchLikes: boolean
 }
 
-export const createPostsController = createStoreFactory<PostsControllerState>()
+export const createPostsController = newStoreDef<PostsControllerState>()
 
 export const postsController = createPostsController({
   batchLikes: false,

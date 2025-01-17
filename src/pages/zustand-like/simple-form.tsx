@@ -1,6 +1,6 @@
 import { Spinner } from "@blueprintjs/core"
 import { useEffect, useState } from "react"
-import { createStoreFactory } from "~/create-store"
+import { newStoreDef } from "~/create-store"
 import { BaseState } from "~/create-store/types"
 import { createStoreUtils } from "~/createStoreUtils"
 import { createSession } from "~/pages/zustand-like/fn/create-session"
@@ -16,7 +16,7 @@ type SimpleFormState = BaseState & {
   $fullName: string
 }
 
-const createSimpleForm = createStoreFactory<SimpleFormInitialProps, SimpleFormState>({
+const createSimpleForm = newStoreDef<SimpleFormInitialProps, SimpleFormState>({
   onConstruct({ initialProps }) {
     const [name, surname] = initialProps.fullName.split(" ")
 

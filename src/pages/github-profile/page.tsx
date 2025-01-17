@@ -1,4 +1,4 @@
-import { createStoreFactory } from "../../create-store"
+import { newStoreDef } from "../../create-store"
 import { GithubProfile } from "./types"
 import { createStoreUtils } from "../../createStoreUtils"
 
@@ -14,7 +14,7 @@ async function fetchUser(username: string) {
   return profile
 }
 
-const createUserStore = createStoreFactory<UserStoreInitialProps>({
+const newUserStore = newStoreDef<UserStoreInitialProps>({
   reducer({ state, action, async }) {
     if (action.type === "fetch-user") {
       async.promise(fetchUser(state.username), (profile, actor) => {
@@ -26,13 +26,13 @@ const createUserStore = createStoreFactory<UserStoreInitialProps>({
   },
 })
 
-const userStore = createUserStore({
+const userStore = newUserStore({
   username: "",
   profile: null,
   currentTransition: null,
 })
 
-export const User = createStoreUtils<typeof createUserStore>(userStore)
+export const User = createStoreUtils<typeof newUserStore>(userStore)
 
 export function GithubProfilePage() {
   const username = User.useStore(s => s.username)

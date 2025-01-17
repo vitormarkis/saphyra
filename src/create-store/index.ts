@@ -114,7 +114,7 @@ export type StoreConstructorConfig = {
 
 const BOOTSTRAP_TRANSITION = ["bootstrap"]
 
-export function createStoreFactory<
+export function newStoreDef<
   TInitialProps,
   TState extends BaseState = TInitialProps & BaseState,
   TActions extends DefaultActions & BaseAction<TState> = DefaultActions & BaseAction<TState>,
@@ -159,10 +159,7 @@ export function createStoreFactory<
 
     const getState: Met["getState"] = () => store.state
 
-    const applyTransition = (
-      transition: any[] | null | undefined,
-      onTransitionEnd?: (state: TState) => void
-    ) => {
+    const applyTransition = (transition: any[] | null | undefined, onTransitionEnd?: (state: TState) => void) => {
       if (!transition) {
         debugger
         throw _noTransitionError
@@ -209,10 +206,7 @@ export function createStoreFactory<
               console.log(`%cTransition failed! [${initialAction.transition.join(":")}]`, "color: red")
               handleError(error)
             } else {
-              console.log(
-                `%cTransition completed! [${initialAction.transition.join(":")}]`,
-                "color: lightgreen"
-              )
+              console.log(`%cTransition completed! [${initialAction.transition.join(":")}]`, "color: lightgreen")
               applyTransition(initialAction.transition, initialAction.onTransitionEnd)
             }
           })
@@ -396,9 +390,7 @@ export function createStoreFactory<
     }
 
     function construct(initialProps: TInitialProps, config: StoreConstructorConfig) {
-      store.errorHandlers = config.errorHandlers
-        ? new Set(config.errorHandlers)
-        : new Set([defaultErrorHandler])
+      store.errorHandlers = config.errorHandlers ? new Set(config.errorHandlers) : new Set([defaultErrorHandler])
 
       const prevState = {} as TState
       store.state = prevState

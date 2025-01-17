@@ -1,7 +1,7 @@
 import { Spinner } from "@blueprintjs/core"
 import { Fragment, useEffect, useState } from "react"
 import { useHistory } from "~/hooks/use-history"
-import { createStoreFactory } from "./create-store"
+import { newStoreDef } from "./create-store"
 import { BaseState } from "./create-store/types"
 import { createStoreUtils } from "./createStoreUtils"
 import { sleep } from "./sleep"
@@ -25,7 +25,7 @@ type CounterActions =
       type: "increment-three"
     }
 
-const createTodosStore = createStoreFactory<CounterState, CounterState, CounterActions>({
+const newCount = newStoreDef<CounterState, CounterState, CounterActions>({
   reducer({ prevState, state, action, async, set }) {
     if (action.type === "increment") {
       set(s => ({ count: s.count + 1 }))
@@ -54,24 +54,25 @@ const createTodosStore = createStoreFactory<CounterState, CounterState, CounterA
   },
 })
 
-export const Todos = createStoreUtils<typeof createTodosStore>()
+export const Todos = createStoreUtils<typeof newCount>()
 
 export default function App() {
-  let [todosStore, setTodosStore] = useState(() =>
-    createTodosStore({
+  const countStoreState = useState(() =>
+    newCount({
       count: 0,
       currentTransition: null,
     })
   )
+  const [countStore] = countStoreState
 
-  useHistory(todosStore)
+  useHistory(countStore)
 
   useEffect(() => {
-    Object.assign(window, { todosStore })
+    Object.assign(window, { todosStore: countStore })
   }, [])
 
   return (
-    <Todos.Provider value={[todosStore, setTodosStore]}>
+    <Todos.Provider value={countStoreState}>
       <Content />
       <div className="mt-4">
         <Todos.Devtools />

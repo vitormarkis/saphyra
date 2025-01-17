@@ -1,4 +1,4 @@
-import { createStoreFactory } from "../../create-store"
+import { newStoreDef } from "../../create-store"
 import { createStoreUtils } from "../../createStoreUtils"
 
 type SimpleForm = {
@@ -7,14 +7,14 @@ type SimpleForm = {
   password: string
 }
 
-const simpleFormStore = createStoreFactory<SimpleForm>()
+const newSimpleForm = newStoreDef<SimpleForm>()
 
-const simpleForm = simpleFormStore({
+const simpleForm = newSimpleForm({
   email: "",
   name: "",
   password: "",
 })
-const SimpleForm = createStoreUtils<typeof simpleFormStore>(simpleForm)
+const SimpleForm = createStoreUtils<typeof newSimpleForm>(simpleForm)
 const useSimpleForm = SimpleForm.useStore
 
 export function ZustandLikePage() {

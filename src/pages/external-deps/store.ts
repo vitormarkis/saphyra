@@ -1,4 +1,4 @@
-import { createStoreFactory } from "~/create-store"
+import { newStoreDef } from "~/create-store"
 import { createStoreUtils } from "~/createStoreUtils"
 import { fetchPosts } from "./fn/fetch-posts"
 import { likePost } from "./fn/like-post"
@@ -31,7 +31,7 @@ type PostsActions =
       postId: number
     }
 
-const createPostsStore = createStoreFactory<PostsInitialProps, PostsState, PostsActions>({
+const newPostsStore = newStoreDef<PostsInitialProps, PostsState, PostsActions>({
   async onConstruct() {
     const posts = await fetchPosts()
     const likedPosts = await fetchLikedPosts()
@@ -71,6 +71,6 @@ const createPostsStore = createStoreFactory<PostsInitialProps, PostsState, Posts
   },
 })
 
-export const postsStore = createPostsStore({})
+export const postsStore = newPostsStore({})
 
 export const Posts = createStoreUtils(postsStore)
