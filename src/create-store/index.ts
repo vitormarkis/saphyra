@@ -2,8 +2,7 @@ import _ from "lodash"
 import { createDiffOnKeyChange } from "../diff"
 import { createSubject, Subject } from "../Subject"
 import { RemoveDollarSignProps } from "../types"
-import { createAsync } from "./createAsync"
-import { _noTransitionError } from "./errors"
+import { createAsync, errorNoTransition } from "./createAsync"
 import { defaultErrorHandler } from "./fn/default-error-handler"
 import { TransitionsStore } from "./transitions-store"
 import {
@@ -164,7 +163,7 @@ export function newStoreDef<
     const applyTransition = (transition: any[] | null | undefined, onTransitionEnd?: (state: TState) => void) => {
       if (!transition) {
         debugger
-        throw _noTransitionError
+        throw errorNoTransition()
       }
       const transitionKey = transition.join(":")
       const setters = store.setStateCallbacks[transitionKey] ?? []
@@ -202,14 +201,16 @@ export function newStoreDef<
         store.transitions.addKey(initialAction.transition)
         newState.currentTransition = initialAction.transition
         if (!transitionAlreadyRunning) {
-          store.transitions.events.done.once(initialAction.transition.join(":"), error => {
-            if (!initialAction.transition) throw new Error("Impossible to reach this point")
+          const transition = initialAction.transition
+          const transitionString = transition.join(":")
+          store.transitions.events.done.once(transitionString, error => {
+            if (!transition) throw new Error("Impossible to reach this point")
             if (error) {
-              console.log(`%cTransition failed! [${initialAction.transition.join(":")}]`, "color: red")
-              handleError(error)
+              console.log(`%cTransition failed! [${transitionString}]`, "color: red")
+              handleError(error, transition)
             } else {
-              console.log(`%cTransition completed! [${initialAction.transition.join(":")}]`, "color: lightgreen")
-              applyTransition(initialAction.transition, initialAction.onTransitionEnd)
+              console.log(`%cTransition completed! [${transitionString}]`, "color: lightgreen")
+              applyTransition(transition, initialAction.onTransitionEnd)
             }
           })
         }
@@ -239,6 +240,7 @@ export function newStoreDef<
             actionsQueue.push({
               ...action,
               transition: initialAction.transition ?? null,
+              onTransitionEnd: initialAction.onTransitionEnd ?? null,
             })
           },
         }
@@ -258,9 +260,9 @@ export function newStoreDef<
       }
     }
 
-    const handleError: Met["handleError"] = (error: unknown) => {
+    const handleError: Met["handleError"] = (error, transition) => {
       store.errorHandlers.forEach(errorHandler => {
-        errorHandler(error)
+        errorHandler(error, transition)
       })
     }
 
@@ -345,12 +347,17 @@ export function newStoreDef<
       }
 
       for (const key in newState) {
-        Object.assign(currentState as any, { [key]: newState[key] })
+        Object.assign(currentState as any, {
+          [key]: newState[key],
+        })
       }
     }
 
     const setState: Met["setState"] = (newPartialState: Partial<TState>) => {
-      const newState = { ...store.state, ...newPartialState }
+      const newState = {
+        ...store.state,
+        ...newPartialState,
+      }
       store.state = userReducer({
         action: { type: "noop" } as TActions,
         diff: createDiff(store.state, newState),
@@ -393,19 +400,21 @@ export function newStoreDef<
     }
 
     function construct(initialProps: TInitialProps, config: StoreConstructorConfig) {
+      Object.assign(window, { _store: store })
+
       store.errorHandlers = config.errorHandlers ? new Set(config.errorHandlers) : new Set([defaultErrorHandler])
 
       const prevState = {} as TState
       store.state = prevState
       const isAsync = isAsyncFunction(onConstruct)
 
-      if (isAsync) {
-        const bootstrapAction = {
-          type: "bootstrap",
-          transition: BOOTSTRAP_TRANSITION,
-        } as TActions
-        handleRegisterTransition(prevState, bootstrapAction, store)
+      const bootstrapAction = {
+        type: "bootstrap",
+        transition: BOOTSTRAP_TRANSITION,
+      } as TActions
+      handleRegisterTransition(prevState, bootstrapAction, store)
 
+      if (isAsync) {
         async function handleConstruction() {
           const initialState = await onConstruct({
             initialProps,
@@ -438,7 +447,6 @@ export function newStoreDef<
           console.log(isSameAsPrev)
 
           actor.set(() => _.cloneDeep(processedState))
-          store.transitions.doneKey(BOOTSTRAP_TRANSITION, null)
         })
       } else {
         try {
@@ -448,7 +456,7 @@ export function newStoreDef<
           }) as TState
 
           const processedState = userReducer({
-            action: { type: "noop" } as TActions,
+            action: bootstrapAction,
             state: initialState,
             diff: createDiff(prevState, initialState),
             async: createAsync(store, initialState, BOOTSTRAP_TRANSITION),
@@ -463,10 +471,12 @@ export function newStoreDef<
 
           store.state = processedState
         } catch (error) {
-          handleError(error)
+          handleError(error, BOOTSTRAP_TRANSITION)
           throw error
         }
       }
+
+      store.transitions.doneKey(BOOTSTRAP_TRANSITION, null)
 
       store.history = [store.state]
       store.historyRedo = []

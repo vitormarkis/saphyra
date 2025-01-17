@@ -1,5 +1,5 @@
 import { createContext, memo, ReactNode, useContext, useEffect, useSyncExternalStore } from "react"
-import { BaseState, StoreInstantiatorGeneric } from "./create-store/types"
+import { BaseState, StoreErrorHandler, StoreInstantiatorGeneric } from "./create-store/types"
 import { Devtools, DevtoolsPropsWithoutStore } from "./devtools/devtools"
 
 function defaultSelector<T>(data: T) {
@@ -29,7 +29,7 @@ export function createStoreUtils<
     )
   }
 
-  function useErrorHandlers(handler: (error: unknown) => void, store = getDefaultStore()) {
+  function useErrorHandlers(handler: StoreErrorHandler, store = getDefaultStore()) {
     useEffect(() => {
       const unsub = store.registerErrorHandler(handler)
       return () => void unsub()
@@ -74,5 +74,5 @@ export type StoreUtils<
   useStore: <R = TState>(selector?: (data: TState) => R, store?: TStore) => R
   useUseState: () => [TStore, React.Dispatch<React.SetStateAction<TStore>>]
   useTransition: (transition: any[], store?: TStore) => boolean
-  useErrorHandlers: (handler: (error: unknown) => void, store?: TStore) => void
+  useErrorHandlers: (handler: StoreErrorHandler, store?: TStore) => void
 }

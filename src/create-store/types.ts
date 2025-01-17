@@ -2,7 +2,7 @@ import { EventEmitter, EventsTuple } from "~/create-store/event-emitter"
 import { RemoveDollarSignProps } from "~/types"
 import { StoreConstructorConfig } from "."
 import { TransitionsStore } from "./transitions-store"
-import { Subject, SubjectType } from "~/Subject"
+import { SubjectType } from "~/Subject"
 
 export type TODO = any
 
@@ -39,7 +39,7 @@ export type GenericStoreMethods<
   ): ReducerSet<TState>
   registerErrorHandler(handler: StoreErrorHandler): () => void
   rerender(): void
-  handleError(error: unknown): void
+  handleError: StoreErrorHandler
   undo(): void
   redo(): void
   rebuild(): () => SomeStore<TState, TActions, TEvents>
@@ -102,7 +102,7 @@ export type InnerReducerSet<TState extends BaseState> = (
   mergeType: "reducer" | "set"
 ) => void
 
-export type StoreErrorHandler = (error: unknown) => void
+export type StoreErrorHandler = (error: unknown, transition: any[]) => void
 
 export type SomeStoreGeneric = SomeStore<any, any, any>
 

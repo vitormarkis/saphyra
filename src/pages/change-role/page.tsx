@@ -2,18 +2,20 @@ import { Spinner } from "@blueprintjs/core"
 import { createStoreUtils } from "../../createStoreUtils"
 import { cn } from "../../lib/utils"
 import { fetchRole } from "./fn/fetch-role"
-import { PERMISSIONS } from "./const"
 import { fetchPermissions } from "~/fetchPermissions"
 import { useHistory } from "~/hooks/use-history"
 import { newStoreDef } from "~/create-store"
+import { useCallback, useState } from "react"
+import { useBootstrapError } from "~/create-store/hooks/useBootstrapError"
+import { ErrorPage } from "~/components/error-page"
 
 type SelectedRole = "user" | "admin"
 
 type AuthStoreState = {
   role: "user" | "admin"
-  permissions: string[]
   currentTransition: any[] | null
   username: string
+  $permissions: string[]
   $welcomeMessage: string
   $firstPermission: string
 }
@@ -34,35 +36,73 @@ const newAuthStore = newStoreDef<AuthStoreState, AuthStoreState, AuthStoreAction
 
     if (prevState.role !== state.role) {
       async.promise(fetchPermissions({ role: state.role }), (permissions, actor) => {
-        actor.set({ permissions })
+        actor.set({ $permissions: permissions })
       })
     }
 
-    set(s => ({ $firstPermission: s.permissions[0] }))
+    set(s => (s.$permissions != null ? { $firstPermission: s.$permissions[0] } : s))
 
     if (diff(["username", "role"])) {
-      set(s => ({ $welcomeMessage: `Welcome ${s.username}! Your role is [${s.role}].` }))
+      set(s => ({
+        $welcomeMessage: `Welcome ${s.username}! Your role is [${s.role}].`,
+      }))
     }
 
     return state
   },
 })
 
-const authStore = newAuthStore({
-  role: "user",
-  permissions: PERMISSIONS()["user"],
-  currentTransition: null,
-  username: "",
-})
-Object.assign(window, { authStore })
-
-export const Auth = createStoreUtils<typeof newAuthStore>(authStore)
+export const Auth = createStoreUtils<typeof newAuthStore>()
 
 export function ChangeRolePage() {
+  const instantiateStore = useCallback(
+    () =>
+      newAuthStore({
+        role: "user",
+        currentTransition: null,
+        username: "",
+      }),
+    []
+  )
+  const authStoreState = useState(instantiateStore)
+  const [error, tryAgain] = useBootstrapError(authStoreState, instantiateStore)
+
+  if (error != null) {
+    return (
+      <ErrorPage
+        error={error}
+        tryAgain={tryAgain}
+      />
+    )
+  }
+
+  return (
+    <Auth.Provider value={authStoreState}>
+      <ChangeRolePageContent />
+    </Auth.Provider>
+  )
+}
+
+function ChangeRolePageContent() {
+  const [authStore] = Auth.useUseState()
   const state = Auth.useStore()
+  const isBootstraping = Auth.useTransition(["bootstrap"])
+
   const isChangingRole = Auth.useTransition(["auth", "role"])
 
   useHistory(authStore)
+
+  if (isBootstraping)
+    return (
+      <div className="flex flex-col gap-4 h-full">
+        <div className="flex items-center gap-2">
+          <div className="w-full grid place-items-center">
+            <Spinner size={36} />
+          </div>
+        </div>
+        <Auth.Devtools allExpanded />
+      </div>
+    )
 
   return (
     <div className="flex flex-col gap-4 h-full">
