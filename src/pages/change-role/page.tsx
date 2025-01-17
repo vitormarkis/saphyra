@@ -28,13 +28,13 @@ const newAuthStore = newStoreDef<AuthStoreState, AuthStoreState, AuthStoreAction
   reducer({ prevState, state, action, diff, set, async }) {
     if (action?.type === "change-role") {
       async.promise(fetchRole({ roleName: action.role }), (role, actor) => {
-        actor.set(() => ({ role }))
+        actor.set({ role })
       })
     }
 
     if (prevState.role !== state.role) {
       async.promise(fetchPermissions({ role: state.role }), (permissions, actor) => {
-        actor.set(() => ({ permissions }))
+        actor.set({ permissions })
       })
     }
 

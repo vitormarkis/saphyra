@@ -15,6 +15,8 @@ import {
   Dispatch,
   GenericStoreMethods,
   GenericStoreValues,
+  isSetter,
+  newSetter,
   ReducerSet,
   SomeStore,
   StoreErrorHandler,
@@ -154,7 +156,7 @@ export function newStoreDef<
       mergeType = "set",
       transition = null
     ): ReducerSet<TState> => {
-      return setState => store.registerSet(setState, newState, transition, mergeType)
+      return setterOrPartialState => store.registerSet(setterOrPartialState, newState, transition, mergeType)
     }
 
     const getState: Met["getState"] = () => store.state
@@ -301,7 +303,8 @@ export function newStoreDef<
       subject.notify()
     }
 
-    const registerSet: Met["registerSet"] = (setter, currentState, transition, mergeType) => {
+    const registerSet: Met["registerSet"] = (setterOrPartialStateList, currentState, transition, mergeType) => {
+      const setter = isSetter(setterOrPartialStateList) ? setterOrPartialStateList : newSetter(setterOrPartialStateList)
       if (transition) {
         const transitionKey = transition.join(":")
         store.setStateCallbacks[transitionKey] ??= []

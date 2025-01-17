@@ -60,9 +60,21 @@ export type BaseAction<TState extends BaseState> = {
   transition?: any[]
 }
 
+type SetterOrPartialState<TState extends BaseState> = Setter<TState> | Partial<TState>
+
 export type AsyncActor<TState extends BaseState, TActions extends DefaultActions & BaseAction<TState>> = {
-  set: (setter: Setter<TState>) => void
+  set: (setterOrPartialState: SetterOrPartialState<TState>) => void
   dispatch(action: TActions & BaseAction<TState>): void
+}
+
+export const isSetter = <TState extends BaseState>(
+  setterOrPartialState: SetterOrPartialState<TState>
+): setterOrPartialState is Setter<TState> => {
+  return typeof setterOrPartialState === "function"
+}
+
+export function newSetter<TState extends BaseState>(newPartialState: Partial<TState>): Setter<TState> {
+  return () => newPartialState
 }
 
 export type Async<TState extends BaseState, TActions extends DefaultActions & BaseAction<TState>> = {
@@ -82,9 +94,9 @@ export type BaseState = {
 
 export type Setter<TState> = (state: TState) => Partial<TState>
 
-export type ReducerSet<TState> = (setter: (state: TState) => Partial<TState>) => void
-export type InnerReducerSet<TState> = (
-  setterList: Setter<TState>,
+export type ReducerSet<TState extends BaseState> = (setterOrPartialState: SetterOrPartialState<TState>) => void
+export type InnerReducerSet<TState extends BaseState> = (
+  setterOrPartialStateList: SetterOrPartialState<TState>,
   state: TState,
   transition: any[] | null | undefined,
   mergeType: "reducer" | "set"

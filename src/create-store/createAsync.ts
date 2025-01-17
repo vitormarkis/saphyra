@@ -1,5 +1,5 @@
 import { EventsTuple } from "~/create-store/event-emitter"
-import { Async, AsyncActor, BaseAction, BaseState, DefaultActions, Dispatch, SomeStore } from "./types"
+import { Async, AsyncActor, BaseAction, BaseState, DefaultActions, Dispatch, isSetter, SomeStore } from "./types"
 
 export const errorNoTransition = () => new Error("No transition provided.")
 
@@ -11,10 +11,7 @@ function createTransitionDispatch<
   TState extends BaseState,
   TActions extends DefaultActions & BaseAction<TState>,
   TEvents extends EventsTuple
->(
-  store: SomeStore<TState, TActions, TEvents>,
-  transition: any[] | null | undefined
-): Dispatch<TState, TActions> {
+>(store: SomeStore<TState, TActions, TEvents>, transition: any[] | null | undefined): Dispatch<TState, TActions> {
   return function dispatch(action: TActions) {
     store.dispatch({
       ...action,
@@ -38,7 +35,7 @@ export function createAsync<
   const set: AsyncActorInner["set"] = setter => {
     store.registerSet(
       (currentState: TState) => {
-        const newState = setter(currentState)
+        const newState = isSetter(setter) ? setter(currentState) : setter
         return { ...currentState, ...newState }
       },
       state,

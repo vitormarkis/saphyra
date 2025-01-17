@@ -18,7 +18,7 @@ const newUserStore = newStoreDef<UserStoreInitialProps>({
   reducer({ state, action, async }) {
     if (action.type === "fetch-user") {
       async.promise(fetchUser(state.username), (profile, actor) => {
-        actor.set(() => ({ profile }))
+        actor.set({ profile })
       })
     }
 
