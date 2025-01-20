@@ -18,7 +18,7 @@ export const errorNoTransition = () => new Error("No transition provided.")
  * dar suporte a subtransitions dentro de transitions
  */
 function createTransitionDispatch<
-  TState extends BaseState,
+  TState,
   TActions extends BaseAction<TState>,
   TEvents extends EventsTuple
 >(
@@ -34,7 +34,7 @@ function createTransitionDispatch<
 }
 
 export function createAsync<
-  TState extends BaseState = BaseState,
+  TState = BaseState,
   TActions extends BaseAction<TState> = DefaultActions & BaseAction<TState>,
   TEvents extends EventsTuple = EventsTuple
 >(
@@ -44,10 +44,7 @@ export function createAsync<
 ): Async<TState, TActions> {
   type AsyncInner = Async<TState, TActions>
   type AsyncActorInner = AsyncActor<TState, TActions>
-  const dispatch: AsyncActorInner["dispatch"] = createTransitionDispatch(
-    store,
-    transition
-  )
+  const dispatch: AsyncActorInner["dispatch"] = createTransitionDispatch(store, transition)
   const set: AsyncActorInner["set"] = setter => {
     store.registerSet(
       (currentState: TState) => {
@@ -86,10 +83,7 @@ export function createAsync<
     handlePromise(promise)
   }
 
-  const timer = (
-    callback: (actor: AsyncActor<TState, TActions>) => void,
-    time = 0
-  ) => {
+  const timer = (callback: (actor: AsyncActor<TState, TActions>) => void, time = 0) => {
     if (!transition) throw errorNoTransition()
     const async = createAsync(store, state, transition)
     store.transitions.addKey(transition)

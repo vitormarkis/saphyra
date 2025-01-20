@@ -33,7 +33,7 @@ export type ExternalProps = Record<string, any> | null
  */
 type OnConstructProps<
   TInitialProps,
-  TState extends BaseState,
+  TState,
   TActions extends BaseAction<TState>,
   TEvents extends EventsTuple
 > = {
@@ -43,7 +43,7 @@ type OnConstructProps<
 
 type OnConstruct<
   TInitialProps,
-  TState extends BaseState,
+  TState,
   TActions extends BaseAction<TState>,
   TEvents extends EventsTuple
 > = (
@@ -53,7 +53,7 @@ type OnConstruct<
 
 function defaultOnConstruct<
   TInitialProps,
-  TState extends BaseState,
+  TState,
   TActions extends BaseAction<TState>,
   TEvents extends EventsTuple
 >(
@@ -70,7 +70,7 @@ function defaultOnConstruct<
  * Reducer
  */
 type ReducerProps<
-  TState extends BaseState,
+  TState,
   TActions extends BaseAction<TState> & DefaultActions,
   TEvents extends EventsTuple
 > = {
@@ -85,30 +85,24 @@ type ReducerProps<
   dispatch: Dispatch<TState, TActions>
 }
 
-export type Reducer<
-  TState extends BaseState,
-  TActions extends BaseAction<TState>,
-  TEvents extends EventsTuple
-> = (props: ReducerProps<TState, TActions, TEvents>) => TState
+export type Reducer<TState, TActions extends BaseAction<TState>, TEvents extends EventsTuple> = (
+  props: ReducerProps<TState, TActions, TEvents>
+) => TState
 
-function defaultReducer<
-  TState extends BaseState,
-  TActions extends BaseAction<TState>,
-  TEvents extends EventsTuple
->(props: ReducerProps<TState, TActions, TEvents>) {
+function defaultReducer<TState, TActions extends BaseAction<TState>, TEvents extends EventsTuple>(
+  props: ReducerProps<TState, TActions, TEvents>
+) {
   return props.state
 }
 
-export type ExternalPropsFn<TExternalProps> =
-  | (() => Promise<TExternalProps>)
-  | null
+export type ExternalPropsFn<TExternalProps> = (() => Promise<TExternalProps>) | null
 
 /**
  * Create store options
  */
 type CreateStoreOptions<
   TInitialProps,
-  TState extends BaseState,
+  TState,
   TActions extends BaseAction<TState>,
   TEvents extends EventsTuple
 > = {
@@ -124,7 +118,7 @@ const BOOTSTRAP_TRANSITION = ["bootstrap"]
 
 export function newStoreDef<
   TInitialProps,
-  TState extends BaseState = TInitialProps & BaseState,
+  TState = TInitialProps & BaseState,
   TActions extends BaseAction<TState> = DefaultActions & BaseAction<TState>,
   TEvents extends EventsTuple = EventsTuple
 >(
@@ -201,7 +195,7 @@ export function newStoreDef<
     }
 
     const handleRegisterTransition = (
-      newState: TState,
+      newState: TState & BaseState,
       initialAction: TActions,
       store: SomeStore<TState, TActions, TEvents>
     ) => {
@@ -210,9 +204,7 @@ export function newStoreDef<
       const isNewTransition = currentTransitionName !== actionTransitionName
 
       if (initialAction.transition != null && isNewTransition) {
-        const transitionAlreadyRunning = store.transitions.get(
-          initialAction.transition
-        )
+        const transitionAlreadyRunning = store.transitions.get(initialAction.transition)
         store.transitions.addKey(initialAction.transition)
         newState.currentTransition = initialAction.transition
         if (!transitionAlreadyRunning) {
@@ -225,10 +217,7 @@ export function newStoreDef<
               if (initialAction.transition?.join(":") === "bootstrap") {
                 errorsStore.setState({ bootstrap: error })
               }
-              console.log(
-                `%cTransition failed! [${transitionString}]`,
-                "color: red"
-              )
+              console.log(`%cTransition failed! [${transitionString}]`, "color: red")
               store.settersRegistry[transitionString] = []
               handleError(error, transition)
               if (initialAction.abortController) {
@@ -242,10 +231,7 @@ export function newStoreDef<
             transitionString,
             () => {
               if (!transition) throw new Error("Impossible to reach this point")
-              console.log(
-                `%cTransition completed! [${transitionString}]`,
-                "color: lightgreen"
-              )
+              console.log(`%cTransition completed! [${transitionString}]`, "color: lightgreen")
               applyTransition(transition, initialAction.onTransitionEnd)
               cleanUpErrorHandler()
             }
@@ -261,11 +247,7 @@ export function newStoreDef<
 
       let prevState = store.state
       for (const action of actionsQueue) {
-        const scheduleSetter = createSetScheduler(
-          newState,
-          "set",
-          action.transition
-        )
+        const scheduleSetter = createSetScheduler(newState, "set", action.transition)
 
         const futurePrevState = { ...newState }
         const context: ReducerProps<TState, TActions, TEvents> = {
@@ -289,11 +271,7 @@ export function newStoreDef<
           context: ReducerProps<TState, TActions, TEvents>
         ) => {
           if (context.action.type === "$$lazy-value") {
-            const {
-              transition,
-              transitionFn,
-              onSuccess = noop,
-            } = context.action
+            const { transition, transitionFn, onSuccess = noop } = context.action
             context.async.promise(transitionFn(transition), onSuccess)
           }
           return userReducer(context)
@@ -320,9 +298,7 @@ export function newStoreDef<
       })
     }
 
-    const registerErrorHandler: Met["registerErrorHandler"] = (
-      handler: StoreErrorHandler
-    ) => {
+    const registerErrorHandler: Met["registerErrorHandler"] = (handler: StoreErrorHandler) => {
       store.errorHandlers.add(handler)
       return () => store.errorHandlers.delete(handler)
     }
@@ -462,10 +438,7 @@ export function newStoreDef<
       ...methods,
     }
 
-    function construct(
-      initialProps: TInitialProps,
-      config: StoreConstructorConfig
-    ) {
+    function construct(initialProps: TInitialProps, config: StoreConstructorConfig) {
       Object.assign(window, { _store: store })
 
       store.errorHandlers = config.errorHandlers

@@ -3,6 +3,7 @@ import { ChangeRolePage } from "./pages/change-role/page"
 import { GithubProfilePage } from "./pages/github-profile/page"
 import { MemoryGamePage } from "./pages/memory-game/page"
 import { ZustandLikePage } from "./pages/zustand-like/page"
+import { TransitionsShowcasePage } from "~/pages/transitions-showcase/page"
 
 export const myRoutesManifest = [
   {
@@ -24,5 +25,9 @@ export const myRoutesManifest = [
   {
     path: "/external-deps",
     element: <ExternalDepsPage />,
+  },
+  {
+    path: "/transitions-showcase",
+    element: <TransitionsShowcasePage />,
   },
 ]

@@ -7,35 +7,28 @@ import { ErrorsStore } from "~/create-store/errors-store"
 
 export type TODO = any
 
-export type Dispatch<
-  TState extends BaseState,
-  TActions extends BaseAction<TState>
-> = (action: TActions & BaseAction<TState>) => void
+export type Dispatch<TState, TActions extends BaseAction<TState>> = (
+  action: TActions & BaseAction<TState>
+) => void
 
-export type HistoryExtension<TState extends BaseState> = {
+export type HistoryExtension<TState> = {
   history: Array<TState>
   historyRedo: Array<TState>
 }
 
-type SettersRegistry<TState extends BaseState> = Record<
-  string,
-  Array<(state: TState) => Partial<TState>>
->
+type SettersRegistry<TState> = Record<string, Array<(state: TState) => Partial<TState>>>
 
-export type GenericStoreValues<
-  TState extends BaseState,
-  TEvents extends EventsTuple = EventsTuple
-> = {
+export type GenericStoreValues<TState, TEvents extends EventsTuple = EventsTuple> = {
   errors: ErrorsStore
   events: EventEmitter<TEvents>
-  state: TState
+  state: TState & BaseState
   errorHandlers: Set<StoreErrorHandler>
   settersRegistry: SettersRegistry<TState>
 } & TransitionsExtension &
   HistoryExtension<TState>
 
 export type GenericStoreMethods<
-  TState extends BaseState,
+  TState,
   TActions extends BaseAction<TState>,
   TEvents extends EventsTuple
 > = {
@@ -57,7 +50,7 @@ export type GenericStoreMethods<
 }
 
 export type SomeStore<
-  TState extends BaseState,
+  TState,
   TActions extends BaseAction<TState>,
   TEvents extends EventsTuple
 > = GenericStoreValues<TState, TEvents> &
@@ -73,56 +66,40 @@ export type DefaultActions =
   | {
       type: "$$lazy-value"
       transition: any[]
-      transitionFn: (
-        transition: any[],
-        actor: AsyncActor<any, any>
-      ) => Promise<any>
+      transitionFn: (transition: any[], actor: AsyncActor<any, any>) => Promise<any>
       onSuccess: (value: any, actor: AsyncActor<any, any>) => void
     }
 
-export type BaseAction<TState extends BaseState> = {
+export type BaseAction<TState> = {
   type: string
   onTransitionEnd?: (state: TState) => void
   transition?: any[]
 } & Record<string, any>
 
-type SetterOrPartialState<TState extends BaseState> =
-  | Setter<TState>
-  | Partial<TState>
+type SetterOrPartialState<TState> = Setter<TState> | Partial<TState>
 
-export type AsyncActor<
-  TState extends BaseState,
-  TActions extends BaseAction<TState>
-> = {
+export type AsyncActor<TState, TActions extends BaseAction<TState>> = {
   set: (setterOrPartialState: SetterOrPartialState<TState>) => void
   dispatch(action: TActions | DefaultActions): void
   async: Async<TState, TActions>
 }
 
-export const isSetter = <TState extends BaseState>(
+export const isSetter = <TState>(
   setterOrPartialState: SetterOrPartialState<TState>
 ): setterOrPartialState is Setter<TState> => {
   return typeof setterOrPartialState === "function"
 }
 
-export function newSetter<TState extends BaseState>(
-  newPartialState: Partial<TState>
-): Setter<TState> {
+export function newSetter<TState>(newPartialState: Partial<TState>): Setter<TState> {
   return () => newPartialState
 }
 
-export type Async<
-  TState extends BaseState,
-  TActions extends BaseAction<TState>
-> = {
+export type Async<TState, TActions extends BaseAction<TState>> = {
   promise<T>(
     promise: Promise<T>,
     onSuccess?: (value: T, actor: AsyncActor<TState, TActions>) => void
   ): void
-  timer(
-    callback: (actor: AsyncActor<TState, TActions>) => void,
-    time?: number
-  ): void
+  timer(callback: (actor: AsyncActor<TState, TActions>) => void, time?: number): void
 }
 
 export type Diff<TState> = (keys: (keyof TState)[]) => boolean
@@ -137,10 +114,8 @@ export type BaseState = {
 
 export type Setter<TState> = (state: TState) => Partial<TState>
 
-export type ReducerSet<TState extends BaseState> = (
-  setterOrPartialState: SetterOrPartialState<TState>
-) => void
-export type InnerReducerSet<TState extends BaseState> = (
+export type ReducerSet<TState> = (setterOrPartialState: SetterOrPartialState<TState>) => void
+export type InnerReducerSet<TState> = (
   setterOrPartialStateList: SetterOrPartialState<TState>,
   state: TState,
   transition: any[] | null | undefined,
@@ -153,7 +128,7 @@ export type SomeStoreGeneric = SomeStore<any, any, any>
 
 export type StoreInstantiator<
   TInitialProps,
-  TState extends BaseState,
+  TState,
   TActions extends BaseAction<TState>,
   TEvents extends EventsTuple
 > = (
@@ -163,9 +138,5 @@ export type StoreInstantiator<
 
 export type StoreInstantiatorGeneric = StoreInstantiator<any, any, any, any>
 
-export type ExtractEvents<T> = T extends SomeStore<any, any, infer E>
-  ? E
-  : never
-export type ExtractActions<T> = T extends SomeStore<any, infer A, any>
-  ? A
-  : never
+export type ExtractEvents<T> = T extends SomeStore<any, any, infer E> ? E : never
+export type ExtractActions<T> = T extends SomeStore<any, infer A, any> ? A : never
