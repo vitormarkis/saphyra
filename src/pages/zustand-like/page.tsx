@@ -46,7 +46,11 @@ export function InputName({}: InputNameProps) {
       type="text"
       placeholder="Name"
       value={name}
-      onChange={e => simpleForm.setState({ name: e.target.value })}
+      onChange={e =>
+        simpleForm.setState({
+          name: e.target.value,
+        })
+      }
     />
   )
 }
@@ -60,7 +64,11 @@ export function InputEmail({}: InputEmailProps) {
       type="text"
       placeholder="Email"
       value={email}
-      onChange={e => simpleForm.setState({ email: e.target.value })}
+      onChange={e =>
+        simpleForm.setState({
+          email: e.target.value,
+        })
+      }
     />
   )
 }
@@ -74,7 +82,11 @@ export function InputPassword({}: InputPasswordProps) {
       type="text"
       placeholder="Password"
       value={password}
-      onChange={e => simpleForm.setState({ password: e.target.value })}
+      onChange={e =>
+        simpleForm.setState({
+          password: e.target.value,
+        })
+      }
     />
   )
 }

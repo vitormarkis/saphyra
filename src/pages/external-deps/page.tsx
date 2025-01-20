@@ -1,19 +1,51 @@
 import { Spinner } from "@blueprintjs/core"
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { IconHeartFull } from "~/generic-structure-displayer/components/IconHearFull"
 import { IconHeart } from "~/generic-structure-displayer/components/IconHeart"
 import { useHistory } from "~/hooks/use-history"
 import { cn } from "~/lib/utils"
-import { Posts, postsStore } from "~/pages/external-deps/store"
+import { newPostsStore, Posts } from "~/pages/external-deps/store"
 import { PostType } from "./types"
-import { postsController, PostsController } from "~/pages/external-deps/store.controller"
+import { PostsController } from "~/pages/external-deps/store.controller"
 import { IconComment } from "~/generic-structure-displayer/components/IconComment"
 import { EditingPost } from "~/pages/external-deps/components/editing-post"
+import { notifyOnChangeList } from "~/notify-on-change"
+import { getCommentsQueryOptions } from "~/pages/external-deps/query-options/get-comments-query-options"
 
 export function ExternalDepsPage() {
-  const isBootstraping = Posts.useTransition(["bootstrap"])
+  const postsStoreState = useState(() => newPostsStore({}))
+  const [postsStore] = postsStoreState
+
+  const isBootstraping = Posts.useTransition(["bootstrap"], postsStore)
+  const isCommentingPost = Posts.useStore(
+    s => s.commentingPostId != null,
+    postsStore
+  )
+  const allPosts = Posts.useStore(s => s.posts, postsStore)
 
   useHistory(postsStore)
+
+  /** [external-deps.react-query]
+   * Use React Query as truth source for post comments
+   */
+  useEffect(() => {
+    if (isBootstraping) return
+
+    return notifyOnChangeList(
+      allPosts.map(post => ({
+        ...getCommentsQueryOptions({ postId: post.id }),
+        meta: { postId: post.id },
+      })),
+      (comments, meta) => {
+        postsStore.setState({
+          commentsByPostId: {
+            ...postsStore.state.commentsByPostId,
+            [meta.postId]: comments,
+          },
+        })
+      }
+    )
+  }, [isBootstraping, allPosts, postsStore])
 
   useEffect(() => {
     Object.assign(window, { postsStore })
@@ -23,15 +55,20 @@ export function ExternalDepsPage() {
   }, [])
 
   return (
-    <Posts.Provider value={[postsStore, () => {}]}>
+    <Posts.Provider value={postsStoreState}>
       <div className="h-full gap-4 flex flex-col @xl:flex-row">
-        <div className="flex-1 flex justify-between min-h-0 min-w-0 h-full overflow-auto">
+        <div
+          className={cn(
+            "flex-1 flex justify-between min-h-0 min-w-0 h-full overflow-auto",
+            isCommentingPost && "overflow-hidden"
+          )}
+        >
           {isBootstraping ? (
             <div className="w-full h-full grid place-items-center">
               <Spinner size={96} />
             </div>
           ) : (
-            <div className="mr-4">
+            <div className="mr-4 relative">
               <PostList />
             </div>
           )}
@@ -53,12 +90,8 @@ export function PostList({}: PostListProps) {
   // const isPending = Posts.useTransition(["post"])
 
   return (
-    <div className="flex flex-col relative">
-      {isCommentingPost && (
-        <div className="inset-0 absolute backdrop-blur-sm z-10 p-4">
-          <EditingPost />
-        </div>
-      )}
+    <div className="flex flex-col">
+      {isCommentingPost && <EditingPost />}
 
       <div className="flex justify-between mb-4">
         <div className="flex items-center gap-2">
@@ -66,7 +99,7 @@ export function PostList({}: PostListProps) {
           <span>{likedPostsAmount}</span>
         </div>
         <div className="h-full flex [&>*]:border-r [&>*]:border-r-gray-800 [&>*:last-child]:border-r-0 ">
-          <label
+          {/* <label
             htmlFor=""
             className="flex flex-col items-center gap-1 px-2"
           >
@@ -77,7 +110,9 @@ export function PostList({}: PostListProps) {
             </span>
             <input
               type="checkbox"
-              checked={PostsController.useStore(s => s.batchLikes)}
+              checked={PostsController.useStore(
+                s => s.batchLikes
+              )}
               onChange={e => {
                 postsController.setState({
                   batchLikes: e.target.checked,
@@ -85,7 +120,7 @@ export function PostList({}: PostListProps) {
               }}
               className="h-4 w-4 rounded-sm"
             />
-          </label>
+          </label> */}
         </div>
       </div>
       <ul className="grid grid-cols-2 gap-2">
@@ -155,8 +190,7 @@ export function Post({ post }: PostProps) {
             posts.dispatch({
               type: "like-post",
               postId: post.id,
-              // @ts-ignore TODO
-              transition: ["post", ...(batchLikes ? [] : [post.id]), "like"],
+              transition: ["post", post.id, "like"],
             })
           }}
           className={cn(

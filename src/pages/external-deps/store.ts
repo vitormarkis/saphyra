@@ -3,8 +3,12 @@ import { createStoreUtils } from "~/createStoreUtils"
 import { fetchPosts } from "./fn/fetch-posts"
 import { likePost } from "./fn/like-post"
 import { reduceGroupById } from "./fn/reduce-group-by-user-id"
-import { PostType } from "./types"
+import { CommentType, PostType } from "./types"
 import { fetchLikedPosts } from "~/pages/external-deps/fn/fetch-liked-posts"
+import { placeComment } from "~/pages/external-deps/fn/fetch-place-commment"
+import { randomString } from "~/lib/utils"
+import { queryClient } from "~/query-client"
+import { getCommentsQueryOptions } from "~/pages/external-deps/query-options/get-comments-query-options"
 
 type PostsState = {
   newTodoTitle: string
@@ -17,6 +21,9 @@ type PostsState = {
 
   posts: PostType[]
   likedPosts: number[]
+
+  commentsByPostId: Record<number, CommentType[]>
+  $commentsByAuthorId: Record<number, CommentType[]>
 }
 
 type PostsInitialProps = {}
@@ -30,11 +37,23 @@ type PostsActions =
       type: "comment-in-post"
       postId: number
     }
+  | {
+      type: "place-comment"
+      postId: number
+      comment: string
+      revalidateOnSameTransition?: boolean
+    }
 
-const newPostsStore = newStoreDef<PostsInitialProps, PostsState, PostsActions>({
+export const newPostsStore = newStoreDef<
+  PostsInitialProps,
+  PostsState,
+  PostsActions
+>({
   async onConstruct() {
-    const posts = await fetchPosts()
-    const likedPosts = await fetchLikedPosts()
+    const [posts, likedPosts] = await Promise.all([
+      fetchPosts(),
+      fetchLikedPosts(),
+    ])
 
     return {
       likedPosts,
@@ -42,11 +61,35 @@ const newPostsStore = newStoreDef<PostsInitialProps, PostsState, PostsActions>({
       commentingPostId: null,
       currentTransition: null,
       newTodoTitle: "",
+      commentsByPostId: {},
     }
   },
-  reducer({ prevState, state, action, set, diff, async }) {
+  reducer({ prevState, state, action, set, diff, async, store }) {
+    if (action.type === "place-comment") {
+      const newComment: CommentType = {
+        id: randomString(),
+        authorId: 999,
+        body: action.comment,
+        postId: action.postId,
+      }
+      async.promise(placeComment(newComment, action.postId), (_, actor) => {
+        /** [external-deps.react-query]
+         * Refetches the post comments after
+         * a successful mutation
+         */
+        const promise = queryClient.refetchQueries({
+          ...getCommentsQueryOptions({ postId: action.postId }),
+        })
+        if (action.revalidateOnSameTransition) {
+          actor.async.promise(promise)
+        }
+      })
+    }
+
     if (action.type === "comment-in-post") {
-      set(() => ({ commentingPostId: action.postId }))
+      set(() => ({
+        commentingPostId: action.postId,
+      }))
     }
 
     if (action.type === "like-post") {
@@ -71,6 +114,4 @@ const newPostsStore = newStoreDef<PostsInitialProps, PostsState, PostsActions>({
   },
 })
 
-export const postsStore = newPostsStore({})
-
-export const Posts = createStoreUtils(postsStore)
+export const Posts = createStoreUtils<typeof newPostsStore>()

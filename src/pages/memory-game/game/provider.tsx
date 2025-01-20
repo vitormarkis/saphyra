@@ -56,7 +56,9 @@ const newMemoryGame = newStoreDef<MemoryGameInitialProps, MemoryGameState, Memor
       cardsToMatch.forEach((card, index) => {
         const otherIdx = index === 0 ? 1 : 0
         const otherCard = cardsToMatch[otherIdx]
-        set(s => ({ cards: updateCard(s.cards, card.match(otherCard)) }))
+        set(s => ({
+          cards: updateCard(s.cards, card.match(otherCard)),
+        }))
       })
     }
 
@@ -99,7 +101,9 @@ export function MemoryGame({ children, index, ...initialState }: MemoryGameProvi
   const [memoryGame] = memoryGameState
 
   useEffect(() => {
-    Object.assign(window, { [`memoryGame${index}`]: memoryGame })
+    Object.assign(window, {
+      [`memoryGame${index}`]: memoryGame,
+    })
   }, [])
 
   useHistory(memoryGame)

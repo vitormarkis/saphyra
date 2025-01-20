@@ -36,7 +36,9 @@ const newCount = newStoreDef<CounterState, CounterState, CounterActions>({
 
     if (action.type === "increment-ten") {
       async.promise(sleep(3000, "incrementing a lot"), (_, actor) => {
-        actor.set(s => ({ count: s.count + 10 }))
+        actor.set(s => ({
+          count: s.count + 10,
+        }))
       })
     }
 
@@ -47,7 +49,9 @@ const newCount = newStoreDef<CounterState, CounterState, CounterActions>({
     }
 
     if (state.count !== prevState.count) {
-      set(s => ({ $direction: prevState.count <= s.count ? "up" : "down" }))
+      set(s => ({
+        $direction: prevState.count <= s.count ? "up" : "down",
+      }))
     }
 
     return state
@@ -68,7 +72,9 @@ export default function App() {
   useHistory(countStore)
 
   useEffect(() => {
-    Object.assign(window, { todosStore: countStore })
+    Object.assign(window, {
+      todosStore: countStore,
+    })
   }, [])
 
   return (
@@ -94,14 +100,19 @@ export function Content() {
         <div className="flex gap-2 @2xl:flex-row flex-col">
           <button
             onClick={() => {
-              todosStore.dispatch({ type: "increment", transition: ["increment"] })
+              todosStore.dispatch({
+                type: "increment",
+                transition: ["increment"],
+              })
             }}
           >
             Increment
           </button>
           <button
             onClick={() => {
-              todosStore.dispatch({ type: "decrement" })
+              todosStore.dispatch({
+                type: "decrement",
+              })
             }}
           >
             Decrement
@@ -122,7 +133,10 @@ export function Content() {
           </button>
           <button
             onClick={() => {
-              todosStore.dispatch({ type: "increment-three", transition: ["increment", "three"] })
+              todosStore.dispatch({
+                type: "increment-three",
+                transition: ["increment", "three"],
+              })
             }}
           >
             Increment (3) [async]

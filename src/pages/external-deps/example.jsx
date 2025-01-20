@@ -2,7 +2,7 @@ function useTodos({ children }) {
   const todos = []
 
   const uncompletedTodos = useMemo(
-    () => todos.filter((todo) => !todo.completed),
+    () => todos.filter(todo => !todo.completed),
     [todos]
   )
 
@@ -36,7 +36,5 @@ function Header() {
 function UncompletedTodos() {
   const { uncompletedTodos } = useTodos()
 
-  return uncompletedTodos.map((todo) => (
-    <Todo todo={todo} />
-  ))
+  return uncompletedTodos.map(todo => <Todo todo={todo} />)
 }

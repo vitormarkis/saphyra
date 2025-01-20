@@ -1,9 +1,16 @@
-import { Spinner } from "@blueprintjs/core"
 import { useEffect, useState } from "react"
 import { newStoreDef } from "~/create-store"
 import { BaseState } from "~/create-store/types"
 import { createStoreUtils } from "~/createStoreUtils"
 import { createSession } from "~/pages/zustand-like/fn/create-session"
+
+type SimpleFormEvents = {
+  "got-token": [token: string]
+}
+
+type SimpleFormActions = {
+  type: "submit"
+}
 
 type SimpleFormInitialProps = {
   fullName: string
@@ -13,10 +20,14 @@ type SimpleFormState = BaseState & {
   name: string
   surname: string
   email: string
-  $fullName: string
 }
 
-const createSimpleForm = newStoreDef<SimpleFormInitialProps, SimpleFormState>({
+const newSimpleForm = newStoreDef<
+  SimpleFormInitialProps,
+  SimpleFormState,
+  SimpleFormActions,
+  SimpleFormEvents
+>({
   onConstruct({ initialProps }) {
     const [name, surname] = initialProps.fullName.split(" ")
 
@@ -24,42 +35,34 @@ const createSimpleForm = newStoreDef<SimpleFormInitialProps, SimpleFormState>({
       name,
       surname,
       email: `${name}@${surname}.com`.toLowerCase(),
-      currentTransition: null, // REMOVE
+      currentTransition: null,
     }
   },
-  reducer({ prevState, state, action, diff, set, async, events }) {
+  reducer({ prevState, state, action, async, events }) {
     if (action.type === "submit") {
-      const postPromise = createSession(state)
-      async.promise(postPromise, token => {
+      async.promise(createSession(state), token => {
         events.emit("got-token", token)
       })
-    }
-
-    if (diff(["name", "surname"])) {
-      set(s => ({ $fullName: `${s.name} ${s.surname}` }))
-    }
-
-    if (state.$fullName.length > 30) {
-      return prevState
     }
 
     return state
   },
 })
 
-const SimpleForm = createStoreUtils()
+const SimpleForm = createStoreUtils<typeof newSimpleForm>()
 
 export function SimpleFormPage() {
   const simpleFormState = useState(() =>
-    createSimpleForm({
-      fullName: "Vitor Markis",
-    })
+    newSimpleForm({ fullName: "Vitor Markis" })
   )
 
   return (
     <SimpleForm.Provider value={simpleFormState}>
-      <SimpleFormView onGetToken={console.log} />
-      <SimpleForm.Devtools />
+      <SimpleFormView
+        onGetToken={token => {
+          console.log("New token! ", JSON.stringify(token))
+        }}
+      />
     </SimpleForm.Provider>
   )
 }
@@ -70,48 +73,54 @@ type SimpleFormViewProps = {
 
 export function SimpleFormView({ onGetToken }: SimpleFormViewProps) {
   const [simpleForm] = SimpleForm.useUseState()
-  const isSubmitting = SimpleForm.useTransition(["submit"])
-
   const name = SimpleForm.useStore(s => s.name)
   const surname = SimpleForm.useStore(s => s.surname)
   const email = SimpleForm.useStore(s => s.email)
 
-  const fullName = SimpleForm.useStore(s => s.$fullName)
-
   useEffect(() => {
-    const unsub = simpleForm.events.on("got-token", onGetToken)
+    const unsub = simpleForm.events.on("got-token", token => {
+      onGetToken(token)
+    })
     return () => void unsub()
   }, [simpleForm])
 
-  if (isSubmitting) {
-    return <Spinner />
-  }
-
   return (
     <form
+      action=""
       onSubmit={e => {
         e.preventDefault()
         simpleForm.dispatch({
           type: "submit",
-          transition: ["submit"],
         })
       }}
+      className="flex flex-col gap-2"
     >
-      Hello {fullName}!
       <input
-        type="text"
+        placeholder="name"
         value={name}
-        onChange={e => simpleForm.setState({ name: e.target.value })}
+        onChange={e =>
+          simpleForm.setState({
+            name: e.target.value,
+          })
+        }
       />
       <input
-        type="text"
+        placeholder="surname"
         value={surname}
-        onChange={e => simpleForm.setState({ surname: e.target.value })}
+        onChange={e =>
+          simpleForm.setState({
+            surname: e.target.value,
+          })
+        }
       />
       <input
-        type="email"
+        placeholder="email"
         value={email}
-        onChange={e => simpleForm.setState({ email: e.target.value })}
+        onChange={e =>
+          simpleForm.setState({
+            email: e.target.value,
+          })
+        }
       />
       <button>Submit</button>
     </form>

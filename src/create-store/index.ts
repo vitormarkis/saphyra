@@ -23,6 +23,8 @@ import {
 } from "./types"
 import { EventEmitter, EventsTuple } from "~/create-store/event-emitter"
 import { isAsyncFunction } from "~/lib/utils"
+import { noop } from "~/create-store/fn/noop"
+import { ErrorsStore } from "~/create-store/errors-store"
 
 export type ExternalProps = Record<string, any> | null
 
@@ -32,7 +34,7 @@ export type ExternalProps = Record<string, any> | null
 type OnConstructProps<
   TInitialProps,
   TState extends BaseState,
-  TActions extends DefaultActions & BaseAction<TState>,
+  TActions extends BaseAction<TState>,
   TEvents extends EventsTuple
 > = {
   initialProps: TInitialProps
@@ -42,7 +44,7 @@ type OnConstructProps<
 type OnConstruct<
   TInitialProps,
   TState extends BaseState,
-  TActions extends DefaultActions & BaseAction<TState>,
+  TActions extends BaseAction<TState>,
   TEvents extends EventsTuple
 > = (
   props: OnConstructProps<TInitialProps, TState, TActions, TEvents>,
@@ -52,9 +54,12 @@ type OnConstruct<
 function defaultOnConstruct<
   TInitialProps,
   TState extends BaseState,
-  TActions extends DefaultActions & BaseAction<TState>,
+  TActions extends BaseAction<TState>,
   TEvents extends EventsTuple
->(props: OnConstructProps<TInitialProps, TState, TActions, TEvents>, _config?: StoreConstructorConfig) {
+>(
+  props: OnConstructProps<TInitialProps, TState, TActions, TEvents>,
+  _config?: StoreConstructorConfig
+) {
   const state = props.initialProps as unknown as TState
   return { ...state }
 }
@@ -66,7 +71,7 @@ function defaultOnConstruct<
  */
 type ReducerProps<
   TState extends BaseState,
-  TActions extends DefaultActions & BaseAction<TState>,
+  TActions extends BaseAction<TState> & DefaultActions,
   TEvents extends EventsTuple
 > = {
   prevState: TState
@@ -82,19 +87,21 @@ type ReducerProps<
 
 export type Reducer<
   TState extends BaseState,
-  TActions extends DefaultActions & BaseAction<TState>,
+  TActions extends BaseAction<TState>,
   TEvents extends EventsTuple
 > = (props: ReducerProps<TState, TActions, TEvents>) => TState
 
 function defaultReducer<
   TState extends BaseState,
-  TActions extends DefaultActions & BaseAction<TState>,
+  TActions extends BaseAction<TState>,
   TEvents extends EventsTuple
 >(props: ReducerProps<TState, TActions, TEvents>) {
   return props.state
 }
 
-export type ExternalPropsFn<TExternalProps> = (() => Promise<TExternalProps>) | null
+export type ExternalPropsFn<TExternalProps> =
+  | (() => Promise<TExternalProps>)
+  | null
 
 /**
  * Create store options
@@ -102,7 +109,7 @@ export type ExternalPropsFn<TExternalProps> = (() => Promise<TExternalProps>) | 
 type CreateStoreOptions<
   TInitialProps,
   TState extends BaseState,
-  TActions extends DefaultActions & BaseAction<TState>,
+  TActions extends BaseAction<TState>,
   TEvents extends EventsTuple
 > = {
   onConstruct?: OnConstruct<TInitialProps, TState, TActions, TEvents>
@@ -118,7 +125,7 @@ const BOOTSTRAP_TRANSITION = ["bootstrap"]
 export function newStoreDef<
   TInitialProps,
   TState extends BaseState = TInitialProps & BaseState,
-  TActions extends DefaultActions & BaseAction<TState> = DefaultActions & BaseAction<TState>,
+  TActions extends BaseAction<TState> = DefaultActions & BaseAction<TState>,
   TEvents extends EventsTuple = EventsTuple
 >(
   {
@@ -133,14 +140,16 @@ export function newStoreDef<
     config: StoreConstructorConfig = {} as StoreConstructorConfig
   ): SomeStore<TState, TActions, TEvents> {
     const subject = createSubject()
+    const errorsStore = new ErrorsStore()
 
     const storeValues: GenericStoreValues<TState, TEvents> = {
+      errors: errorsStore,
       transitions: new TransitionsStore(),
       events: new EventEmitter(),
       history: [],
       historyRedo: [],
       errorHandlers: new Set(),
-      setStateCallbacks: {},
+      settersRegistry: {},
       state: {} as TState,
     }
     let store = storeValues as unknown as SomeStore<TState, TActions, TEvents>
@@ -155,24 +164,28 @@ export function newStoreDef<
       mergeType = "set",
       transition = null
     ): ReducerSet<TState> => {
-      return setterOrPartialState => store.registerSet(setterOrPartialState, newState, transition, mergeType)
+      return setterOrPartialState =>
+        store.registerSet(setterOrPartialState, newState, transition, mergeType)
     }
 
     const getState: Met["getState"] = () => store.state
 
-    const applyTransition = (transition: any[] | null | undefined, onTransitionEnd?: (state: TState) => void) => {
+    const applyTransition = (
+      transition: any[] | null | undefined,
+      onTransitionEnd?: (state: TState) => void
+    ) => {
       if (!transition) {
         debugger
         throw errorNoTransition()
       }
       const transitionKey = transition.join(":")
-      const setters = store.setStateCallbacks[transitionKey] ?? []
+      const setters = store.settersRegistry[transitionKey] ?? []
       if (!setters) {
         console.log(
           "No setters found for this transition. It's most likely you didn't use the `set` function in your reducer."
         )
       }
-      store.setStateCallbacks[transitionKey] = []
+      store.settersRegistry[transitionKey] = []
       const newState = setters.reduce(
         (acc: TState, setter) => {
           const newState = setter(acc)
@@ -197,22 +210,46 @@ export function newStoreDef<
       const isNewTransition = currentTransitionName !== actionTransitionName
 
       if (initialAction.transition != null && isNewTransition) {
-        const transitionAlreadyRunning = store.transitions.get(initialAction.transition)
+        const transitionAlreadyRunning = store.transitions.get(
+          initialAction.transition
+        )
         store.transitions.addKey(initialAction.transition)
         newState.currentTransition = initialAction.transition
         if (!transitionAlreadyRunning) {
           const transition = initialAction.transition
           const transitionString = transition.join(":")
-          store.transitions.events.done.once(transitionString, error => {
-            if (!transition) throw new Error("Impossible to reach this point")
-            if (error) {
-              console.log(`%cTransition failed! [${transitionString}]`, "color: red")
+
+          const cleanUpErrorHandler = store.transitions.events.error.once(
+            transitionString,
+            error => {
+              if (initialAction.transition?.join(":") === "bootstrap") {
+                errorsStore.setState({ bootstrap: error })
+              }
+              console.log(
+                `%cTransition failed! [${transitionString}]`,
+                "color: red"
+              )
+              store.settersRegistry[transitionString] = []
               handleError(error, transition)
-            } else {
-              console.log(`%cTransition completed! [${transitionString}]`, "color: lightgreen")
-              applyTransition(transition, initialAction.onTransitionEnd)
+              if (initialAction.abortController) {
+                initialAction.abortController.abort()
+              }
+              cleanupApplyTransition()
             }
-          })
+          )
+
+          const cleanupApplyTransition = store.transitions.events.done.once(
+            transitionString,
+            () => {
+              if (!transition) throw new Error("Impossible to reach this point")
+              console.log(
+                `%cTransition completed! [${transitionString}]`,
+                "color: lightgreen"
+              )
+              applyTransition(transition, initialAction.onTransitionEnd)
+              cleanUpErrorHandler()
+            }
+          )
         }
       }
     }
@@ -224,7 +261,11 @@ export function newStoreDef<
 
       let prevState = store.state
       for (const action of actionsQueue) {
-        const scheduleSetter = createSetScheduler(newState, "set", action.transition)
+        const scheduleSetter = createSetScheduler(
+          newState,
+          "set",
+          action.transition
+        )
 
         const futurePrevState = { ...newState }
         const context: ReducerProps<TState, TActions, TEvents> = {
@@ -244,7 +285,20 @@ export function newStoreDef<
             })
           },
         }
-        const producedState = userReducer(context)
+        const reducer: Reducer<TState, TActions, TEvents> = (
+          context: ReducerProps<TState, TActions, TEvents>
+        ) => {
+          if (context.action.type === "$$lazy-value") {
+            const {
+              transition,
+              transitionFn,
+              onSuccess = noop,
+            } = context.action
+            context.async.promise(transitionFn(transition), onSuccess)
+          }
+          return userReducer(context)
+        }
+        const producedState = reducer(context)
         // looks redundant but user might return prev state
         newState = producedState
         prevState = futurePrevState
@@ -261,12 +315,14 @@ export function newStoreDef<
     }
 
     const handleError: Met["handleError"] = (error, transition) => {
-      store.errorHandlers.forEach(errorHandler => {
-        errorHandler(error, transition)
+      store.errorHandlers.forEach(handleError => {
+        handleError(error, transition)
       })
     }
 
-    const registerErrorHandler: Met["registerErrorHandler"] = (handler: StoreErrorHandler) => {
+    const registerErrorHandler: Met["registerErrorHandler"] = (
+      handler: StoreErrorHandler
+    ) => {
       store.errorHandlers.add(handler)
       return () => store.errorHandlers.delete(handler)
     }
@@ -305,12 +361,19 @@ export function newStoreDef<
       subject.notify()
     }
 
-    const registerSet: Met["registerSet"] = (setterOrPartialStateList, currentState, transition, mergeType) => {
-      const setter = isSetter(setterOrPartialStateList) ? setterOrPartialStateList : newSetter(setterOrPartialStateList)
+    const registerSet: Met["registerSet"] = (
+      setterOrPartialStateList,
+      currentState,
+      transition,
+      mergeType
+    ) => {
+      const setter = isSetter(setterOrPartialStateList)
+        ? setterOrPartialStateList
+        : newSetter(setterOrPartialStateList)
       if (transition) {
         const transitionKey = transition.join(":")
-        store.setStateCallbacks[transitionKey] ??= []
-        store.setStateCallbacks[transitionKey].push(setter)
+        store.settersRegistry[transitionKey] ??= []
+        store.settersRegistry[transitionKey].push(setter)
       }
 
       // mutating the current new state so user
@@ -399,12 +462,18 @@ export function newStoreDef<
       ...methods,
     }
 
-    function construct(initialProps: TInitialProps, config: StoreConstructorConfig) {
+    function construct(
+      initialProps: TInitialProps,
+      config: StoreConstructorConfig
+    ) {
       Object.assign(window, { _store: store })
 
-      store.errorHandlers = config.errorHandlers ? new Set(config.errorHandlers) : new Set([defaultErrorHandler])
+      store.errorHandlers = config.errorHandlers
+        ? new Set(config.errorHandlers)
+        : new Set([defaultErrorHandler])
 
       const prevState = {} as TState
+      // prevState.role ??= "user"
       store.state = prevState
       const isAsync = isAsyncFunction(onConstruct)
 
@@ -430,7 +499,9 @@ export function newStoreDef<
           const initialState = pureState as TState
 
           const processedState = userReducer({
-            action: { type: "noop" } as TActions,
+            action: {
+              type: "noop",
+            } as TActions,
             state: initialState,
             diff: createDiff(prevState, initialState),
             async: createAsync(store, initialState, BOOTSTRAP_TRANSITION),

@@ -5,14 +5,15 @@ export type TransitionsStoreState = {
   transitions: Record<string, number>
 }
 
-type EventsDone = {
+type EventsType = {
   [K: string]: [error: unknown | null]
 }
 
 export class TransitionsStore extends Subject {
   state: TransitionsStoreState
   events = {
-    done: new EventEmitter<EventsDone>(),
+    done: new EventEmitter<EventsType>(),
+    error: new EventEmitter<EventsType>(),
   }
 
   constructor() {
@@ -34,7 +35,10 @@ export class TransitionsStore extends Subject {
 
   add(transitionName: string | null) {
     if (!transitionName) return
-    const state = { ...this.state, transitions: { ...this.state.transitions } }
+    const state = {
+      ...this.state,
+      transitions: { ...this.state.transitions },
+    }
     state.transitions[transitionName] ??= 0
     state.transitions[transitionName]++
     this.setState(state)
@@ -52,7 +56,10 @@ export class TransitionsStore extends Subject {
 
   done(transitionName: string | null, error: unknown | null) {
     if (!transitionName) return
-    const state = { ...this.state, transitions: { ...this.state.transitions } }
+    const state = {
+      ...this.state,
+      transitions: { ...this.state.transitions },
+    }
     state.transitions[transitionName] ??= 0
     state.transitions[transitionName]--
 
@@ -64,12 +71,34 @@ export class TransitionsStore extends Subject {
     this.setState(state)
   }
 
+  clear(transitionName: string | null) {
+    if (!transitionName) return
+    const state = {
+      ...this.state,
+      transitions: { ...this.state.transitions },
+    }
+    state.transitions[transitionName] = 0
+
+    this.setState(state)
+  }
+
   doneKey(transition: any[] | null, error: unknown | null) {
     if (!transition) return
+
+    let clearKeys = false
+
+    if (error) {
+      clearKeys = true
+      this.events.error.emit(transition.join(":"), error)
+    }
+
     let ctx = ""
     for (let key of transition) {
       if (ctx !== "") key = `${ctx}:${key}`
       ctx = key
+      if (clearKeys) {
+        this.clear(key)
+      }
       this.done(key, error)
     }
   }

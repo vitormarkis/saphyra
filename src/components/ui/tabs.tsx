@@ -3,12 +3,14 @@ import * as TabsPrimitive from "@radix-ui/react-tabs"
 
 import { cn } from "~/lib/utils"
 
-export type TabsProps = React.ComponentPropsWithoutRef<typeof TabsPrimitive.Root>
+export type TabsProps = React.ComponentPropsWithoutRef<
+  typeof TabsPrimitive.Root
+>
 
-const Tabs = React.forwardRef<React.ElementRef<typeof TabsPrimitive.Root>, TabsProps>(function TabsComponent(
-  { className, ...props },
-  ref
-) {
+const Tabs = React.forwardRef<
+  React.ElementRef<typeof TabsPrimitive.Root>,
+  TabsProps
+>(function TabsComponent({ className, ...props }, ref) {
   return (
     <TabsPrimitive.Root
       ref={ref}

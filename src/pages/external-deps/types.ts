@@ -1,3 +1,10 @@
+export type CommentType = {
+  id: string
+  postId: number
+  authorId: number
+  body: string
+}
+
 export type PostType = {
   userId: string
   id: number

@@ -12,7 +12,7 @@ body {
 }
 
 button {
-  @apply bg-blue-500 text-white border border-blue-600 hover:bg-blue-600 hover:border-blue-700 focus:outline-none font-medium text-sm transition-all px-4 h-7 rounded-sm outline-none whitespace-nowrap;
+  @apply bg-blue-500 text-white border border-blue-600 hover:bg-blue-600 hover:border-blue-700 focus:outline-none font-medium text-sm transition-all px-4 h-7 rounded-sm outline-none whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-blue-500 disabled:hover:border-blue-600;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -27,6 +27,33 @@ button {
   input,
   select {
     @apply border border-slate-600 h-9 text-white bg-gray-700 outline-none focus:ring-0 ring-0;
+  }
+
+  ::-webkit-scrollbar-corner {
+    background: hsl(var(--background));
+  }
+
+  ::-webkit-scrollbar {
+    background-color: theme("colors.gray.900");
+    width: 10px;
+    height: 10px;
+    border: 2px solid rgba(0, 0, 0, 0);
+  }
+
+  ::-webkit-scrollbar-track {
+    border: 1px solid hsla(var(--fore-2) / 0.5);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background-color: theme("colors.gray.600");
+    border-radius: 999px;
+    background-clip: padding-box;
+    border: 2px solid rgba(0, 0, 0, 0);
+    transition: background-color 0.3s cubic-bezier(0, 1, 0.5, 1);
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: hsla(var(--fore-2) / 1);
   }
 }
 

@@ -7,8 +7,15 @@ type MemoryCardIdProviderProps = {
   children?: React.ReactNode
 }
 
-export function MemoryCardIdProvider({ children, id }: MemoryCardIdProviderProps) {
-  return <MemoryCardIdContext.Provider value={id}>{children}</MemoryCardIdContext.Provider>
+export function MemoryCardIdProvider({
+  children,
+  id,
+}: MemoryCardIdProviderProps) {
+  return (
+    <MemoryCardIdContext.Provider value={id}>
+      {children}
+    </MemoryCardIdContext.Provider>
+  )
 }
 
 export function useMemoryCardId() {

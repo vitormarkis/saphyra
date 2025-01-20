@@ -6,17 +6,12 @@ import {
 } from "../generic-structure-displayer/components/Root"
 
 export type DevtoolsProps<
-  T extends StoreInstantiatorGeneric = StoreInstantiatorGeneric
+  T extends StoreInstantiatorGeneric = StoreInstantiatorGeneric,
 > = {
   store: ReturnType<T>
 } & Omit<GenericStructureDisplayerProps<T>, "source">
 
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "~/components/ui/tabs"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs"
 import { useLocation } from "react-router-dom"
 
 export type DevtoolsPropsWithoutStore<T> = Omit<
@@ -25,7 +20,7 @@ export type DevtoolsPropsWithoutStore<T> = Omit<
 >
 
 export function Devtools<
-  T extends StoreInstantiatorGeneric = StoreInstantiatorGeneric
+  T extends StoreInstantiatorGeneric = StoreInstantiatorGeneric,
 >({
   store,
   allNodes,
@@ -36,8 +31,7 @@ export function Devtools<
 }: DevtoolsProps<T>) {
   const { pathname } = useLocation()
   const defaultTab =
-    sessionStorage.getItem(`${pathname}.devtools-tab`) ??
-    "state"
+    sessionStorage.getItem(`${pathname}.devtools-tab`) ?? "state"
 
   const saveCurrentTab = (tab: string) => {
     sessionStorage.setItem(`${pathname}.devtools-tab`, tab)
@@ -53,10 +47,9 @@ export function Devtools<
     () => store.transitions.state
   )
 
-  const [
-    transitionsExpandedNodes,
-    setTransitionsExpandedNodes,
-  ] = useState<Set<string>>(new Set())
+  const [transitionsExpandedNodes, setTransitionsExpandedNodes] = useState<
+    Set<string>
+  >(new Set())
 
   return (
     <Tabs
@@ -66,9 +59,7 @@ export function Devtools<
     >
       <TabsList className="grow-0 basis-auto">
         <TabsTrigger value="state">State</TabsTrigger>
-        <TabsTrigger value="transitions">
-          Transitions
-        </TabsTrigger>
+        <TabsTrigger value="transitions">Transitions</TabsTrigger>
       </TabsList>
       <TabsContent value="state">
         <GenericStructureDisplayer

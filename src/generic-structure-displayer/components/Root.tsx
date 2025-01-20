@@ -35,7 +35,9 @@ export const GenericStructureDisplayer = memo(
     onAllNodesChange,
     allExpanded,
   }: GenericStructureDisplayerProps<T>) => {
-    const [expandedNodesInner, setExpandedNodesInner] = useState<Set<string>>(new Set())
+    const [expandedNodesInner, setExpandedNodesInner] = useState<Set<string>>(
+      new Set()
+    )
     const [allNodesInner, setAllNodes] = useState<Set<string>>(new Set())
     const allNodes = allNodesProp ?? allNodesInner
     const prevAllNodes = useRef(allNodes)
@@ -57,7 +59,10 @@ export const GenericStructureDisplayer = memo(
     }, [source])
 
     useEffect(() => {
-      const hasChangedItem = checkHasChangedSetItem(allNodes, prevAllNodes.current)
+      const hasChangedItem = checkHasChangedSetItem(
+        allNodes,
+        prevAllNodes.current
+      )
       if (!hasChangedItem) return
       onAllNodesChange?.(allNodes)
       return () => {

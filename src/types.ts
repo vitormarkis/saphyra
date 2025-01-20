@@ -5,3 +5,5 @@ export type RemoveDollarSignProps<T> = {
 }
 
 export type ReactState<T> = [T, React.Dispatch<React.SetStateAction<T>>]
+
+export type NonUndefined<T> = T & ({} & null)

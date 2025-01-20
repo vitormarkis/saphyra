@@ -45,7 +45,10 @@ export function GithubProfilePage() {
         className="flex flex-col gap-2 h-full"
         onSubmit={e => {
           e.preventDefault()
-          userStore.dispatch({ type: "fetch-user", transition: ["user", "fetch"] })
+          userStore.dispatch({
+            type: "fetch-user",
+            transition: ["user", "fetch"],
+          })
         }}
       >
         <label htmlFor="username">Username</label>
@@ -57,7 +60,9 @@ export function GithubProfilePage() {
           value={username}
           disabled={isFetchingUser}
           onChange={e => {
-            userStore.setState({ username: e.target.value })
+            userStore.setState({
+              username: e.target.value,
+            })
           }}
         />
         <button
