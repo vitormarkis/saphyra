@@ -1,4 +1,4 @@
-import { createStoreFactory } from "../../create-store"
+import { newStoreDef } from "../../create-store"
 import { createStoreUtils } from "../../createStoreUtils"
 
 type SimpleForm = {
@@ -7,14 +7,14 @@ type SimpleForm = {
   password: string
 }
 
-const simpleFormStore = createStoreFactory<SimpleForm>()
+const newSimpleForm = newStoreDef<SimpleForm>()
 
-const simpleForm = simpleFormStore({
+const simpleForm = newSimpleForm({
   email: "",
   name: "",
   password: "",
 })
-const SimpleForm = createStoreUtils<typeof simpleFormStore>(simpleForm)
+const SimpleForm = createStoreUtils<typeof newSimpleForm>(simpleForm)
 const useSimpleForm = SimpleForm.useStore
 
 export function ZustandLikePage() {
@@ -46,7 +46,11 @@ export function InputName({}: InputNameProps) {
       type="text"
       placeholder="Name"
       value={name}
-      onChange={e => simpleForm.setState({ name: e.target.value })}
+      onChange={e =>
+        simpleForm.setState({
+          name: e.target.value,
+        })
+      }
     />
   )
 }
@@ -60,7 +64,11 @@ export function InputEmail({}: InputEmailProps) {
       type="text"
       placeholder="Email"
       value={email}
-      onChange={e => simpleForm.setState({ email: e.target.value })}
+      onChange={e =>
+        simpleForm.setState({
+          email: e.target.value,
+        })
+      }
     />
   )
 }
@@ -74,7 +82,11 @@ export function InputPassword({}: InputPasswordProps) {
       type="text"
       placeholder="Password"
       value={password}
-      onChange={e => simpleForm.setState({ password: e.target.value })}
+      onChange={e =>
+        simpleForm.setState({
+          password: e.target.value,
+        })
+      }
     />
   )
 }
@@ -95,7 +107,7 @@ type ValueDislayerProps = {
 }
 
 export function ValueDislayer({ valueName }: ValueDislayerProps) {
-  const value: string = useSimpleForm(s => s[valueName])
+  const value: string = useSimpleForm(s => s[valueName as keyof SimpleForm])
 
   return (
     <div className="flex gap-2">

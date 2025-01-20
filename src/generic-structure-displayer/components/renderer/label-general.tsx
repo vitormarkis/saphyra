@@ -33,42 +33,45 @@ export type WrapperProps = React.ComponentPropsWithoutRef<"div"> & {
   ctx: RendererContext
 }
 
-export const Wrapper = React.forwardRef<React.ElementRef<"div">, WrapperProps>(function WrapperComponent(
-  { className, ctx, children, ...props },
-  ref
-) {
-  const { expandNode, expandedNodes } = useContext(TreeContext)
-  const hasChildNodes = ctx.node.childNodes != null
-  const childNode = ctx.node
-  const isExpanded = expandedNodes.has(childNode.id)
+export const Wrapper = React.forwardRef<React.ElementRef<"div">, WrapperProps>(
+  function WrapperComponent({ className, ctx, children, ...props }, ref) {
+    const { expandNode, expandedNodes } = useContext(TreeContext)
+    const hasChildNodes = ctx.node.childNodes != null
+    const childNode = ctx.node
+    const isExpanded = expandedNodes.has(childNode.id)
 
-  const isObject = ctx.type === "object" || ctx.type === "array"
+    const isObject = ctx.type === "object" || ctx.type === "array"
 
-  return (
-    <div
-      ref={ref}
-      className={cn("flex h-5 items-center gap-1", !isObject && "ml-6", className)}
-      {...props}
-    >
+    return (
       <div
-        role="button"
+        ref={ref}
         className={cn(
-          "aspect-square grid place-content-center transition-all h-full",
-          hasChildNodes && "dark:hover:bg-gray-800 hover:bg-gray-200",
-          !isObject && "hidden"
+          "flex h-5 items-center gap-1",
+          !isObject && "ml-6",
+          className
         )}
-        onClick={expandNode.bind(null, childNode.id)}
+        {...props}
       >
-        {hasChildNodes && (
-          <div
-            data-state={isExpanded ? "expanded" : "collapsed"}
-            className="ease-[0,1,0.5,1] data-[state=collapsed]:-rotate-90 transition-all duration-300 select-none"
-          >
-            <IconCaret className="h-3 w-3" />
-          </div>
-        )}
+        <div
+          role="button"
+          className={cn(
+            "aspect-square grid place-content-center transition-all h-full",
+            hasChildNodes && "dark:hover:bg-gray-800 hover:bg-gray-200",
+            !isObject && "hidden"
+          )}
+          onClick={expandNode.bind(null, childNode.id)}
+        >
+          {hasChildNodes && (
+            <div
+              data-state={isExpanded ? "expanded" : "collapsed"}
+              className="ease-[0,1,0.5,1] data-[state=collapsed]:-rotate-90 transition-all duration-300 select-none"
+            >
+              <IconCaret className="h-3 w-3" />
+            </div>
+          )}
+        </div>
+        {children}
       </div>
-      {children}
-    </div>
-  )
-})
+    )
+  }
+)

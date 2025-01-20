@@ -1,3 +1,4 @@
+import { EventsTuple } from "~/create-store/event-emitter"
 import {
   Async,
   AsyncActor,
@@ -5,21 +6,23 @@ import {
   BaseState,
   DefaultActions,
   Dispatch,
-  GenericStore,
-  TransitionsExtension,
+  isSetter,
+  SomeStore,
 } from "./types"
+import { noop } from "~/create-store/fn/noop"
 
-export const _noTransitionError = new Error("No transition provided.")
+export const errorNoTransition = () => new Error("No transition provided.")
 
 /**
  * Comportamento deve ser mudado no futuro caso a store comece a
  * dar suporte a subtransitions dentro de transitions
  */
 function createTransitionDispatch<
-  TState extends BaseState = BaseState,
-  TActions extends DefaultActions & BaseAction<TState> = DefaultActions & BaseAction<TState>
+  TState extends BaseState,
+  TActions extends BaseAction<TState>,
+  TEvents extends EventsTuple
 >(
-  store: GenericStore<TState, TActions> & TransitionsExtension,
+  store: SomeStore<TState, TActions, TEvents>,
   transition: any[] | null | undefined
 ): Dispatch<TState, TActions> {
   return function dispatch(action: TActions) {
@@ -32,19 +35,23 @@ function createTransitionDispatch<
 
 export function createAsync<
   TState extends BaseState = BaseState,
-  TActions extends DefaultActions & BaseAction<TState> = DefaultActions & BaseAction<TState>
+  TActions extends BaseAction<TState> = DefaultActions & BaseAction<TState>,
+  TEvents extends EventsTuple = EventsTuple
 >(
-  store: GenericStore<TState, any> & TransitionsExtension,
+  store: SomeStore<TState, TActions, TEvents>,
   state: TState,
   transition: any[] | null | undefined
-): Async<TState> {
+): Async<TState, TActions> {
   type AsyncInner = Async<TState, TActions>
   type AsyncActorInner = AsyncActor<TState, TActions>
-  const dispatch: AsyncActorInner["dispatch"] = createTransitionDispatch(store, transition)
+  const dispatch: AsyncActorInner["dispatch"] = createTransitionDispatch(
+    store,
+    transition
+  )
   const set: AsyncActorInner["set"] = setter => {
     store.registerSet(
       (currentState: TState) => {
-        const newState = setter(currentState)
+        const newState = isSetter(setter) ? setter(currentState) : setter
         return { ...currentState, ...newState }
       },
       state,
@@ -54,42 +61,51 @@ export function createAsync<
   }
   const promise: AsyncInner["promise"] = <T>(
     promise: Promise<T>,
-    onSuccess: (value: T, actor: AsyncActor<TState, TActions>) => void
+    onSuccess?: (value: T, actor: AsyncActor<TState, TActions>) => void
   ) => {
-    if (!transition) throw _noTransitionError
+    if (!transition) throw errorNoTransition()
     store.transitions.addKey(transition)
 
     async function handlePromise(promise: Promise<T>) {
-      if (!transition) throw _noTransitionError
+      if (!transition) throw errorNoTransition()
+      const async = createAsync(store, state, transition)
       try {
-        if (!transition) throw _noTransitionError
+        if (!transition) throw errorNoTransition()
         const value = await promise
+        onSuccess ??= noop
         onSuccess(value, {
           dispatch,
           set,
+          async,
         })
-      } catch (error) {
-        console.log("%cSomething went wrong! Rolling back the store state. [TODO]", "color: palevioletred")
-        store.transitions.doneKey(transition, error)
-      } finally {
         store.transitions.doneKey(transition, null)
+      } catch (error) {
+        store.transitions.doneKey(transition, error)
       }
     }
     handlePromise(promise)
   }
 
-  const timer = (callback: (actor: AsyncActor<TState, TActions>) => void, time = 0) => {
-    if (!transition) throw _noTransitionError
+  const timer = (
+    callback: (actor: AsyncActor<TState, TActions>) => void,
+    time = 0
+  ) => {
+    if (!transition) throw errorNoTransition()
+    const async = createAsync(store, state, transition)
     store.transitions.addKey(transition)
     setTimeout(() => {
       try {
         callback({
           dispatch,
           set,
+          async,
         })
         store.transitions.doneKey(transition, null)
       } catch (error) {
-        console.log("%cSomething went wrong! Rolling back the store state. [TODO]", "color: palevioletred")
+        console.log(
+          "%cSomething went wrong! Rolling back the store state. [TODO]",
+          "color: palevioletred"
+        )
         store.transitions.doneKey(transition, error)
       }
     }, time)

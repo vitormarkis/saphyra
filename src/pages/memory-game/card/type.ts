@@ -49,7 +49,12 @@ export class MemoryCard {
   }
 
   clone(): MemoryCard {
-    return MemoryCard.restore(this.value, this.state, this.matchedWithId, this.id)
+    return MemoryCard.restore(
+      this.value,
+      this.state,
+      this.matchedWithId,
+      this.id
+    )
   }
 
   match(card: MemoryCard): MemoryCard {

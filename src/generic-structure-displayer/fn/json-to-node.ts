@@ -3,7 +3,9 @@ import { ChildNode, Renderer } from "./types"
 
 export type CheckIsObject = (item: unknown) => item is Record<string, any>
 
-export function defaultCheckIsObject(item: unknown): item is Record<string, any> {
+export function defaultCheckIsObject(
+  item: unknown
+): item is Record<string, any> {
   if (!item) return false
   return Object.getPrototypeOf(item) === Object.prototype
 }
@@ -19,7 +21,10 @@ export interface JsonToNodeInterface {
 }
 
 export function createJsonToNode(
-  { renderer = defaultRenderer, checkIsObject = defaultCheckIsObject }: JsonToNodeInterface = {
+  {
+    renderer = defaultRenderer,
+    checkIsObject = defaultCheckIsObject,
+  }: JsonToNodeInterface = {
     renderer: defaultRenderer,
     checkIsObject: defaultCheckIsObject,
   }
@@ -48,7 +53,15 @@ export function createJsonToNode(
       const type = getType(value)
       const isItem = currentPath.endsWith("]")
       const idx = isItem ? getIdx(key) : null
-      return renderer({ node, path: currentPath, value, key, type, isItem, idx })
+      return renderer({
+        node,
+        path: currentPath,
+        value,
+        key,
+        type,
+        isItem,
+        idx,
+      })
     }
 
     if (checkIsObject(state) || Array.isArray(state)) {
@@ -82,7 +95,17 @@ export function createJsonToNode(
         const type = getType(state)
         const isItem = true
         const idx = isItem ? getIdx(key) : null
-        return [renderer({ node, path, value: state, key, type, isItem, idx })]
+        return [
+          renderer({
+            node,
+            path,
+            value: state,
+            key,
+            type,
+            isItem,
+            idx,
+          }),
+        ]
       }
 
       return content
@@ -96,13 +119,27 @@ export function createJsonToNode(
     const type = getType(state)
     const isItem = path?.endsWith("]") ?? true
     const idx = isItem ? getIdx(key) : null
-    return [renderer({ node, path, value: state, key, type, isItem, idx })]
+    return [
+      renderer({
+        node,
+        path,
+        value: state,
+        key,
+        type,
+        isItem,
+        idx,
+      }),
+    ]
   }
 
   return jsonToNode
 }
 
-function getPath(key: string, path: string | null | undefined, state: any): string {
+function getPath(
+  key: string,
+  path: string | null | undefined,
+  state: any
+): string {
   if (path != null) {
     return `${path}.${key}`
   }

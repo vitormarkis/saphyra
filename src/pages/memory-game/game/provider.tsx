@@ -1,5 +1,5 @@
 import { PropsWithChildren, useEffect, useState } from "react"
-import { createStoreFactory } from "../../../create-store"
+import { newStoreDef } from "../../../create-store"
 import { createStoreUtils } from "../../../createStoreUtils"
 import { MemoryCard } from "../card/type"
 import { reduceGroupById } from "./fn/reduce-group-by-id"
@@ -35,7 +35,7 @@ type MemoryGameActions =
       type: "match-cards"
     }
 
-const createMemoryGame = createStoreFactory<MemoryGameInitialProps, MemoryGameState, MemoryGameActions>({
+const newMemoryGame = newStoreDef<MemoryGameInitialProps, MemoryGameState, MemoryGameActions>({
   onConstruct({ initialProps }) {
     const cards = initialProps.cards.flatMap(flatMapCreateCards)
     return {
@@ -43,7 +43,7 @@ const createMemoryGame = createStoreFactory<MemoryGameInitialProps, MemoryGameSt
       currentTransition: null,
     }
   },
-  reducer({ prevState, state, action, store, diff, dispatch, set }) {
+  reducer({ state, action, diff, dispatch, set }) {
     console.log("fn")
     if (action.type === "tap-card") {
       const card = state.$cardById[action.cardId]
@@ -56,7 +56,9 @@ const createMemoryGame = createStoreFactory<MemoryGameInitialProps, MemoryGameSt
       cardsToMatch.forEach((card, index) => {
         const otherIdx = index === 0 ? 1 : 0
         const otherCard = cardsToMatch[otherIdx]
-        set(s => ({ cards: updateCard(s.cards, card.match(otherCard)) }))
+        set(s => ({
+          cards: updateCard(s.cards, card.match(otherCard)),
+        }))
       })
     }
 
@@ -85,7 +87,7 @@ const createMemoryGame = createStoreFactory<MemoryGameInitialProps, MemoryGameSt
   },
 })
 
-export const Game = createStoreUtils<typeof createMemoryGame>()
+export const Game = createStoreUtils<typeof newMemoryGame>()
 
 type MemoryGameProviderProps = {
   index: number
@@ -94,12 +96,14 @@ type MemoryGameProviderProps = {
 
 export function MemoryGame({ children, index, ...initialState }: MemoryGameProviderProps) {
   const [expandedNodes, setExpandedNodes] = useState(new Set<string>())
-  const memoryGameState = useState(() => createMemoryGame(initialState))
+  const memoryGameState = useState(() => newMemoryGame(initialState))
 
   const [memoryGame] = memoryGameState
 
   useEffect(() => {
-    Object.assign(window, { [`memoryGame${index}`]: memoryGame })
+    Object.assign(window, {
+      [`memoryGame${index}`]: memoryGame,
+    })
   }, [])
 
   useHistory(memoryGame)

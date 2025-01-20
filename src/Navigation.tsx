@@ -13,12 +13,19 @@ export function RootLayoutWrapper({ children }: RootLayoutWrapperProps) {
   )
 
   useEffect(() => {
-    Object.assign(window, { toggleSidebar: () => setIsSidebarVisible(s => !s) })
+    Object.assign(window, {
+      toggleSidebar: () => setIsSidebarVisible(s => !s),
+    })
   }, [])
 
   return (
     <div className="container-1 flex gap-4 h-screen p-4 ">
-      <div className={cn("flex flex-col text-sm basis-[320px]", !isSidebarVisible && "hidden")}>
+      <div
+        className={cn(
+          "flex flex-col text-sm basis-[240px]",
+          !isSidebarVisible && "hidden"
+        )}
+      >
         <div className="border border-dashed container-2 h-full flex flex-col px-4 py-6 text-sm rounded-md ">
           <h3 className="font-bold text-normal">Showcases</h3>
           <nav className="flex flex-col py-6 gap-1">
@@ -29,17 +36,20 @@ export function RootLayoutWrapper({ children }: RootLayoutWrapperProps) {
                 className={({ isActive }) =>
                   cn(
                     "hover:bg-gray-100 dark:hover:bg-gray-900 dark:hover:text-white w-full py-1 px-2 rounded-sm",
-                    isActive && "bg-blue-500 text-white hover:bg-blue-500 hover:text-white"
+                    isActive &&
+                      "bg-blue-500 text-white hover:bg-blue-500 hover:text-white"
                   )
                 }
               >
-                {route === "/" ? "Home" : capitalize(route?.replace("/", "").replaceAll("-", " "))}
+                {route === "/"
+                  ? "Home"
+                  : capitalize(route?.replace("/", "").replaceAll("-", " "))}
               </NavLink>
             ))}
           </nav>
         </div>
       </div>
-      <div className="flex-1 flex flex-col text-sm min-w-[320px]">
+      <div className="flex-1 flex flex-col text-sm min-w-[240px]">
         <div className="border border-dashed container-2 h-full flex flex-col px-4 py-6 text-sm rounded-md @container">
           {children}
         </div>

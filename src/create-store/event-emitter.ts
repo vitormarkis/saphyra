@@ -9,7 +9,10 @@ type HandlersMapping<Events extends EventsTuple> = {
 export class EventEmitter<EventArgs extends EventsTuple = EventsTuple> {
   private handlers: Partial<HandlersMapping<EventArgs>> = {}
 
-  on<TEventName extends keyof EventArgs>(event: TEventName, handler: EventHandler<EventArgs[TEventName]>) {
+  on<TEventName extends keyof EventArgs>(
+    event: TEventName,
+    handler: EventHandler<EventArgs[TEventName]>
+  ) {
     this.handlers[event] ??= []
     this.handlers[event]?.push(handler)
     return () => {
@@ -19,18 +22,30 @@ export class EventEmitter<EventArgs extends EventsTuple = EventsTuple> {
     }
   }
 
-  once<TEventName extends keyof EventArgs>(event: TEventName, handler: EventHandler<EventArgs[TEventName]>) {
+  once<TEventName extends keyof EventArgs>(
+    event: TEventName,
+    handler: EventHandler<EventArgs[TEventName]>
+  ) {
     const off = this.on(event, (...args) => {
       off()
       handler(...args)
     })
+
+    return off
   }
 
-  emit<TEventName extends keyof EventArgs>(event: TEventName, ...args: EventArgs[TEventName]) {
+  emit<TEventName extends keyof EventArgs>(
+    event: TEventName,
+    ...args: EventArgs[TEventName]
+  ) {
     const handlers = this.handlers[event]
     if (!handlers) return
     for (const handler of handlers) {
       handler(...args)
     }
+  }
+
+  clear<TEventName extends keyof EventArgs>(event: TEventName) {
+    this.handlers[event] = []
   }
 }

@@ -1,4 +1,7 @@
-export function createDebugableShallowCopy<T>(intendedState: T, debugProp?: keyof T): T {
+export function createDebugableShallowCopy<T>(
+  intendedState: T,
+  debugProp?: keyof T
+): T {
   const state = { ...intendedState }
 
   if (debugProp) {

@@ -1,23 +1,32 @@
 import { Spinner } from "@blueprintjs/core"
 import { Fragment, useEffect, useState } from "react"
 import { useHistory } from "~/hooks/use-history"
-import { createStoreFactory } from "./create-store"
+import { newStoreDef } from "./create-store"
 import { BaseState } from "./create-store/types"
 import { createStoreUtils } from "./createStoreUtils"
 import { sleep } from "./sleep"
 
-type TodosStoreInitialProps = BaseState & {
+type CounterState = BaseState & {
   count: number
   $direction: "up" | "down"
-  currentTransition: null
 }
 
-const createTodosStore = createStoreFactory<TodosStoreInitialProps>({
-  onConstruct({ initialProps, store }) {
-    store.uncontrolledState = {}
-    return initialProps
-  },
-  reducer({ prevState, state, action, async, set, store }) {
+type CounterActions =
+  | {
+      type: "increment"
+    }
+  | {
+      type: "decrement"
+    }
+  | {
+      type: "increment-ten"
+    }
+  | {
+      type: "increment-three"
+    }
+
+const newCount = newStoreDef<CounterState, CounterState, CounterActions>({
+  reducer({ prevState, state, action, async, set }) {
     if (action.type === "increment") {
       set(s => ({ count: s.count + 1 }))
     }
@@ -27,7 +36,9 @@ const createTodosStore = createStoreFactory<TodosStoreInitialProps>({
 
     if (action.type === "increment-ten") {
       async.promise(sleep(3000, "incrementing a lot"), (_, actor) => {
-        actor.set(s => ({ count: s.count + 10 }))
+        actor.set(s => ({
+          count: s.count + 10,
+        }))
       })
     }
 
@@ -38,28 +49,36 @@ const createTodosStore = createStoreFactory<TodosStoreInitialProps>({
     }
 
     if (state.count !== prevState.count) {
-      set(s => ({ $direction: prevState.count <= s.count ? "up" : "down" }))
+      set(s => ({
+        $direction: prevState.count <= s.count ? "up" : "down",
+      }))
     }
 
     return state
   },
 })
 
-export const Todos = createStoreUtils<typeof createTodosStore>()
+export const Todos = createStoreUtils<typeof newCount>()
 
 export default function App() {
-  let [todosStore, setTodosStore] = useState(() =>
-    createTodosStore({ count: 0, $direction: "down", currentTransition: null })
+  const countStoreState = useState(() =>
+    newCount({
+      count: 0,
+      currentTransition: null,
+    })
   )
+  const [countStore] = countStoreState
 
-  useHistory(todosStore)
+  useHistory(countStore)
 
   useEffect(() => {
-    Object.assign(window, { todosStore })
+    Object.assign(window, {
+      todosStore: countStore,
+    })
   }, [])
 
   return (
-    <Todos.Provider value={[todosStore, setTodosStore]}>
+    <Todos.Provider value={countStoreState}>
       <Content />
       <div className="mt-4">
         <Todos.Devtools />
@@ -81,27 +100,32 @@ export function Content() {
         <div className="flex gap-2 @2xl:flex-row flex-col">
           <button
             onClick={() => {
-              todosStore.dispatch({ type: "increment", transition: ["increment"] })
+              todosStore.dispatch({
+                type: "increment",
+                transition: ["increment"],
+              })
             }}
           >
             Increment
           </button>
           <button
             onClick={() => {
-              todosStore.dispatch({ type: "decrement" })
+              todosStore.dispatch({
+                type: "decrement",
+              })
             }}
           >
             Decrement
           </button>
           <button
             onClick={async () => {
-              const incrementTenResolver = Promise.withResolvers<TodosStoreInitialProps>()
-              todosStore.dispatch({
-                type: "increment-ten",
-                transition: ["increment", "ten"],
-                onTransitionEnd: incrementTenResolver.resolve,
+              const { count } = await new Promise<CounterState>(resolve => {
+                todosStore.dispatch({
+                  type: "increment-ten",
+                  transition: ["increment", "ten"],
+                  onTransitionEnd: resolve,
+                })
               })
-              const { count } = await incrementTenResolver.promise
               console.log("new count", count)
             }}
           >
@@ -109,7 +133,10 @@ export function Content() {
           </button>
           <button
             onClick={() => {
-              todosStore.dispatch({ type: "increment-three", transition: ["increment", "three"] })
+              todosStore.dispatch({
+                type: "increment-three",
+                transition: ["increment", "three"],
+              })
             }}
           >
             Increment (3) [async]

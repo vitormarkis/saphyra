@@ -1,3 +1,4 @@
+import { ExternalDepsPage } from "~/pages/external-deps/page"
 import { ChangeRolePage } from "./pages/change-role/page"
 import { GithubProfilePage } from "./pages/github-profile/page"
 import { MemoryGamePage } from "./pages/memory-game/page"
@@ -19,5 +20,9 @@ export const myRoutesManifest = [
   {
     path: "/memory-game",
     element: <MemoryGamePage />,
+  },
+  {
+    path: "/external-deps",
+    element: <ExternalDepsPage />,
   },
 ]

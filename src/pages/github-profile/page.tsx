@@ -1,4 +1,4 @@
-import { createStoreFactory } from "../../create-store"
+import { newStoreDef } from "../../create-store"
 import { GithubProfile } from "./types"
 import { createStoreUtils } from "../../createStoreUtils"
 
@@ -14,11 +14,11 @@ async function fetchUser(username: string) {
   return profile
 }
 
-const createUserStore = createStoreFactory<UserStoreInitialProps>({
+const newUserStore = newStoreDef<UserStoreInitialProps>({
   reducer({ state, action, async }) {
     if (action.type === "fetch-user") {
       async.promise(fetchUser(state.username), (profile, actor) => {
-        actor.set(() => ({ profile }))
+        actor.set({ profile })
       })
     }
 
@@ -26,17 +26,16 @@ const createUserStore = createStoreFactory<UserStoreInitialProps>({
   },
 })
 
-const userStore = createUserStore({
+const userStore = newUserStore({
   username: "",
   profile: null,
   currentTransition: null,
 })
 
-export const User = createStoreUtils<typeof createUserStore>(userStore)
+export const User = createStoreUtils<typeof newUserStore>(userStore)
 
 export function GithubProfilePage() {
   const username = User.useStore(s => s.username)
-  const state = User.useStore()
   const isFetchingUser = User.useTransition(["user", "fetch"])
 
   return (
@@ -46,7 +45,10 @@ export function GithubProfilePage() {
         className="flex flex-col gap-2 h-full"
         onSubmit={e => {
           e.preventDefault()
-          userStore.dispatch({ type: "fetch-user", transition: ["user", "fetch"] })
+          userStore.dispatch({
+            type: "fetch-user",
+            transition: ["user", "fetch"],
+          })
         }}
       >
         <label htmlFor="username">Username</label>
@@ -58,7 +60,9 @@ export function GithubProfilePage() {
           value={username}
           disabled={isFetchingUser}
           onChange={e => {
-            userStore.setState({ username: e.target.value })
+            userStore.setState({
+              username: e.target.value,
+            })
           }}
         />
         <button
