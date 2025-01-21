@@ -18,5 +18,3 @@ A partir desse momento o valor presente no cache do React Query se torna a fonte
 Se você quiser usar apenas APIs do XXX, eu ainda recomendo usar React Query como cache.
 
 Por padrão, use as APIs assíncronas do XXX. Se precisar que um dado da sua store esteja sempre sinocronizado com o servidor, use React Query como fonte de verdade.
-
-

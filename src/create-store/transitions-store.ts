@@ -10,6 +10,7 @@ type EventsType = {
 }
 
 export class TransitionsStore extends Subject {
+  controllers: Record<string, AbortController> = {}
   state: TransitionsStoreState
   events = {
     done: new EventEmitter<EventsType>(),
@@ -33,33 +34,33 @@ export class TransitionsStore extends Subject {
     return this.state.transitions[key]
   }
 
-  add(transitionName: string | null) {
+  add(state: TransitionsStoreState, transitionName: string | null) {
     if (!transitionName) return
-    const state = {
-      ...this.state,
-      transitions: { ...this.state.transitions },
-    }
     state.transitions[transitionName] ??= 0
     state.transitions[transitionName]++
-    this.setState(state)
+    return state
   }
 
   addKey(transition: any[] | null) {
     if (!transition) return
-    let ctx = ""
-    for (let key of transition) {
-      if (ctx !== "") key = `${ctx}:${key}`
-      ctx = key
-      this.add(key)
-    }
-  }
 
-  done(transitionName: string | null, error: unknown | null) {
-    if (!transitionName) return
     const state = {
       ...this.state,
       transitions: { ...this.state.transitions },
     }
+
+    let ctx = ""
+    const newState = transition.reduce((acc, key) => {
+      if (ctx !== "") key = `${ctx}:${key}`
+      ctx = key
+      return this.add(acc, key)
+    }, state)
+
+    this.setState(newState)
+  }
+
+  done(state: TransitionsStoreState, transitionName: string | null, error: unknown | null) {
+    if (!transitionName) return
     state.transitions[transitionName] ??= 0
     state.transitions[transitionName]--
 
@@ -68,7 +69,7 @@ export class TransitionsStore extends Subject {
       this.events.done.emit(transitionName, error)
     }
 
-    this.setState(state)
+    return state
   }
 
   clear(transitionName: string | null) {
@@ -85,22 +86,27 @@ export class TransitionsStore extends Subject {
   doneKey(transition: any[] | null, error: unknown | null) {
     if (!transition) return
 
-    let clearKeys = false
+    // let clearKeys = false
 
+    // if (isNewActionError(error)) {
     if (error) {
-      clearKeys = true
+      // clearKeys = true
       this.events.error.emit(transition.join(":"), error)
     }
 
+    let state = {
+      ...this.state,
+      transitions: { ...this.state.transitions },
+    }
+
     let ctx = ""
-    for (let key of transition) {
+    const newState = transition.reduce((acc, key) => {
       if (ctx !== "") key = `${ctx}:${key}`
       ctx = key
-      if (clearKeys) {
-        this.clear(key)
-      }
-      this.done(key, error)
-    }
+      return this.done(acc, key, error)
+    }, state)
+
+    this.setState(newState)
   }
 
   isHappening(transition: any[] | null) {

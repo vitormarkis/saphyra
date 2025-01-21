@@ -7,30 +7,26 @@
  * @param signal - Optional AbortSignal to cancel the sleep operation.
  * @returns A promise that resolves to `true` after the delay, or rejects if aborted.
  */
-export function sleep(
-  ms: number,
-  context?: string,
-  signal?: AbortSignal
-): Promise<boolean> {
+export function sleep(ms: number, context?: string, signal?: AbortSignal): Promise<boolean> {
   return new Promise((resolve, reject) => {
     if (signal?.aborted) {
-      console.log("[SLEEP ABORTED]", context)
+      // console.log("[SLEEP ABORTED]", context)
       return reject(new Error("Sleep aborted"))
     }
 
-    console.log("[SLEEPING]", context)
+    // console.log("[SLEEPING]", context)
 
     const timeoutId = setTimeout(() => {
-      console.log("[WAKE]", context)
+      // console.log("[WAKE]", context)
       cleanup()
       resolve(true)
     }, ms)
 
-    const onAbort = () => {
+    const onAbort = (e: { target: EventTarget | null }) => {
       clearTimeout(timeoutId)
-      console.log("[SLEEP ABORTED]", context)
+      // console.log("[SLEEP ABORTED]", context)
       cleanup()
-      reject(new Error("Sleep aborted"))
+      reject(e.target)
     }
 
     const cleanup = () => {

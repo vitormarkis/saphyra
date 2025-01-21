@@ -94,11 +94,16 @@ export function newSetter<TState>(newPartialState: Partial<TState>): Setter<TSta
   return () => newPartialState
 }
 
+export type AsyncPromiseProps = {
+  signal: AbortSignal
+}
+
+export type PromiseResult<T, TState, TActions extends BaseAction<TState>> = {
+  onSuccess: (callback: (value: T, actor: AsyncActor<TState, TActions>) => void) => void
+}
+
 export type Async<TState, TActions extends BaseAction<TState>> = {
-  promise<T>(
-    promise: Promise<T>,
-    onSuccess?: (value: T, actor: AsyncActor<TState, TActions>) => void
-  ): void
+  promise<T>(promise: (props: AsyncPromiseProps) => Promise<T>): PromiseResult<T, TState, TActions>
   timer(callback: (actor: AsyncActor<TState, TActions>) => void, time?: number): void
 }
 

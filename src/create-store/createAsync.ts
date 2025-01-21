@@ -2,11 +2,13 @@ import { EventsTuple } from "~/create-store/event-emitter"
 import {
   Async,
   AsyncActor,
+  AsyncPromiseProps,
   BaseAction,
   BaseState,
   DefaultActions,
   Dispatch,
   isSetter,
+  PromiseResult,
   SomeStore,
 } from "./types"
 import { noop } from "~/create-store/fn/noop"
@@ -40,7 +42,8 @@ export function createAsync<
 >(
   store: SomeStore<TState, TActions, TEvents>,
   state: TState,
-  transition: any[] | null | undefined
+  transition: any[] | null | undefined,
+  signal: AbortSignal
 ): Async<TState, TActions> {
   type AsyncInner = Async<TState, TActions>
   type AsyncActorInner = AsyncActor<TState, TActions>
@@ -56,20 +59,23 @@ export function createAsync<
       "reducer"
     )
   }
+  type PromiseResult<T, TState, TActions extends BaseAction<TState>> = {
+    onSuccess: (callback: (value: T, actor: AsyncActor<TState, TActions>) => void) => void
+  }
+
   const promise: AsyncInner["promise"] = <T>(
-    promise: Promise<T>,
-    onSuccess?: (value: T, actor: AsyncActor<TState, TActions>) => void
-  ) => {
+    promise: (props: AsyncPromiseProps) => Promise<T>
+  ): PromiseResult<T, TState, TActions> => {
+    let onSuccess: (value: T, actor: AsyncActor<TState, TActions>) => void = noop
     if (!transition) throw errorNoTransition()
     store.transitions.addKey(transition)
 
     async function handlePromise(promise: Promise<T>) {
       if (!transition) throw errorNoTransition()
-      const async = createAsync(store, state, transition)
+      const async = createAsync(store, state, transition, signal)
       try {
         if (!transition) throw errorNoTransition()
         const value = await promise
-        onSuccess ??= noop
         onSuccess(value, {
           dispatch,
           set,
@@ -80,12 +86,18 @@ export function createAsync<
         store.transitions.doneKey(transition, error)
       }
     }
-    handlePromise(promise)
+    handlePromise(promise({ signal }))
+
+    return {
+      onSuccess(onSuccessCallback) {
+        onSuccess = onSuccessCallback
+      },
+    }
   }
 
   const timer = (callback: (actor: AsyncActor<TState, TActions>) => void, time = 0) => {
     if (!transition) throw errorNoTransition()
-    const async = createAsync(store, state, transition)
+    const async = createAsync(store, state, transition, signal)
     store.transitions.addKey(transition)
     setTimeout(() => {
       try {

@@ -8,7 +8,7 @@ type UserStoreInitialProps = {
   currentTransition: null
 }
 
-async function fetchUser(username: string) {
+async function fetchUser(username: string, signal: AbortSignal) {
   const response = await fetch("https://api.github.com/users/" + username)
   const profile: GithubProfile = await response.json()
   return profile
@@ -17,9 +17,11 @@ async function fetchUser(username: string) {
 const newUserStore = newStoreDef<UserStoreInitialProps>({
   reducer({ state, action, async }) {
     if (action.type === "fetch-user") {
-      async.promise(fetchUser(state.username), (profile, actor) => {
-        actor.set({ profile })
-      })
+      async
+        .promise(ctx => fetchUser(state.username, ctx.signal))
+        .onSuccess((profile, actor) => {
+          actor.set({ profile })
+        })
     }
 
     return state

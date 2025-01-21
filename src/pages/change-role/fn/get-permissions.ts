@@ -4,14 +4,11 @@ import { PERMISSIONS } from "../const"
 
 type FetchPermissionsProps = {
   role: SelectedRole
-  abortController?: AbortController
+  signal: AbortSignal
 }
 
-export async function fetchPermissions({
-  role,
-  abortController,
-}: FetchPermissionsProps) {
-  await sleep(1000, "fetching permissions", abortController?.signal)
+export async function fetchPermissions({ role, signal }: FetchPermissionsProps) {
+  await sleep(1000, "fetching permissions", signal)
   const unlucky = Math.random() < 0.35
   // const unlucky = true
   if (unlucky) {

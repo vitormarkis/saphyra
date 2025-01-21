@@ -7,6 +7,7 @@ import { defaultErrorHandler } from "./fn/default-error-handler"
 import { TransitionsStore } from "./transitions-store"
 import {
   Async,
+  AsyncPromiseProps,
   BaseAction,
   BaseState,
   DefaultActions,
@@ -22,9 +23,10 @@ import {
   StoreInstantiator,
 } from "./types"
 import { EventEmitter, EventsTuple } from "~/create-store/event-emitter"
-import { isAsyncFunction } from "~/lib/utils"
+import { isAsyncFunction, nonNullable } from "~/lib/utils"
 import { noop } from "~/create-store/fn/noop"
 import { ErrorsStore } from "~/create-store/errors-store"
+import { isNewActionError } from "~/create-store/utils"
 
 export type ExternalProps = Record<string, any> | null
 
@@ -39,6 +41,7 @@ type OnConstructProps<
 > = {
   initialProps: TInitialProps
   store: SomeStore<TState, TActions, TEvents>
+  signal: AbortSignal
 }
 
 type OnConstruct<
@@ -118,7 +121,7 @@ const BOOTSTRAP_TRANSITION = ["bootstrap"]
 
 export function newStoreDef<
   TInitialProps,
-  TState = TInitialProps & BaseState,
+  TState extends BaseState = TInitialProps & BaseState,
   TActions extends BaseAction<TState> = DefaultActions & BaseAction<TState>,
   TEvents extends EventsTuple = EventsTuple
 >(
@@ -164,7 +167,7 @@ export function newStoreDef<
 
     const getState: Met["getState"] = () => store.state
 
-    const applyTransition = (
+    const commitTransition = (
       transition: any[] | null | undefined,
       onTransitionEnd?: (state: TState) => void
     ) => {
@@ -200,13 +203,24 @@ export function newStoreDef<
       store: SomeStore<TState, TActions, TEvents>
     ) => {
       const currentTransitionName = store.state.currentTransition?.join(":")
-      const actionTransitionName = initialAction.transition?.join(":")
+      const actionTransitionName = initialAction.transition?.join(":")!
       const isNewTransition = currentTransitionName !== actionTransitionName
 
       if (initialAction.transition != null && isNewTransition) {
-        const transitionAlreadyRunning = store.transitions.get(initialAction.transition)
+        // Abort the current transition before anything
+        const prevController = store.transitions.controllers[actionTransitionName]
+        if (prevController) {
+          console.log("%cAbort transition!", "color: lime")
+          prevController.abort("new-action")
+        }
+
+        // const transitionAlreadyRunning = store.transitions.get(initialAction.transition)
+        const transitionAlreadyRunning = false
         store.transitions.addKey(initialAction.transition)
         newState.currentTransition = initialAction.transition
+
+        store.transitions.controllers[actionTransitionName] = initialAction.controller
+
         if (!transitionAlreadyRunning) {
           const transition = initialAction.transition
           const transitionString = transition.join(":")
@@ -217,32 +231,41 @@ export function newStoreDef<
               if (initialAction.transition?.join(":") === "bootstrap") {
                 errorsStore.setState({ bootstrap: error })
               }
-              console.log(`%cTransition failed! [${transitionString}]`, "color: red")
               store.settersRegistry[transitionString] = []
-              handleError(error, transition)
-              if (initialAction.abortController) {
-                initialAction.abortController.abort()
+              cleanupCommitTransition()
+              const newActionAbort = isNewActionError(error)
+              if (!newActionAbort) {
+                console.log(`%cTransition failed! [${transitionString}]`, "color: red")
+                handleError(error, transition)
+              } else {
+                console.log(
+                  `%cPrevious transition canceled! [${transitionString}], creating new one.`,
+                  "color: orange"
+                )
               }
-              cleanupApplyTransition()
             }
           )
 
-          const cleanupApplyTransition = store.transitions.events.done.once(
+          const cleanupCommitTransition = store.transitions.events.done.once(
             transitionString,
             () => {
               if (!transition) throw new Error("Impossible to reach this point")
               console.log(`%cTransition completed! [${transitionString}]`, "color: lightgreen")
-              applyTransition(transition, initialAction.onTransitionEnd)
+              commitTransition(transition, initialAction.onTransitionEnd)
               cleanUpErrorHandler()
             }
           )
         }
       }
     }
+
     const dispatch: Met["dispatch"] = (initialAction: TActions) => {
       let newState = { ...store.state }
       handleRegisterTransition(newState, initialAction, store)
 
+      const transitionName = initialAction.transition?.join(":")!
+      const controller = initialAction.controller ?? new AbortController()
+      store.transitions.controllers[transitionName] = controller
       const actionsQueue: TActions[] = [initialAction]
 
       let prevState = store.state
@@ -256,7 +279,7 @@ export function newStoreDef<
           action,
           events: store.events,
           store,
-          async: createAsync(store, newState, action.transition),
+          async: createAsync(store, newState, action.transition, controller.signal),
           set: scheduleSetter,
           diff: createDiff(prevState, newState),
           dispatch: (action: TActions) => {
@@ -272,7 +295,7 @@ export function newStoreDef<
         ) => {
           if (context.action.type === "$$lazy-value") {
             const { transition, transitionFn, onSuccess = noop } = context.action
-            context.async.promise(transitionFn(transition), onSuccess)
+            context.async.promise(transitionFn(transition)).onSuccess(onSuccess)
           }
           return userReducer(context)
         }
@@ -321,11 +344,12 @@ export function newStoreDef<
     }
 
     const rerender: Met["rerender"] = () => {
+      const signal = new AbortController().signal
       store.state = userReducer({
         action: { type: "noop" } as TActions,
         diff: createDiff(store.state, store.state),
         state: store.state,
-        async: createAsync(store, store.state, null),
+        async: createAsync(store, store.state, null, signal),
         set: store.createSetScheduler(store.state, "set", null),
         prevState: store.state,
         events: store.events,
@@ -346,6 +370,10 @@ export function newStoreDef<
       const setter = isSetter(setterOrPartialStateList)
         ? setterOrPartialStateList
         : newSetter(setterOrPartialStateList)
+      const { signal } = getAbortController({
+        controller: new AbortController(),
+        transition,
+      })
       if (transition) {
         const transitionKey = transition.join(":")
         store.settersRegistry[transitionKey] ??= []
@@ -370,7 +398,7 @@ export function newStoreDef<
           state: newState,
           diff: createDiff(currentState, newState),
           set: createSetScheduler(newState, "set", transition),
-          async: createAsync(store, newState, transition),
+          async: createAsync(store, newState, transition, signal),
           prevState: currentState,
           events: store.events,
           dispatch: action => {
@@ -397,12 +425,14 @@ export function newStoreDef<
         ...store.state,
         ...newPartialState,
       }
+      const action = { type: "noop" } as TActions
+      const { signal } = getAbortController(action)
       store.state = userReducer({
-        action: { type: "noop" } as TActions,
+        action,
         diff: createDiff(store.state, newState),
         state: newState,
         prevState: store.state,
-        async: createAsync(store, newState, null),
+        async: createAsync(store, newState, null, signal), // um set state pode ocasionar em chamadas assíncronas, e como isso é cancelado?
         set: store.createSetScheduler(newState, "set", null),
         events: store.events,
         store,
@@ -438,6 +468,19 @@ export function newStoreDef<
       ...methods,
     }
 
+    type GetAbortControllerProps = {
+      transition?: any[] | null | undefined
+      controller?: AbortController | null | undefined
+    }
+    function getAbortController(props: GetAbortControllerProps): AbortController {
+      if (!props.transition) return new AbortController()
+      const key = props.transition.join(":")
+      const controller = store.transitions.controllers[key]
+      if (controller != null) return controller
+      store.transitions.controllers[key] = props.controller ?? new AbortController()
+      return getAbortController(props)
+    }
+
     function construct(initialProps: TInitialProps, config: StoreConstructorConfig) {
       Object.assign(window, { _store: store })
 
@@ -457,53 +500,59 @@ export function newStoreDef<
       handleRegisterTransition(prevState, bootstrapAction, store)
 
       if (isAsync) {
-        async function handleConstruction() {
+        async function handleConstruction(ctx: AsyncPromiseProps) {
           const initialState = await onConstruct({
             initialProps,
             store,
+            signal: ctx.signal,
           })
 
           return initialState
         }
 
-        const async = createAsync(store, prevState, BOOTSTRAP_TRANSITION)
+        const { signal } = getAbortController(bootstrapAction)
+        const async = createAsync(store, prevState, BOOTSTRAP_TRANSITION, signal)
 
-        async.promise(handleConstruction(), (pureState, actor) => {
-          const initialState = pureState as TState
+        async
+          .promise(ctx => handleConstruction(ctx))
+          .onSuccess((pureState, actor) => {
+            const initialState = pureState as TState
 
-          const processedState = userReducer({
-            action: {
-              type: "noop",
-            } as TActions,
-            state: initialState,
-            diff: createDiff(prevState, initialState),
-            async: createAsync(store, initialState, BOOTSTRAP_TRANSITION),
-            set: createSetScheduler(initialState, "set", null),
-            prevState,
-            events: store.events,
-            store,
-            dispatch: (action: TActions) => {
-              console.log("dispatch", action)
-            },
+            const processedState = userReducer({
+              action: {
+                type: "noop",
+              } as TActions,
+              state: initialState,
+              diff: createDiff(prevState, initialState),
+              async: createAsync(store, initialState, BOOTSTRAP_TRANSITION, signal),
+              set: createSetScheduler(initialState, "set", null),
+              prevState,
+              events: store.events,
+              store,
+              dispatch: (action: TActions) => {
+                console.log("dispatch", action)
+              },
+            })
+
+            const isSameAsPrev = Object.is(processedState, prevState)
+            console.log(isSameAsPrev)
+
+            actor.set(() => _.cloneDeep(processedState))
           })
-
-          const isSameAsPrev = Object.is(processedState, prevState)
-          console.log(isSameAsPrev)
-
-          actor.set(() => _.cloneDeep(processedState))
-        })
       } else {
+        const { signal } = getAbortController(bootstrapAction)
         try {
           const initialState = onConstruct({
             initialProps,
             store: store,
+            signal,
           }) as TState
 
           const processedState = userReducer({
             action: bootstrapAction,
             state: initialState,
             diff: createDiff(prevState, initialState),
-            async: createAsync(store, initialState, BOOTSTRAP_TRANSITION),
+            async: createAsync(store, initialState, BOOTSTRAP_TRANSITION, signal),
             set: createSetScheduler(initialState, "set", null),
             prevState,
             events: store.events,

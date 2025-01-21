@@ -35,17 +35,21 @@ const newCount = newStoreDef<CounterState, CounterState, CounterActions>({
     }
 
     if (action.type === "increment-ten") {
-      async.promise(sleep(3000, "incrementing a lot"), (_, actor) => {
-        actor.set(s => ({
-          count: s.count + 10,
-        }))
-      })
+      async
+        .promise(ctx => sleep(3000, "incrementing a lot", ctx.signal))
+        .onSuccess((_, actor) => {
+          actor.set(s => ({
+            count: s.count + 10,
+          }))
+        })
     }
 
     if (action.type === "increment-three") {
-      async.promise(sleep(1800, "incrementing a little bit"), (_, actor) => {
-        actor.set(s => ({ count: s.count + 3 }))
-      })
+      async
+        .promise(ctx => sleep(1800, "incrementing a little bit", ctx.signal))
+        .onSuccess((_, actor) => {
+          actor.set(s => ({ count: s.count + 3 }))
+        })
     }
 
     if (state.count !== prevState.count) {

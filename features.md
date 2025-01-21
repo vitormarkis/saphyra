@@ -1,0 +1,28 @@
+- onConstruct / async onConstruct
+- reducer
+  - prevState
+    - estado antigo
+  - state
+    - cópia rasa do estado antigo, por padrão, ele é retornado pelo reducer e se torna o novo estado 
+  - action
+    - ação que disparou o reducer
+  - async
+    - módulo que envolve operações assíncronas sob controle da store
+      - comunica store sobre estado das promises, modificando as transitions
+      - abortar transitions que estão correndo caso componente seja desmontado
+  - diff
+    - permite comparar chaves do estado antigo e do estado novo para fazer checagem se algum valor foi alterado e escrever alguma lógica
+      - serve como memoization para valores derivados
+      - serve para você invocar callbacks/dispara eventos quando algum valor muda
+  - dispatch
+    - permite disparar novas ações
+  - events
+    - permite registrar novos eventos a nível de store, e disparar eventos para módulos externos que estejam interessados
+  - set
+    - permite definir valores do estado
+      - se você não quiser aproveitar transitions, você pode mutar diretamente (apenas o primeiro nível) o estado novo
+      - o set serve exlusivamente para integrar com **transitions**.
+        - Invés dele mutar o estado, ele registra a intenção de mudança de estado, e eu posso aplicar essa mudança de estado a hora que eu quiser, por exemplo, quando uma transition concluir, ou posso não aplicar caso tenha ocorrido um erro
+  - store
+    - objeto da própria store
+      - é apenas um objeto Javascript, você pode mutar ele, adicionar mais key values, uncontrolled state, mutar valores, acessar valores internos caso precise fazer alguma operação mais low level, debugar valores etc.

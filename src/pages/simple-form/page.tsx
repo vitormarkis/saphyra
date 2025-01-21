@@ -40,9 +40,11 @@ const newSimpleForm = newStoreDef<
   },
   reducer({ prevState, state, action, async, events }) {
     if (action.type === "submit") {
-      async.promise(createSession(state), token => {
-        events.emit("got-token", token)
-      })
+      async
+        .promise(ctx => createSession(state, ctx.signal))
+        .onSuccess(token => {
+          events.emit("got-token", token)
+        })
     }
 
     return state
@@ -52,9 +54,7 @@ const newSimpleForm = newStoreDef<
 const SimpleForm = createStoreUtils<typeof newSimpleForm>()
 
 export function SimpleFormPage() {
-  const simpleFormState = useState(() =>
-    newSimpleForm({ fullName: "Vitor Markis" })
-  )
+  const simpleFormState = useState(() => newSimpleForm({ fullName: "Vitor Markis" }))
 
   return (
     <SimpleForm.Provider value={simpleFormState}>

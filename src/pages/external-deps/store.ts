@@ -44,16 +44,9 @@ type PostsActions =
       revalidateOnSameTransition?: boolean
     }
 
-export const newPostsStore = newStoreDef<
-  PostsInitialProps,
-  PostsState,
-  PostsActions
->({
-  async onConstruct() {
-    const [posts, likedPosts] = await Promise.all([
-      fetchPosts(),
-      fetchLikedPosts(),
-    ])
+export const newPostsStore = newStoreDef<PostsInitialProps, PostsState, PostsActions>({
+  async onConstruct({ signal }) {
+    const [posts, likedPosts] = await Promise.all([fetchPosts(signal), fetchLikedPosts(signal)])
 
     return {
       likedPosts,
@@ -72,31 +65,33 @@ export const newPostsStore = newStoreDef<
         body: action.comment,
         postId: action.postId,
       }
-      async.promise(placeComment(newComment, action.postId), (_, actor) => {
-        /** [external-deps.react-query]
-         * Refetches the post comments after
-         * a successful mutation
-         */
-        const promise = queryClient.refetchQueries({
-          ...getCommentsQueryOptions({ postId: action.postId }),
+      async
+        .promise(ctx => placeComment(newComment, action.postId, ctx.signal))
+        .onSuccess((_, actor) => {
+          /** [external-deps.react-query]
+           * Refetches the post comments after
+           * a successful mutation
+           */
+          if (action.revalidateOnSameTransition) {
+            actor.async.promise(() =>
+              queryClient.refetchQueries({
+                ...getCommentsQueryOptions({ postId: action.postId }),
+              })
+            )
+          }
         })
-        if (action.revalidateOnSameTransition) {
-          actor.async.promise(promise)
-        }
-      })
     }
 
     if (action.type === "comment-in-post") {
-      set(() => ({
-        commentingPostId: action.postId,
-      }))
+      set({ commentingPostId: action.postId })
     }
 
     if (action.type === "like-post") {
-      const likedPostsPromise = likePost(state.likedPosts, action.postId)
-      async.promise(likedPostsPromise, (likedPosts, actor) => {
-        actor.set(() => ({ likedPosts }))
-      })
+      async
+        .promise(ctx => likePost(state.likedPosts, action.postId, ctx.signal))
+        .onSuccess((likedPosts, actor) => {
+          actor.set(() => ({ likedPosts }))
+        })
     }
 
     if (diff(["posts"])) {

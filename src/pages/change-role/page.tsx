@@ -34,15 +34,19 @@ const newAuthStore = newStoreDef<
 >({
   reducer({ prevState, state, action, diff, set, async }) {
     if (action?.type === "change-role") {
-      async.promise(fetchRole({ roleName: action.role }), (role, actor) => {
-        actor.set({ role })
-      })
+      async
+        .promise(({ signal }) => fetchRole({ roleName: action.role, signal }))
+        .onSuccess((role, actor) => {
+          actor.set({ role })
+        })
     }
 
     if (prevState.role !== state.role) {
-      async.promise(fetchPermissions({ role: state.role }), (permissions, actor) => {
-        actor.set({ $permissions: permissions })
-      })
+      async
+        .promise(({ signal }) => fetchPermissions({ role: state.role, signal }))
+        .onSuccess((permissions, actor) => {
+          actor.set({ $permissions: permissions })
+        })
     }
 
     set(s => (s.$permissions != null ? { $firstPermission: s.$permissions[0] } : s))
