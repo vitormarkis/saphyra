@@ -8,8 +8,8 @@ type FetchPermissionsProps = {
 }
 
 export async function fetchPermissions({ role, signal }: FetchPermissionsProps) {
-  await sleep(1000, "fetching permissions", signal)
-  const unlucky = Math.random() < 0.35
+  await sleep(3000, "fetching permissions", signal)
+  const unlucky = Math.random() < 0
   // const unlucky = true
   if (unlucky) {
     throw new Error("Error while fetching permissions!")

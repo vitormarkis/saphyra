@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { newStoreDef } from "~/create-store"
 import { BaseState } from "~/create-store/types"
 import { createStoreUtils } from "~/createStoreUtils"
@@ -67,14 +67,7 @@ const TransitionsStore = createStoreUtils<typeof newTransitionsStore>()
  * React
  */
 export function TransitionsShowcasePage() {
-  const transitionsStoreState = useState(() =>
-    newTransitionsStore(
-      {},
-      {
-        errorHandlers: [],
-      }
-    )
-  )
+  const transitionsStoreState = useState(() => newTransitionsStore({}))
 
   return (
     <TransitionsStore.Provider value={transitionsStoreState}>
@@ -99,10 +92,13 @@ export function TransitionsShowcaseView({}: TransitionsShowcaseViewProps) {
 
   const fetchAlbumsAbort = useAbortController()
   const isLoadingAlbums = TransitionsStore.useTransition(["fetch", "albums"])
+  const isFetchingSomething = TransitionsStore.useTransition(["fetch"])
 
   TransitionsStore.useErrorHandlers(error => {
-    console.log("error")
+    console.log("error", error)
   })
+
+  const canRun = useRef(true)
 
   return (
     <div className="flex flex-wrap gap-2">
@@ -113,7 +109,6 @@ export function TransitionsShowcaseView({}: TransitionsShowcaseViewProps) {
             transitionsStore.dispatch({
               type: "increment-many",
               transition: ["increment", "many"],
-              controller: new AbortController(),
             })
           }}
           className={cn(isIncrementingMany && "border-red-800 ring-red-500 ring-2")}
@@ -159,7 +154,19 @@ export function TransitionsShowcaseView({}: TransitionsShowcaseViewProps) {
             transitionsStore.dispatch({
               type: "fetch-albums",
               transition: ["fetch", "albums"],
-              controller: new AbortController(),
+              beforeDispatch(ctx) {
+                if (ctx.meta.canRun === false) return
+                ctx.meta.canRun = false
+                setTimeout(() => {
+                  ctx.meta.canRun = true
+                }, 1000)
+
+                if (ctx.currentTransition.isRunning) {
+                  ctx.currentTransition.controller.abort()
+                }
+
+                return ctx.action
+              },
             })
           }}
           className={cn(isLoadingAlbums && "border-red-800 ring-red-500 ring-2")}

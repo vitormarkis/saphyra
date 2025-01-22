@@ -16,12 +16,28 @@ export class TransitionsStore extends Subject {
     done: new EventEmitter<EventsType>(),
     error: new EventEmitter<EventsType>(),
   }
+  meta: {
+    get: (transition: any[] | null) => Record<string, any>
+    values: Record<string, any>
+  }
 
   constructor() {
     super()
     this.state = {
       transitions: {},
     }
+
+    this.meta = {
+      get: this.getMeta.bind(this),
+      values: {},
+    }
+  }
+
+  private getMeta(transition: any[] | null) {
+    if (!transition) return {} // TODO
+    const key = transition.join(":")
+    this.meta.values[key] ??= {}
+    return this.meta.values[key]
   }
 
   private setState(newState: TransitionsStoreState) {
@@ -49,10 +65,10 @@ export class TransitionsStore extends Subject {
       transitions: { ...this.state.transitions },
     }
 
-    let ctx = ""
+    let meta = ""
     const newState = transition.reduce((acc, key) => {
-      if (ctx !== "") key = `${ctx}:${key}`
-      ctx = key
+      if (meta !== "") key = `${meta}:${key}`
+      meta = key
       return this.add(acc, key)
     }, state)
 
@@ -67,9 +83,16 @@ export class TransitionsStore extends Subject {
     if (state.transitions[transitionName] <= 0) {
       delete state.transitions[transitionName]
       this.events.done.emit(transitionName, error)
+      this.cleanup(transitionName)
     }
 
     return state
+  }
+
+  cleanup(transitionName: string | null) {
+    // if (transitionName) {
+    //   this.meta.values[transitionName] = {}
+    // }
   }
 
   clear(transitionName: string | null) {
@@ -99,10 +122,10 @@ export class TransitionsStore extends Subject {
       transitions: { ...this.state.transitions },
     }
 
-    let ctx = ""
+    let meta = ""
     const newState = transition.reduce((acc, key) => {
-      if (ctx !== "") key = `${ctx}:${key}`
-      ctx = key
+      if (meta !== "") key = `${meta}:${key}`
+      meta = key
       return this.done(acc, key, error)
     }, state)
 
@@ -113,10 +136,10 @@ export class TransitionsStore extends Subject {
     if (!transition) return false
     let isHappening = false
 
-    let ctx = ""
+    let meta = ""
     for (let key of transition) {
-      if (ctx !== "") key = `${ctx}:${key}`
-      ctx = key
+      if (meta !== "") key = `${meta}:${key}`
+      meta = key
       const subtransitions = this.state.transitions[key]
       if (subtransitions > 0) {
         isHappening = true

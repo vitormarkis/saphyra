@@ -131,7 +131,7 @@ function ChangeRolePageContent() {
           name=""
           id=""
           value={state.role}
-          disabled={isChangingRole}
+          // disabled={isChangingRole}
           className={cn(
             "disabled:opacity-30 disabled:cursor-not-allowed",
             isChangingRole && "opacity-30"
@@ -142,6 +142,19 @@ function ChangeRolePageContent() {
               type: "change-role",
               role: selectedRole,
               transition: ["auth", "role"],
+              beforeDispatch(ctx) {
+                // if (ctx.meta.canRun === false) return
+                // ctx.meta.canRun = false
+                // setTimeout(() => {
+                //   ctx.meta.canRun = true
+                // }, 1000)
+
+                if (ctx.currentTransition.isRunning) {
+                  ctx.currentTransition.controller.abort()
+                }
+
+                return ctx.action
+              },
             })
           }}
         >

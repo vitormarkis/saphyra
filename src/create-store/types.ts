@@ -70,9 +70,34 @@ export type DefaultActions =
       onSuccess: (value: any, actor: AsyncActor<any, any>) => void
     }
 
-export type BaseAction<TState> = {
+export type TransitionStartConfig<TBaseAction extends GenericAction = GenericAction> = {
+  action: TBaseAction
+  currentTransition: {
+    isRunning: boolean
+    controller: AbortController
+  }
+  meta: Record<string, any>
+}
+
+export type GenericAction = { type: string } & Record<string, any>
+
+type BeforeDispatch<TBaseAction extends GenericAction = GenericAction> = (
+  config: TransitionStartConfig<TBaseAction>
+) => TBaseAction | void
+
+export type BaseAction<TState, TBaseAction extends GenericAction = GenericAction> = {
   type: string
   onTransitionEnd?: (state: TState) => void
+  /**
+   * Receive action as parameter and return it.
+   *
+   * You can modify the action before returning.
+   *
+   * If you return a nullish value from this function, the action will be ignored.
+   *
+   * You can abort the current transition running under the same transition key.
+   */
+  beforeDispatch?: BeforeDispatch<TBaseAction>
   transition?: any[]
 } & Record<string, any>
 
@@ -127,7 +152,7 @@ export type InnerReducerSet<TState> = (
   mergeType: "reducer" | "set"
 ) => void
 
-export type StoreErrorHandler = (error: unknown, transition: any[]) => void
+export type StoreErrorHandler = (error: unknown, transition: any[] | undefined) => void
 
 export type SomeStoreGeneric = SomeStore<any, any, any>
 

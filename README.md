@@ -1,3 +1,5 @@
+Se você está curioso por que eu decidi criar uma biblioteca de gerenciamento de estado mesmo sabendo que já existe uma infinidade no mercado, é porque essa biblioteca se baseia em cima de alguns bons princípios, os quais eu recomendo fortemente [a leitura aqui]().
+
 ### O que é XXX?
 O XXX é uma biblioteca de gerenciamento de estado minimalista assim como Zustand, com uma abordagem declarativa. TL;DR: Zustand para stores imperativas, XXX para stores declarativas.
 
@@ -48,6 +50,7 @@ apesar da store ser framework agnostic, eu sou um dev React, e com bases nos pro
 - **Controle do ciclo de vida de uma feature**: Em outras soluções, é muito comum você precisar usar lib A para buscar iniciar o fetch de um dado, lib B para cachear o dado, lib C para gerenciar o estado... Você perde o rastreio de onde começa sua store, e onde ela termina. Com XXX, sua store começa no useState, e termina o no setState [reference]().
 - **Baixo custo técnico para expandir:** Como toda interação com a store é feita por meio de eventos, qualquer child pode enviar qualquer evento, e outro child qualquer do outro lado do mundo pode registrar um listener para reagir.
 - **Leituras O(1):** É incentivado que você derive valores dentro do reducer em vez de calcular em render, usando o prefixo $ (convenção), assim seus componentes apenas acessam o valor que eles precisam em vez de receberem os valores brutos e calcularem em render.
+- **Cancelamento first class**: TODO
 
 
 ... - poucas estrutura para stores declarativas

@@ -5,8 +5,8 @@ type FetchRoleProps = {
 }
 
 export async function fetchRole({ roleName }: FetchRoleProps) {
-  await sleep(1000, "fetching role")
-  const unlucky = Math.random() < 0.25
+  await sleep(3000, "fetching role")
+  const unlucky = Math.random() < 0.1
   if (unlucky) {
     throw new Error("Error while fetching role!")
   }

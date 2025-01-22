@@ -26,7 +26,7 @@ import { EventEmitter, EventsTuple } from "~/create-store/event-emitter"
 import { isAsyncFunction, nonNullable } from "~/lib/utils"
 import { noop } from "~/create-store/fn/noop"
 import { ErrorsStore } from "~/create-store/errors-store"
-import { isNewActionError } from "~/create-store/utils"
+import { defaultBeforeDispatch, isNewActionError } from "~/create-store/utils"
 
 export type ExternalProps = Record<string, any> | null
 
@@ -206,29 +206,50 @@ export function newStoreDef<
       const actionTransitionName = initialAction.transition?.join(":")!
       const isNewTransition = currentTransitionName !== actionTransitionName
 
+      let hasStartedTransition = false
       if (initialAction.transition != null && isNewTransition) {
+        const currentTransition = store.transitions.get(initialAction.transition)
+
         // Abort the current transition before anything
+        const { beforeDispatch = defaultBeforeDispatch } = initialAction
+
+        const meta = store.transitions.meta.get(initialAction.transition)
+
         const prevController = store.transitions.controllers[actionTransitionName]
-        if (prevController) {
-          console.log("%cAbort transition!", "color: lime")
-          prevController.abort("new-action")
-        }
+        const isTransitionRunning = currentTransition > 0
+        const action = beforeDispatch({
+          action: initialAction,
+          currentTransition: {
+            controller: prevController,
+            isRunning: isTransitionRunning,
+          },
+          meta,
+        })
 
-        // const transitionAlreadyRunning = store.transitions.get(initialAction.transition)
-        const transitionAlreadyRunning = false
-        store.transitions.addKey(initialAction.transition)
-        newState.currentTransition = initialAction.transition
+        if (action == null || action.transition == null)
+          return {
+            hasStartedTransition,
+          }
 
-        store.transitions.controllers[actionTransitionName] = initialAction.controller
+        // if (prevController) {
+        //   // console.log("%cSupposed to abort transition!", "color: purple")
+        //   prevController.abort()
+        // }
 
-        if (!transitionAlreadyRunning) {
-          const transition = initialAction.transition
-          const transitionString = transition.join(":")
+        store.transitions.addKey(action.transition)
+        newState.currentTransition = action.transition
 
+        store.transitions.controllers[actionTransitionName] = action.controller
+
+        // if (!currentTransition) {
+        const transition = action.transition
+        const transitionString = transition.join(":")
+
+        if (!isTransitionRunning) {
           const cleanUpErrorHandler = store.transitions.events.error.once(
             transitionString,
             error => {
-              if (initialAction.transition?.join(":") === "bootstrap") {
+              if (action.transition?.join(":") === "bootstrap") {
                 errorsStore.setState({ bootstrap: error })
               }
               store.settersRegistry[transitionString] = []
@@ -251,67 +272,77 @@ export function newStoreDef<
             () => {
               if (!transition) throw new Error("Impossible to reach this point")
               console.log(`%cTransition completed! [${transitionString}]`, "color: lightgreen")
-              commitTransition(transition, initialAction.onTransitionEnd)
+              commitTransition(transition, action.onTransitionEnd)
               cleanUpErrorHandler()
             }
           )
         }
+
+        hasStartedTransition = true
+        // }
       }
+
+      return { hasStartedTransition }
     }
 
     const dispatch: Met["dispatch"] = (initialAction: TActions) => {
-      let newState = { ...store.state }
-      handleRegisterTransition(newState, initialAction, store)
+      try {
+        let newState = { ...store.state }
+        const { hasStartedTransition } = handleRegisterTransition(newState, initialAction, store)
+        if (initialAction.transition != null && !hasStartedTransition) return
 
-      const transitionName = initialAction.transition?.join(":")!
-      const controller = initialAction.controller ?? new AbortController()
-      store.transitions.controllers[transitionName] = controller
-      const actionsQueue: TActions[] = [initialAction]
+        const transitionName = initialAction.transition?.join(":")!
+        const controller = initialAction.controller ?? new AbortController()
+        store.transitions.controllers[transitionName] = controller
+        const actionsQueue: TActions[] = [initialAction]
 
-      let prevState = store.state
-      for (const action of actionsQueue) {
-        const scheduleSetter = createSetScheduler(newState, "set", action.transition)
+        let prevState = store.state
+        for (const action of actionsQueue) {
+          const scheduleSetter = createSetScheduler(newState, "set", action.transition)
 
-        const futurePrevState = { ...newState }
-        const context: ReducerProps<TState, TActions, TEvents> = {
-          prevState: prevState,
-          state: newState,
-          action,
-          events: store.events,
-          store,
-          async: createAsync(store, newState, action.transition, controller.signal),
-          set: scheduleSetter,
-          diff: createDiff(prevState, newState),
-          dispatch: (action: TActions) => {
-            actionsQueue.push({
-              ...action,
-              transition: initialAction.transition ?? null,
-              onTransitionEnd: initialAction.onTransitionEnd ?? null,
-            })
-          },
-        }
-        const reducer: Reducer<TState, TActions, TEvents> = (
-          context: ReducerProps<TState, TActions, TEvents>
-        ) => {
-          if (context.action.type === "$$lazy-value") {
-            const { transition, transitionFn, onSuccess = noop } = context.action
-            context.async.promise(transitionFn(transition)).onSuccess(onSuccess)
+          const futurePrevState = { ...newState }
+          const context: ReducerProps<TState, TActions, TEvents> = {
+            prevState: prevState,
+            state: newState,
+            action,
+            events: store.events,
+            store,
+            async: createAsync(store, newState, action.transition, controller.signal),
+            set: scheduleSetter,
+            diff: createDiff(prevState, newState),
+            dispatch: (action: TActions) => {
+              actionsQueue.push({
+                ...action,
+                transition: initialAction.transition ?? null,
+                onTransitionEnd: initialAction.onTransitionEnd ?? null,
+              })
+            },
           }
-          return userReducer(context)
+          const reducer: Reducer<TState, TActions, TEvents> = (
+            context: ReducerProps<TState, TActions, TEvents>
+          ) => {
+            if (context.action.type === "$$lazy-value") {
+              const { transition, transitionFn, onSuccess = noop } = context.action
+              context.async.promise(transitionFn(transition)).onSuccess(onSuccess)
+            }
+            return userReducer(context)
+          }
+          const producedState = reducer(context)
+          // looks redundant but user might return prev state
+          newState = producedState
+          prevState = futurePrevState
         }
-        const producedState = reducer(context)
-        // looks redundant but user might return prev state
-        newState = producedState
-        prevState = futurePrevState
-      }
 
-      if (initialAction.transition == null) {
-        store.state = newState
-        subject.notify()
-      } else {
-        store.transitions.doneKey(initialAction.transition, null)
-        // the observers will be notified
-        // when the transition is done
+        if (initialAction.transition == null) {
+          store.state = newState
+          subject.notify()
+        } else {
+          store.transitions.doneKey(initialAction.transition, null)
+          // the observers will be notified
+          // when the transition is done
+        }
+      } catch (error) {
+        handleError(error, initialAction.transition)
       }
     }
 
@@ -497,7 +528,7 @@ export function newStoreDef<
         type: "bootstrap",
         transition: BOOTSTRAP_TRANSITION,
       } as TActions
-      handleRegisterTransition(prevState, bootstrapAction, store)
+      const { hasStartedTransition } = handleRegisterTransition(prevState, bootstrapAction, store)
 
       if (isAsync) {
         async function handleConstruction(ctx: AsyncPromiseProps) {
