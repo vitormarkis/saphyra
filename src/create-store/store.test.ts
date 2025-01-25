@@ -1,10 +1,22 @@
 import { BeforeDispatch, SomeStoreGeneric } from "~/create-store/types"
 import { newStoreDef } from "./index"
-import { describe, expect, vi } from "vitest"
+import { describe, expect, MockInstance, vi } from "vitest"
 import { sleep } from "~/sleep"
 
 let newStore: (...args: any[]) => SomeStoreGeneric
 let store: SomeStoreGeneric
+let spy_completeTransition: MockInstance<any>
+
+function getStoreTransitionInfo(store: SomeStoreGeneric, transitionName: string) {
+  const controller = store.transitions.controllers.values[transitionName]
+  const setters = store.settersRegistry[transitionName]
+  const doneCallback = store.transitions.callbacks.done.get(transitionName)
+  const errorCallback = store.transitions.callbacks.error.get(transitionName)
+  const transitions = store.transitions.state.transitions
+  const state = store.getState()
+
+  return { controller, setters, doneCallback, errorCallback, transitions, state }
+}
 
 // const log = console.log
 // console.log = () => {}
@@ -39,11 +51,14 @@ beforeEach(() => {
   store = newStore({
     count: 0,
   })
+  spy_completeTransition = vi.spyOn(store, "completeTransition")
 })
 
 afterEach(() => {
   vi.useRealTimers()
 })
+
+const transitionName = "increment"
 
 test("simple dispatch interaction", () => {
   const spy_add = vi.spyOn(store.transitions, "addKey")
@@ -81,21 +96,12 @@ test("ensure effects are settled after sync transition", () => {
     beforeDispatch: cancelPrevious,
   })
 
-  const transitionName = "increment"
-
-  const controller = store.transitions.controllers.values[transitionName]
-  expect(controller.signal.aborted).toBe(false)
-
-  const setters = store.settersRegistry[transitionName]
-  expect(setters).toHaveLength(0)
-
-  const doneCallback = store.transitions.callbacks.done.get(transitionName)
-  const errorCallback = store.transitions.callbacks.error.get(transitionName)
-  expect(doneCallback).toBeNull()
-  expect(errorCallback).toBeNull()
-
-  const transitions = store.transitions.state.transitions
-  expect(transitions).toMatchObject({})
+  const info = getStoreTransitionInfo(store, transitionName)
+  expect(info.controller.signal.aborted).toBe(false)
+  expect(info.setters).toHaveLength(0)
+  expect(info.doneCallback).toBeNull()
+  expect(info.errorCallback).toBeNull()
+  expect(info.transitions).toMatchObject({})
 })
 
 describe("ensure effects are settled after async transition", () => {
@@ -111,49 +117,35 @@ describe("ensure effects are settled after async transition", () => {
   })
 
   test("before dispatch", () => {
-    const controller = store.transitions.controllers.values[transitionName]
-    expect(controller.signal.aborted).toBe(false)
+    const info = getStoreTransitionInfo(store, transitionName)
 
-    const setters = store.settersRegistry[transitionName]
-    expect(setters).toBeUndefined()
-
-    const doneCallback = store.transitions.callbacks.done.get(transitionName)
-    expect(doneCallback).toBeInstanceOf(Function)
-    const errorCallback = store.transitions.callbacks.error.get(transitionName)
-    expect(errorCallback).toBeInstanceOf(Function)
-
-    const transitions = store.transitions.state.transitions
-    expect(transitions).toStrictEqual({ [transitionName]: 1 })
-
-    const state = store.getState()
-    expect(state).toEqual({ count: 0 })
+    expect(info.controller.signal.aborted).toBe(false)
+    expect(info.setters).toBeUndefined()
+    expect(info.doneCallback).toBeInstanceOf(Function)
+    expect(info.errorCallback).toBeInstanceOf(Function)
+    expect(info.transitions).toStrictEqual({ [transitionName]: 1 })
+    expect(info.state).toEqual({ count: 0 })
+    expect(spy_completeTransition).not.toHaveBeenCalledTimes(1)
   })
 
   test("after promise resolve", async () => {
     await vi.advanceTimersByTimeAsync(1000)
+    const info = getStoreTransitionInfo(store, transitionName)
 
-    const controller = store.transitions.controllers.values[transitionName]
-    expect(controller.signal.aborted).toBe(false)
+    expect(info.controller.signal.aborted).toBe(false)
+    expect(info.setters).toStrictEqual([])
+    expect(info.doneCallback).toBeNull()
+    expect(info.errorCallback).toBeNull()
+    expect(info.transitions).toStrictEqual({})
+    expect(info.state).toEqual({ count: 1 })
 
-    const setters = store.settersRegistry[transitionName]
-    expect(setters).toStrictEqual([])
-
-    const doneCallback = store.transitions.callbacks.done.get(transitionName)
-    expect(doneCallback).toBeNull()
-    const errorCallback = store.transitions.callbacks.error.get(transitionName)
-    expect(errorCallback).toBeNull()
-
-    const transitions = store.transitions.state.transitions
-    expect(transitions).toStrictEqual({})
-
-    const state = store.getState()
-    expect(state).toEqual({ count: 1 })
+    expect(spy_completeTransition).toHaveBeenCalledTimes(1)
   })
 
   describe("abort", () => {
     beforeEach(async () => {
-      const controller = store.transitions.controllers.values[transitionName]
-      const spy_abort = vi.spyOn(controller, "abort")
+      const info = getStoreTransitionInfo(store, transitionName)
+      const spy_abort = vi.spyOn(info.controller, "abort")
 
       await vi.advanceTimersByTimeAsync(500)
       store.dispatch({
@@ -163,45 +155,34 @@ describe("ensure effects are settled after async transition", () => {
       })
 
       expect(spy_abort).toHaveBeenCalledTimes(1)
+      // abort, and make a new abort controller for the transition
+      const info_2 = getStoreTransitionInfo(store, transitionName)
+      expect(info_2.controller.signal.aborted).toBe(false)
     })
 
     test("before wait", () => {
-      const controller = store.transitions.controllers.values[transitionName]
-      expect(controller.signal.aborted).toBe(false)
-
-      const setters = store.settersRegistry[transitionName]
-      expect(setters).toStrictEqual([])
-
-      const doneCallback = store.transitions.callbacks.done.get(transitionName)
-      expect(doneCallback).toBeInstanceOf(Function)
-      const errorCallback = store.transitions.callbacks.error.get(transitionName)
-      expect(errorCallback).toBeInstanceOf(Function)
-
-      const transitions = store.transitions.state.transitions
-      expect(transitions).toStrictEqual({ [transitionName]: 1 })
-
-      const state = store.getState()
-      expect(state).toEqual({ count: 0 })
+      const info = getStoreTransitionInfo(store, transitionName)
+      expect(info.controller.signal.aborted).toBe(false)
+      expect(info.setters).toStrictEqual([])
+      expect(info.doneCallback).toBeInstanceOf(Function)
+      expect(info.errorCallback).toBeInstanceOf(Function)
+      expect(info.transitions).toStrictEqual({ [transitionName]: 1 })
+      expect(info.state).toEqual({ count: 0 })
+      expect(spy_completeTransition).not.toHaveBeenCalledTimes(1)
     })
 
     test("after promise resolve", async () => {
+      // await vi.advanceTimersByTimeAsync(500) // TODO
+      // await vi.advanceTimersByTimeAsync(1000 -> 500) // TODO
       await vi.advanceTimersByTimeAsync(1000)
-      const controller = store.transitions.controllers.values[transitionName]
-      expect(controller.signal.aborted).toBe(false)
-
-      const setters = store.settersRegistry[transitionName]
-      expect(setters).toStrictEqual([])
-
-      const doneCallback = store.transitions.callbacks.done.get(transitionName)
-      expect(doneCallback).toBeNull()
-      const errorCallback = store.transitions.callbacks.error.get(transitionName)
-      expect(errorCallback).toBeNull()
-
-      const transitions = store.transitions.state.transitions
-      expect(transitions).toStrictEqual({})
-
-      const state = store.getState()
-      expect(state).toEqual({ count: 1 })
+      const info = getStoreTransitionInfo(store, transitionName)
+      expect(info.controller.signal.aborted).toBe(false)
+      expect(info.setters).toStrictEqual([])
+      expect(info.doneCallback).toBeNull()
+      expect(info.errorCallback).toBeNull()
+      expect(info.transitions).toStrictEqual({})
+      expect(info.state).toEqual({ count: 1 })
+      expect(spy_completeTransition).toHaveBeenCalledTimes(1)
     })
   })
 })

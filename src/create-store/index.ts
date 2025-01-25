@@ -331,7 +331,7 @@ export function newStoreDef<
           console.log("66: REGISTERING HANDLERS!")
 
           store.transitions.callbacks.done.set(transitionString, () =>
-            completeTransition(action, transition)
+            store.completeTransition(action, transition)
           )
 
           store.transitions.callbacks.error.set(transitionString, error => {
@@ -592,6 +592,7 @@ export function newStoreDef<
       redo,
       rerender,
       rebuild,
+      completeTransition,
     }
 
     store = {

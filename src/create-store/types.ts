@@ -47,6 +47,7 @@ export type GenericStoreMethods<
   undo(): void
   redo(): void
   rebuild(): () => SomeStore<TState, TActions, TEvents>
+  completeTransition(action: GenericAction, transition: any[]): void
 }
 
 export type SomeStore<

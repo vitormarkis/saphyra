@@ -91,12 +91,10 @@ export function PokemonPage() {
 type PokemonPageContentProps = {}
 
 const beforeDispatch = ({ action, meta, transition, transitionStore }: BeforeDispatchOptions) => {
-  // console.log("33: ", transitionStore.state.transitions)
-  // if (transitionStore.isHappeningUnique(transition)) {
-  //   const controller = transitionStore.controllers.get(transition)
-  //   controller.abort()
-  //   // console.log("66:x! ABORT!")
-  // }
+  if (transitionStore.isHappeningUnique(transition)) {
+    const controller = transitionStore.controllers.get(transition)
+    controller.abort()
+  }
   return action
 }
 
