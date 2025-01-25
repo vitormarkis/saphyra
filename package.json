@@ -9,7 +9,9 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "check": "tsc --noEmit --project ./tsconfig.app.json",
-    "pr": "prettier --write src"
+    "pr": "prettier --write src",
+    "test": "vitest --config vitest.config.ts",
+    "test:debug": "vitest --config vitest.config.ts --inspect-brk --browser --no-file-parallelism"
   },
   "dependencies": {
     "@blueprintjs/core": "^5.14.2",
@@ -22,6 +24,7 @@
     "@vercel/analytics": "^1.4.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "jsdom": "^26.0.0",
     "lodash": "^4.17.21",
     "lucide-react": "^0.471.0",
     "normalize.css": "^8.0.1",
@@ -30,7 +33,8 @@
     "react-router-dom": "^7.1.1",
     "sonner": "^1.5.0",
     "tailwind-merge": "^2.6.0",
-    "tailwindcss-animate": "^1.0.7"
+    "tailwindcss-animate": "^1.0.7",
+    "vite-tsconfig-paths": "^5.1.4"
   },
   "devDependencies": {
     "@eslint/js": "^9.9.0",
@@ -47,6 +51,7 @@
     "tailwindcss": "^3.4.12",
     "typescript": "^5.5.3",
     "typescript-eslint": "^8.0.1",
-    "vite": "^5.4.1"
+    "vite": "^5.4.1",
+    "vitest": "^3.0.4"
   }
 }
