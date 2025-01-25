@@ -142,18 +142,13 @@ function ChangeRolePageContent() {
               type: "change-role",
               role: selectedRole,
               transition: ["auth", "role"],
-              beforeDispatch(ctx) {
-                // if (ctx.meta.canRun === false) return
-                // ctx.meta.canRun = false
-                // setTimeout(() => {
-                //   ctx.meta.canRun = true
-                // }, 1000)
-
-                if (ctx.currentTransition.isRunning) {
-                  ctx.currentTransition.controller.abort()
-                }
-
-                return ctx.action
+              beforeDispatch: ({ action, meta }) => {
+                const now = Date.now()
+                meta.timestamps ??= []
+                meta.timestamps = meta.timestamps.filter((ts: number) => now - ts < 1000)
+                if (meta.timestamps.length >= 2) return
+                meta.timestamps.push(now)
+                return action
               },
             })
           }}

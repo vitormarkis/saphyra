@@ -3,10 +3,12 @@ import { sleep } from "~/sleep"
 
 type FetchCommentsProps = {
   postId: number
+  signal: AbortSignal
 }
 
-export async function fetchComments({ postId }: FetchCommentsProps) {
+export async function fetchComments({ postId, signal }: FetchCommentsProps) {
   const value = FAKE_DB_VALUE.comments[postId] ?? []
   await sleep(700)
+  if (signal.aborted) throw new Error("Aborted!")
   return value
 }

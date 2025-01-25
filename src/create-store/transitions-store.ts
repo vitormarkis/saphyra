@@ -1,5 +1,6 @@
+import { TransitionsStoreEvents } from "~/create-store/event-emitter-transitions"
 import { Subject } from "../Subject"
-import { EventEmitter } from "./event-emitter"
+import { CleanUpTransitionConfig } from "~/create-store/types"
 
 export type TransitionsStoreState = {
   transitions: Record<string, number>
@@ -10,15 +11,23 @@ type EventsType = {
 }
 
 export class TransitionsStore extends Subject {
-  controllers: Record<string, AbortController> = {}
+  controllers: {
+    get: (transition: any[] | null | undefined | string) => AbortController
+    values: Record<string, AbortController>
+  }
   state: TransitionsStoreState
   events = {
-    done: new EventEmitter<EventsType>(),
-    error: new EventEmitter<EventsType>(),
+    done: new TransitionsStoreEvents(),
+    error: new TransitionsStoreEvents(),
   }
   meta: {
-    get: (transition: any[] | null) => Record<string, any>
+    get: (transition: any[] | null | undefined) => Record<string, any>
     values: Record<string, any>
+  }
+
+  callbacks = {
+    done: new Map<string, (() => void) | null>(),
+    error: new Map<string, ((error: unknown) => void) | null>(),
   }
 
   constructor() {
@@ -31,17 +40,65 @@ export class TransitionsStore extends Subject {
       get: this.getMeta.bind(this),
       values: {},
     }
+
+    this.controllers = {
+      get: this.getController.bind(this),
+      values: {},
+    }
   }
 
-  private getMeta(transition: any[] | null) {
+  private getMeta(transition: any[] | null | undefined) {
     if (!transition) return {} // TODO
     const key = transition.join(":")
     this.meta.values[key] ??= {}
     return this.meta.values[key]
   }
 
+  eraseKey(transition: any[] | null | undefined, config: CleanUpTransitionConfig = "with-effects") {
+    if (!transition) return
+    const key = transition.join(":")
+    const subTransitions = this.state.transitions[key]
+    for (let i = 0; i < subTransitions; i++) {
+      this.doneKey(transition, config)
+    }
+  }
+
+  cleanup(transitionName: string | null) {
+    if (!transitionName) return
+    this.callbacks.done.set(transitionName, null)
+    this.callbacks.error.set(transitionName, null)
+  }
+
+  checkShouldHandleError(transition: any[]) {
+    const transitionName = transition.join(":")
+    const record = this.meta.values[transitionName]["$$_shouldHandleError"]
+    const shouldSkipErrorHandling = record === false
+    const shouldRunErrorCallback = !shouldSkipErrorHandling
+    if (record != null) {
+      delete this.meta.values[transitionName]["$$_shouldHandleError"]
+    }
+
+    return shouldRunErrorCallback
+  }
+
+  emitError(transition: any[], error: unknown) {
+    console.log("66:x! EMITTING ERROR!", transition, error)
+    const shouldRunErrorCallback = this.checkShouldHandleError(transition)
+    if (!shouldRunErrorCallback) return
+    const transitionName = transition.join(":")
+    this.callbacks.error.get(transitionName)?.(error)
+  }
+
+  getController(transition: any[] | null | undefined | string) {
+    if (!transition) return new AbortController() // TODO
+    const key = typeof transition === "string" ? transition : transition.join(":")
+    this.controllers.values[key] ??= new AbortController()
+    return this.controllers.values[key]
+  }
+
   private setState(newState: TransitionsStoreState) {
     this.state = newState
+    console.log("66:x!", this.state.transitions)
     this.notify()
   }
 
@@ -57,7 +114,9 @@ export class TransitionsStore extends Subject {
     return state
   }
 
-  addKey(transition: any[] | null) {
+  addKey(transition: any[] | null | undefined) {
+    console.log(`44: adding key ${JSON.stringify(transition)}!`)
+
     if (!transition) return
 
     const state = {
@@ -73,26 +132,29 @@ export class TransitionsStore extends Subject {
     }, state)
 
     this.setState(newState)
+
+    return () => this.doneKey(transition)
   }
 
-  done(state: TransitionsStoreState, transitionName: string | null, error: unknown | null) {
+  done(
+    state: TransitionsStoreState,
+    transitionName: string | null,
+    config: CleanUpTransitionConfig = "with-effects"
+  ) {
     if (!transitionName) return
     state.transitions[transitionName] ??= 0
     state.transitions[transitionName]--
 
     if (state.transitions[transitionName] <= 0) {
       delete state.transitions[transitionName]
-      this.events.done.emit(transitionName, error)
-      this.cleanup(transitionName)
+      console.log(`44: done ${transitionName}!`)
+      if (config !== "skip-effects") {
+        const doneCallback = this.callbacks.done.get(transitionName)
+        doneCallback?.()
+      }
     }
 
     return state
-  }
-
-  cleanup(transitionName: string | null) {
-    // if (transitionName) {
-    //   this.meta.values[transitionName] = {}
-    // }
   }
 
   clear(transitionName: string | null) {
@@ -106,16 +168,14 @@ export class TransitionsStore extends Subject {
     this.setState(state)
   }
 
-  doneKey(transition: any[] | null, error: unknown | null) {
+  doneKey(transition: any[] | null | undefined, config: CleanUpTransitionConfig = "with-effects") {
+    console.log(`44: done key ${JSON.stringify(transition)}!`)
+    console.log(`66: done key ${JSON.stringify(transition)}!`)
     if (!transition) return
 
     // let clearKeys = false
 
     // if (isNewActionError(error)) {
-    if (error) {
-      // clearKeys = true
-      this.events.error.emit(transition.join(":"), error)
-    }
 
     let state = {
       ...this.state,
@@ -126,13 +186,19 @@ export class TransitionsStore extends Subject {
     const newState = transition.reduce((acc, key) => {
       if (meta !== "") key = `${meta}:${key}`
       meta = key
-      return this.done(acc, key, error)
+      return this.done(acc, key, config)
     }, state)
 
     this.setState(newState)
   }
 
-  isHappening(transition: any[] | null) {
+  isHappeningUnique(transition: any[] | null | undefined) {
+    if (!transition) return false
+    const key = transition.join(":")
+    return this.state.transitions[key] > 0
+  }
+
+  isHappening(transition: any[] | null | undefined) {
     if (!transition) return false
     let isHappening = false
 

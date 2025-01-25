@@ -72,12 +72,15 @@ export const newPostsStore = newStoreDef<PostsInitialProps, PostsState, PostsAct
            * Refetches the post comments after
            * a successful mutation
            */
+          const revalidate = () =>
+            queryClient.refetchQueries({
+              ...getCommentsQueryOptions({ postId: action.postId }),
+            })
+
           if (action.revalidateOnSameTransition) {
-            actor.async.promise(() =>
-              queryClient.refetchQueries({
-                ...getCommentsQueryOptions({ postId: action.postId }),
-              })
-            )
+            actor.async.promise(revalidate)
+          } else {
+            revalidate()
           }
         })
     }

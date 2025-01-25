@@ -5,14 +5,22 @@ type GetCommentsQueryOptionsProps = {
   postId: number
 }
 
-export function getCommentsQueryOptions({
-  postId,
-}: GetCommentsQueryOptionsProps) {
+type QueryContext = {
+  signal: AbortSignal
+}
+
+export function getCommentsQueryOptions(
+  { postId }: GetCommentsQueryOptionsProps,
+  ctx?: QueryContext
+) {
   return queryOptions({
     queryKey: ["comments", postId] as const,
-    queryFn: async ({ queryKey }) => {
+    queryFn: async ({ queryKey, signal }) => {
       const [, postId] = queryKey
-      return await fetchComments({ postId })
+      return await fetchComments({
+        postId,
+        signal: AbortSignal.any([...(ctx?.signal ? [ctx.signal] : []), signal]),
+      })
     },
     meta: { postId },
   })

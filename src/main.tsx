@@ -8,6 +8,7 @@ import { RootLayoutWrapper } from "./Navigation.tsx"
 import "./index.css"
 import { myRoutesManifest } from "./my-routes-manifest.tsx"
 import { Providers } from "./providers.tsx"
+import { VideoPage } from "~/pages/VideoPage.tsx"
 
 function onThemeChange(event: any, theme: string) {
   if (event.matches) {
@@ -30,6 +31,10 @@ ensureThemeChangeOnSystemChange("dark")
 
 export const routesManifest = [
   {
+    path: "/video",
+    element: <VideoPage />,
+  },
+  {
     path: "/",
     element: (
       <Providers>
@@ -50,6 +55,4 @@ export const routesManifest = [
 
 const router = createBrowserRouter(routesManifest)
 
-createRoot(document.getElementById("root")!).render(
-  <RouterProvider router={router} />
-)
+createRoot(document.getElementById("root")!).render(<RouterProvider router={router} />)

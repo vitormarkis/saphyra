@@ -8,10 +8,7 @@ import { toast } from "sonner"
 import { notifyOnChange } from "~/notify-on-change"
 import { getCommentsQueryOptions } from "~/pages/external-deps/query-options/get-comments-query-options"
 import { useQuery } from "@tanstack/react-query"
-import {
-  postsController,
-  PostsController,
-} from "~/pages/external-deps/store.controller"
+import { postsController, PostsController } from "~/pages/external-deps/store.controller"
 
 type EditingPostProps = {}
 
@@ -72,15 +69,8 @@ export function EditingPost({}: EditingPostProps) {
         <div className="flex">
           <label
             htmlFor=""
-            className="flex flex-col items-center gap-1 px-2"
+            className="flex items-center gap-1 px-2"
           >
-            <span className="text-xs text-center bg-gray-700 text-gray-200 px-2 py-1 rounded-sm">
-              Revalidate
-              <br />
-              comments on
-              <br />
-              same transition
-            </span>
             <input
               type="checkbox"
               checked={revalidateCommentsOnSameTransition}
@@ -91,6 +81,9 @@ export function EditingPost({}: EditingPostProps) {
               }}
               className="h-4 w-4 rounded-sm"
             />
+            <span className="text-xs text-center bg-gray-700 text-gray-200 px-2 py-1 rounded-sm">
+              Revalidate comments on same transition
+            </span>
           </label>
         </div>
         <div className=" shrink-0">
@@ -109,9 +102,7 @@ export function EditingPost({}: EditingPostProps) {
                   key={comment.id}
                   className="text-sm/none px-3 py-2 rounded bg-gray-200 dark:bg-gray-900 dark:text-gray-300"
                 >
-                  <strong className="dark:text-white font-semibold">
-                    {comment.authorId}:{" "}
-                  </strong>
+                  <strong className="dark:text-white font-semibold">{comment.authorId}: </strong>
                   {comment.body}
                 </li>
               ))

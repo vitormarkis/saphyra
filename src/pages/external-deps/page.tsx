@@ -17,10 +17,7 @@ export function ExternalDepsPage() {
   const [postsStore] = postsStoreState
 
   const isBootstraping = Posts.useTransition(["bootstrap"], postsStore)
-  const isCommentingPost = Posts.useStore(
-    s => s.commentingPostId != null,
-    postsStore
-  )
+  const isCommentingPost = Posts.useStore(s => s.commentingPostId != null, postsStore)
   const allPosts = Posts.useStore(s => s.posts, postsStore)
 
   useHistory(postsStore)

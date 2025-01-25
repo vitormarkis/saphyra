@@ -16,7 +16,7 @@ export type HistoryExtension<TState> = {
   historyRedo: Array<TState>
 }
 
-type SettersRegistry<TState> = Record<string, Array<(state: TState) => Partial<TState>>>
+type SettersRegistry<TState> = Record<string, Array<SetterOrPartialState<TState>>>
 
 export type GenericStoreValues<TState, TEvents extends EventsTuple = EventsTuple> = {
   errors: ErrorsStore
@@ -57,6 +57,12 @@ export type SomeStore<
   GenericStoreMethods<TState, TActions, TEvents> &
   SubjectType
 
+export type TransitionFunctionOptions = {
+  transition: any[] | null | undefined
+  actor: AsyncActor<any, any>
+  signal: AbortSignal
+}
+
 export type DefaultActions =
   | {
       type: string
@@ -66,23 +72,36 @@ export type DefaultActions =
   | {
       type: "$$lazy-value"
       transition: any[]
-      transitionFn: (transition: any[], actor: AsyncActor<any, any>) => Promise<any>
+      transitionFn: (options: TransitionFunctionOptions) => Promise<any>
       onSuccess: (value: any, actor: AsyncActor<any, any>) => void
     }
 
 export type TransitionStartConfig<TBaseAction extends GenericAction = GenericAction> = {
+  /**
+   * The action that is being dispatched, except the key 'beforeDispatch'
+   */
   action: TBaseAction
-  currentTransition: {
-    isRunning: boolean
-    controller: AbortController
-  }
+  /**
+   * The store where the transitions are being orchestrated
+   */
+  transitionStore: TransitionsStore
+  /**
+   * The transition that is being dispatched
+   */
+  transition: any[] | null | undefined
+  /**
+   * A stable reference to the current transition metadata
+   */
   meta: Record<string, any>
 }
 
 export type GenericAction = { type: string } & Record<string, any>
 
-type BeforeDispatch<TBaseAction extends GenericAction = GenericAction> = (
-  config: TransitionStartConfig<TBaseAction>
+export type BeforeDispatchOptions<TBaseAction extends GenericAction = GenericAction> =
+  TransitionStartConfig<TBaseAction>
+
+export type BeforeDispatch<TBaseAction extends GenericAction = GenericAction> = (
+  options: BeforeDispatchOptions<TBaseAction>
 ) => TBaseAction | void
 
 export type BaseAction<TState, TBaseAction extends GenericAction = GenericAction> = {
@@ -101,7 +120,7 @@ export type BaseAction<TState, TBaseAction extends GenericAction = GenericAction
   transition?: any[]
 } & Record<string, any>
 
-type SetterOrPartialState<TState> = Setter<TState> | Partial<TState>
+export type SetterOrPartialState<TState> = Setter<TState> | Partial<TState>
 
 export type AsyncActor<TState, TActions extends BaseAction<TState>> = {
   set: (setterOrPartialState: SetterOrPartialState<TState>) => void
@@ -170,3 +189,5 @@ export type StoreInstantiatorGeneric = StoreInstantiator<any, any, any, any>
 
 export type ExtractEvents<T> = T extends SomeStore<any, any, infer E> ? E : never
 export type ExtractActions<T> = T extends SomeStore<any, infer A, any> ? A : never
+
+export type CleanUpTransitionConfig = "skip-effects" | "with-effects"

@@ -36,11 +36,9 @@ const newCount = newStoreDef<CounterState, CounterState, CounterActions>({
 
     if (action.type === "increment-ten") {
       async
-        .promise(ctx => sleep(3000, "incrementing a lot", ctx.signal))
+        .promise(ctx => sleep(2000, "incrementing a lot", ctx.signal))
         .onSuccess((_, actor) => {
-          actor.set(s => ({
-            count: s.count + 10,
-          }))
+          actor.set(s => ({ count: s.count + 10 }))
         })
     }
 
@@ -123,14 +121,10 @@ export function Content() {
           </button>
           <button
             onClick={async () => {
-              const { count } = await new Promise<CounterState>(resolve => {
-                todosStore.dispatch({
-                  type: "increment-ten",
-                  transition: ["increment", "ten"],
-                  onTransitionEnd: resolve,
-                })
+              todosStore.dispatch({
+                type: "increment-ten",
+                transition: ["increment", "ten"],
               })
-              console.log("new count", count)
             }}
           >
             Increment (10) [async]

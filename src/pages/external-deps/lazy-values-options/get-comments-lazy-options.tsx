@@ -13,15 +13,13 @@ type GetCommentsLazyOptionsProps = {
  * on the store root that runs a setState updating the commentsByPostId
  * entry whenever this query receives a new value
  */
-export function getCommentsLazyOptions({
-  postId,
-}: GetCommentsLazyOptionsProps) {
+export function getCommentsLazyOptions({ postId }: GetCommentsLazyOptionsProps) {
   return Posts.createLazyOptions({
     select: s => s.commentsByPostId[postId],
     transition: ["comments", postId],
-    transitionFn: () => {
+    transitionFn: ({ actor, signal, transition }) => {
       return queryClient.ensureQueryData({
-        ...getCommentsQueryOptions({ postId }),
+        ...getCommentsQueryOptions({ postId }, { signal }),
       })
     },
   })

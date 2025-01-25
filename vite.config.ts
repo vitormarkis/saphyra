@@ -18,6 +18,15 @@ export default defineConfig({
     },
   },
 
+  server: {
+    proxy: {
+      "/api": {
+        target: "http://localhost:5173",
+        changeOrigin: true,
+      },
+    },
+  },
+
   build: {
     rollupOptions: {
       // external: ["@blueprintjs/icons/lib/css/blueprint-icons.css", "normalize.css"],

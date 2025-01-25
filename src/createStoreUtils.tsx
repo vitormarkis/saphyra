@@ -15,6 +15,7 @@ import {
   ExtractActions,
   StoreErrorHandler,
   StoreInstantiatorGeneric,
+  TransitionFunctionOptions,
 } from "./create-store/types"
 import { Devtools, DevtoolsPropsWithoutStore } from "./devtools/devtools"
 import { exact } from "~/lib/module-response-type"
@@ -122,10 +123,7 @@ export interface LazyValueOptions<
 > {
   transition: TTransition
   select: (state: TState) => R
-  transitionFn: (
-    transition: TTransition,
-    actor: AsyncActor<TState, TActions>
-  ) => Promise<TPromiseResult>
+  transitionFn: (options: TransitionFunctionOptions) => Promise<TPromiseResult>
   onSuccess?: (value: TPromiseResult, actor: AsyncActor<TState, TActions>) => void
 }
 

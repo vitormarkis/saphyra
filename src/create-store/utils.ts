@@ -1,9 +1,18 @@
-import { TransitionStartConfig } from "~/create-store/types"
+import { BeforeDispatch, GenericAction } from "~/create-store/types"
 
 export function isNewActionError(error: unknown) {
-  return typeof error === "object" && error && "reason" in error && error.reason === null
+  if (typeof error !== "object") return false
+  if (!error) return false
+  const _error = error as any
+  if (_error.code === 20) return true
+  if (_error.reason.code === 20) return true
+  return false
 }
 
-export function defaultBeforeDispatch(config: TransitionStartConfig) {
-  return config.action
+export const createDefaultBeforeDispatch: <
+  TBaseAction extends GenericAction = GenericAction
+>() => BeforeDispatch<TBaseAction> = () => {
+  return options => {
+    return options.action
+  }
 }

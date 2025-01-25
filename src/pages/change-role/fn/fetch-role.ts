@@ -1,3 +1,4 @@
+import { createLuck } from "~/lib/create-luck"
 import { sleep } from "../../../sleep"
 
 type FetchRoleProps = {
@@ -5,10 +6,11 @@ type FetchRoleProps = {
   signal: AbortSignal
 }
 
+const { getLuck } = createLuck([0, 0, 1])
+
 export async function fetchRole({ roleName, signal }: FetchRoleProps) {
-  await sleep(3000, "fetching role", signal)
-  const unlucky = Math.random() < 0
-  if (unlucky) {
+  await sleep(1000, "fetching role", signal)
+  if (getLuck()) {
     throw new Error("Error while fetching role!")
   }
   return roleName as "user" | "admin"

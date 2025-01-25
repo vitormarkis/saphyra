@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from "react"
 import { newStoreDef } from "~/create-store"
+import { EventEmitter } from "~/create-store/event-emitter"
+import { rateLimiter } from "~/create-store/helpers/before-dispatch/rate-limiter"
+import { throttle } from "~/create-store/helpers/before-dispatch/throttle"
 import { BaseState } from "~/create-store/types"
 import { createStoreUtils } from "~/createStoreUtils"
 import { useAbortController } from "~/hooks/use-abort-controller"
@@ -10,6 +13,7 @@ type TransitionsStoreState = {
   count: number
   currentTransition: null
   albums: any[]
+  todos: any[]
 }
 
 type TransitionsStoreActions =
@@ -22,9 +26,17 @@ type TransitionsStoreActions =
   | {
       type: "fetch-albums"
     }
+  | {
+      type: "fetch-todos"
+    }
 
 const newTransitionsStore = newStoreDef<{}, TransitionsStoreState, TransitionsStoreActions>({
-  onConstruct: () => ({ count: 0, currentTransition: null, albums: [] }),
+  onConstruct: () => ({
+    count: 0,
+    currentTransition: null,
+    albums: [],
+    todos: [],
+  }),
   reducer({ prevState, state, action, async, diff, dispatch, events, set, store }) {
     if (action.type === "increment-many") {
       async
@@ -39,13 +51,30 @@ const newTransitionsStore = newStoreDef<{}, TransitionsStoreState, TransitionsSt
     if (action.type === "fetch-albums") {
       async
         .promise(async ({ signal }) => {
-          const response = await fetch("https://jsonplaceholder.typicode.com/albums", {
-            signal,
-          })
-          return await response.json()
+          await sleep(1800, "fetching albums", signal)
+          // const response = await fetch("https://jsonplaceholder.typicode.com/albums", {
+          //   signal,
+          // })
+          // return await response.json()
+          return []
         })
         .onSuccess((albums, actor) => {
           actor.set({ albums })
+        })
+    }
+
+    if (action.type === "fetch-todos") {
+      async
+        .promise(async ({ signal }) => {
+          await sleep(1800, "fetching todos", signal)
+          // const response = await fetch("https://jsonplaceholder.typicode.com/todos", {
+          //   signal,
+          // })
+          // return await response.json()
+          return []
+        })
+        .onSuccess((todos, actor) => {
+          actor.set({ todos })
         })
     }
 
@@ -81,18 +110,15 @@ export function TransitionsShowcasePage() {
 
 type TransitionsShowcaseViewProps = {}
 
+type Events = {
+  tick: []
+}
 export function TransitionsShowcaseView({}: TransitionsShowcaseViewProps) {
-  const [transitionsStore] = TransitionsStore.useUseState()
+  const events = useRef(new EventEmitter<Events>())
+  const [store] = TransitionsStore.useUseState()
 
-  const manyAbort = useAbortController()
-  const isIncrementingMany = TransitionsStore.useTransition(["increment", "many"])
-
-  const someAbort = useAbortController()
-  const isIncrementingSome = TransitionsStore.useTransition(["increment", "some"])
-
-  const fetchAlbumsAbort = useAbortController()
+  const isLoadingTodos = TransitionsStore.useTransition(["fetch", "todos"])
   const isLoadingAlbums = TransitionsStore.useTransition(["fetch", "albums"])
-  const isFetchingSomething = TransitionsStore.useTransition(["fetch"])
 
   TransitionsStore.useErrorHandlers(error => {
     console.log("error", error)
@@ -100,9 +126,18 @@ export function TransitionsShowcaseView({}: TransitionsShowcaseViewProps) {
 
   const canRun = useRef(true)
 
+  useEffect(() => {
+    const id = setInterval(() => {
+      events.current.emit("tick")
+      console.log("tick!")
+    }, 3000)
+
+    return () => clearInterval(id)
+  }, [])
+
   return (
     <div className="flex flex-wrap gap-2">
-      <fieldset className="flex gap-2">
+      {/* <fieldset className="flex gap-2">
         <legend>Increment many</legend>
         <button
           onClick={() => {
@@ -146,37 +181,73 @@ export function TransitionsShowcaseView({}: TransitionsShowcaseViewProps) {
         >
           Cancel
         </button>
-      </fieldset>
-      <fieldset className="flex gap-2">
+      </fieldset> */}
+      <fieldset className={cn("flex gap-2", isLoadingAlbums && "border-amber-600")}>
         <legend>Fetch albums (check network tab)</legend>
         <button
           onClick={() => {
-            transitionsStore.dispatch({
+            store.dispatch({
               type: "fetch-albums",
               transition: ["fetch", "albums"],
-              beforeDispatch(ctx) {
-                if (ctx.meta.canRun === false) return
-                ctx.meta.canRun = false
-                setTimeout(() => {
-                  ctx.meta.canRun = true
-                }, 1000)
-
-                if (ctx.currentTransition.isRunning) {
-                  ctx.currentTransition.controller.abort()
-                }
-
-                return ctx.action
+              beforeDispatch: ({ action, meta }) => {
+                const now = Date.now()
+                meta.timestamps ??= []
+                meta.timestamps = meta.timestamps.filter((ts: number) => now - ts < 4000)
+                if (meta.timestamps.length >= 0) return
+                meta.timestamps.push(now)
+                return action
               },
             })
           }}
-          className={cn(isLoadingAlbums && "border-red-800 ring-red-500 ring-2")}
+          // className={cn(isLoadingTodos && "border-red-800 ring-red-500 ring-2")}
         >
           Fetch
         </button>
         <button
-          disabled={!isLoadingAlbums}
+          // disabled={!isLoadingTodos}
           onClick={() => {
-            fetchAlbumsAbort.abort()
+            // fetchAlbumsAbort.abort()
+          }}
+        >
+          Cancel
+        </button>
+      </fieldset>
+      <fieldset className={cn("flex gap-2", isLoadingTodos && "border-amber-600")}>
+        <legend>Fetch todos (check network tab)</legend>
+        <button
+          onClick={() => {
+            /**
+             *
+             */
+            store.dispatch({
+              type: "fetch-todos",
+              transition: ["fetch", "todos"],
+              beforeDispatch({ transitionStore, transition, action }) {
+                // if (meta.canRun === false) return
+                // meta.canRun = false
+                // setTimeout(() => {
+                //   meta.canRun = true
+                // }, 1000)
+                if (transitionStore.isHappeningUnique(transition)) {
+                  const controller = transitionStore.controllers.get(transition)
+                  controller.abort()
+                }
+                return action
+              },
+            })
+
+            /**
+             *
+             */
+          }}
+          // className={cn(isLoadingTodos && "border-red-800 ring-red-500 ring-2")}
+        >
+          Fetch
+        </button>
+        <button
+          // disabled={!isLoadingTodos}
+          onClick={() => {
+            // fetchTodosAbort.abort()
           }}
         >
           Cancel

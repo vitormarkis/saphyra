@@ -16,6 +16,7 @@
       - serve para você invocar callbacks/dispara eventos quando algum valor muda
   - dispatch
     - permite disparar novas ações
+      - útil para recursão
   - events
     - permite registrar novos eventos a nível de store, e disparar eventos para módulos externos que estejam interessados
   - set

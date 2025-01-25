@@ -13,7 +13,10 @@ import {
 } from "./types"
 import { noop } from "~/create-store/fn/noop"
 
-export const errorNoTransition = () => new Error("No transition provided.")
+export const errorNoTransition = () =>
+  new Error(
+    "No transition! If you want to deal with async operations in your reducer, you must pass a transition to your action."
+  )
 
 /**
  * Comportamento deve ser mudado no futuro caso a store comece a
@@ -49,15 +52,7 @@ export function createAsync<
   type AsyncActorInner = AsyncActor<TState, TActions>
   const dispatch: AsyncActorInner["dispatch"] = createTransitionDispatch(store, transition)
   const set: AsyncActorInner["set"] = setter => {
-    store.registerSet(
-      (currentState: TState) => {
-        const newState = isSetter(setter) ? setter(currentState) : setter
-        return { ...currentState, ...newState }
-      },
-      state,
-      transition,
-      "reducer"
-    )
+    store.registerSet(setter, state, transition, "reducer")
   }
   type PromiseResult<T, TState, TActions extends BaseAction<TState>> = {
     onSuccess: (callback: (value: T, actor: AsyncActor<TState, TActions>) => void) => void
@@ -81,9 +76,9 @@ export function createAsync<
           set,
           async,
         })
-        store.transitions.doneKey(transition, null)
+        store.transitions.doneKey(transition)
       } catch (error) {
-        store.transitions.doneKey(transition, error)
+        store.transitions.emitError(transition, error)
       }
     }
     handlePromise(promise({ signal }))
