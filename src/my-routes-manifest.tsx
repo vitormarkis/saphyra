@@ -7,30 +7,30 @@ import { TransitionsShowcasePage } from "~/pages/transitions-showcase/page"
 import { PokemonPage } from "~/pages/PokemonPage"
 
 export const myRoutesManifest = [
-  // {
-  //   path: "/github-profile",
-  //   element: <GithubProfilePage />,
-  // },
-  // {
-  //   path: "/change-role",
-  //   element: <ChangeRolePage />,
-  // },
-  // {
-  //   path: "/zustand-like",
-  //   element: <ZustandLikePage />,
-  // },
-  // {
-  //   path: "/memory-game",
-  //   element: <MemoryGamePage />,
-  // },
-  // {
-  //   path: "/external-deps",
-  //   element: <ExternalDepsPage />,
-  // },
-  // {
-  //   path: "/transitions-showcase",
-  //   element: <TransitionsShowcasePage />,
-  // },
+  {
+    path: "/github-profile",
+    element: <GithubProfilePage />,
+  },
+  {
+    path: "/change-role",
+    element: <ChangeRolePage />,
+  },
+  {
+    path: "/zustand-like",
+    element: <ZustandLikePage />,
+  },
+  {
+    path: "/memory-game",
+    element: <MemoryGamePage />,
+  },
+  {
+    path: "/external-deps",
+    element: <ExternalDepsPage />,
+  },
+  {
+    path: "/transitions-showcase",
+    element: <TransitionsShowcasePage />,
+  },
   {
     path: "/pokemon",
     element: <PokemonPage />,

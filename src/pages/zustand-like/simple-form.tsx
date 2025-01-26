@@ -37,7 +37,9 @@ const createSimpleForm = newStoreDef<SimpleFormInitialProps, SimpleFormState>({
     }
 
     if (diff(["name", "surname"])) {
-      set(s => ({ $fullName: `${s.name} ${s.surname}` }))
+      set(s => ({
+        $fullName: `${s.name} ${s.surname}`,
+      }))
     }
 
     if (state.$fullName.length > 30) {
@@ -102,17 +104,29 @@ export function SimpleFormView({ onGetToken }: SimpleFormViewProps) {
       <input
         type="text"
         value={name}
-        onChange={e => simpleForm.setState({ name: e.target.value })}
+        onChange={e =>
+          simpleForm.setState({
+            name: e.target.value,
+          })
+        }
       />
       <input
         type="text"
         value={surname}
-        onChange={e => simpleForm.setState({ surname: e.target.value })}
+        onChange={e =>
+          simpleForm.setState({
+            surname: e.target.value,
+          })
+        }
       />
       <input
         type="email"
         value={email}
-        onChange={e => simpleForm.setState({ email: e.target.value })}
+        onChange={e =>
+          simpleForm.setState({
+            email: e.target.value,
+          })
+        }
       />
       <button>Submit</button>
     </form>

@@ -54,7 +54,10 @@ export class TransitionsStore extends Subject {
     return this.meta.values[key]
   }
 
-  eraseKey(transition: any[] | null | undefined, config: CleanUpTransitionConfig = "with-effects") {
+  eraseKey(
+    transition: any[] | null | undefined,
+    config: CleanUpTransitionConfig = "with-effects"
+  ) {
     if (!transition) return
     const key = transition.join(":")
     const subTransitions = this.state.transitions[key]
@@ -91,7 +94,8 @@ export class TransitionsStore extends Subject {
 
   getController(transition: any[] | null | undefined | string) {
     if (!transition) return new AbortController() // TODO
-    const key = typeof transition === "string" ? transition : transition.join(":")
+    const key =
+      typeof transition === "string" ? transition : transition.join(":")
     this.controllers.values[key] ??= new AbortController()
     return this.controllers.values[key]
   }
@@ -168,7 +172,10 @@ export class TransitionsStore extends Subject {
     this.setState(state)
   }
 
-  doneKey(transition: any[] | null | undefined, config: CleanUpTransitionConfig = "with-effects") {
+  doneKey(
+    transition: any[] | null | undefined,
+    config: CleanUpTransitionConfig = "with-effects"
+  ) {
     console.log(`44: done key ${JSON.stringify(transition)}!`)
     console.log(`66: done key ${JSON.stringify(transition)}!`)
     if (!transition) return

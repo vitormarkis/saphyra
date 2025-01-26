@@ -24,25 +24,49 @@ type TransitionsStoreActions =
       type: "fetch-todos"
     }
 
-const newTransitionsStore = newStoreDef<{}, TransitionsStoreState, TransitionsStoreActions>({
-  onConstruct: () => ({ count: 0, currentTransition: null, albums: [], todos: [] }),
-  reducer({ prevState, state, action, async, diff, dispatch, events, set, store }) {
+const newTransitionsStore = newStoreDef<
+  {},
+  TransitionsStoreState,
+  TransitionsStoreActions
+>({
+  onConstruct: () => ({
+    count: 0,
+    currentTransition: null,
+    albums: [],
+    todos: [],
+  }),
+  reducer({
+    prevState,
+    state,
+    action,
+    async,
+    diff,
+    dispatch,
+    events,
+    set,
+    store,
+  }) {
     if (action.type === "increment-many") {
       async
         .promise(async ({ signal }) => {
           return await sleep(2000, "many", signal)
         })
         .onSuccess((_, actor) => {
-          actor.set(s => ({ count: s.count + 10 }))
+          actor.set(s => ({
+            count: s.count + 10,
+          }))
         })
     }
 
     if (action.type === "fetch-albums") {
       async
         .promise(async ({ signal }) => {
-          const response = await fetch("https://jsonplaceholder.typicode.com/albums", {
-            signal,
-          })
+          const response = await fetch(
+            "https://jsonplaceholder.typicode.com/albums",
+            {
+              signal,
+            }
+          )
           return await response.json()
         })
         .onSuccess((albums, actor) => {
@@ -53,9 +77,12 @@ const newTransitionsStore = newStoreDef<{}, TransitionsStoreState, TransitionsSt
     if (action.type === "fetch-todos") {
       async
         .promise(async ({ signal }) => {
-          const response = await fetch("https://jsonplaceholder.typicode.com/todos", {
-            signal,
-          })
+          const response = await fetch(
+            "https://jsonplaceholder.typicode.com/todos",
+            {
+              signal,
+            }
+          )
           return await response.json()
         })
         .onSuccess((todos, actor) => {

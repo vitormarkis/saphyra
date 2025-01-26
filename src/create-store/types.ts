@@ -16,9 +16,15 @@ export type HistoryExtension<TState> = {
   historyRedo: Array<TState>
 }
 
-type SettersRegistry<TState> = Record<string, Array<SetterOrPartialState<TState>>>
+type SettersRegistry<TState> = Record<
+  string,
+  Array<SetterOrPartialState<TState>>
+>
 
-export type GenericStoreValues<TState, TEvents extends EventsTuple = EventsTuple> = {
+export type GenericStoreValues<
+  TState,
+  TEvents extends EventsTuple = EventsTuple,
+> = {
   errors: ErrorsStore
   events: EventEmitter<TEvents>
   state: TState & BaseState
@@ -30,7 +36,7 @@ export type GenericStoreValues<TState, TEvents extends EventsTuple = EventsTuple
 export type GenericStoreMethods<
   TState,
   TActions extends BaseAction<TState>,
-  TEvents extends EventsTuple
+  TEvents extends EventsTuple,
 > = {
   getState(): TState
   dispatch: Dispatch<TState, TActions>
@@ -53,7 +59,7 @@ export type GenericStoreMethods<
 export type SomeStore<
   TState,
   TActions extends BaseAction<TState>,
-  TEvents extends EventsTuple
+  TEvents extends EventsTuple,
 > = GenericStoreValues<TState, TEvents> &
   GenericStoreMethods<TState, TActions, TEvents> &
   SubjectType
@@ -77,7 +83,9 @@ export type DefaultActions =
       onSuccess: (value: any, actor: AsyncActor<any, any>) => void
     }
 
-export type TransitionStartConfig<TBaseAction extends GenericAction = GenericAction> = {
+export type TransitionStartConfig<
+  TBaseAction extends GenericAction = GenericAction,
+> = {
   /**
    * The action that is being dispatched, except the key 'beforeDispatch'
    */
@@ -96,16 +104,21 @@ export type TransitionStartConfig<TBaseAction extends GenericAction = GenericAct
   meta: Record<string, any>
 }
 
-export type GenericAction = { type: string } & Record<string, any>
+export type GenericAction = {
+  type: string
+} & Record<string, any>
 
-export type BeforeDispatchOptions<TBaseAction extends GenericAction = GenericAction> =
-  TransitionStartConfig<TBaseAction>
+export type BeforeDispatchOptions<
+  TBaseAction extends GenericAction = GenericAction,
+> = TransitionStartConfig<TBaseAction>
 
-export type BeforeDispatch<TBaseAction extends GenericAction = GenericAction> = (
-  options: BeforeDispatchOptions<TBaseAction>
-) => TBaseAction | void
+export type BeforeDispatch<TBaseAction extends GenericAction = GenericAction> =
+  (options: BeforeDispatchOptions<TBaseAction>) => TBaseAction | void
 
-export type BaseAction<TState, TBaseAction extends GenericAction = GenericAction> = {
+export type BaseAction<
+  TState,
+  TBaseAction extends GenericAction = GenericAction,
+> = {
   type: string
   onTransitionEnd?: (state: TState) => void
   /**
@@ -135,7 +148,9 @@ export const isSetter = <TState>(
   return typeof setterOrPartialState === "function"
 }
 
-export function newSetter<TState>(newPartialState: Partial<TState>): Setter<TState> {
+export function newSetter<TState>(
+  newPartialState: Partial<TState>
+): Setter<TState> {
   return () => newPartialState
 }
 
@@ -144,12 +159,19 @@ export type AsyncPromiseProps = {
 }
 
 export type PromiseResult<T, TState, TActions extends BaseAction<TState>> = {
-  onSuccess: (callback: (value: T, actor: AsyncActor<TState, TActions>) => void) => void
+  onSuccess: (
+    callback: (value: T, actor: AsyncActor<TState, TActions>) => void
+  ) => void
 }
 
 export type Async<TState, TActions extends BaseAction<TState>> = {
-  promise<T>(promise: (props: AsyncPromiseProps) => Promise<T>): PromiseResult<T, TState, TActions>
-  timer(callback: (actor: AsyncActor<TState, TActions>) => void, time?: number): void
+  promise<T>(
+    promise: (props: AsyncPromiseProps) => Promise<T>
+  ): PromiseResult<T, TState, TActions>
+  timer(
+    callback: (actor: AsyncActor<TState, TActions>) => void,
+    time?: number
+  ): void
 }
 
 export type Diff<TState> = (keys: (keyof TState)[]) => boolean
@@ -164,7 +186,9 @@ export type BaseState = {
 
 export type Setter<TState> = (state: TState) => Partial<TState>
 
-export type ReducerSet<TState> = (setterOrPartialState: SetterOrPartialState<TState>) => void
+export type ReducerSet<TState> = (
+  setterOrPartialState: SetterOrPartialState<TState>
+) => void
 export type InnerReducerSet<TState> = (
   setterOrPartialStateList: SetterOrPartialState<TState>,
   state: TState,
@@ -172,7 +196,10 @@ export type InnerReducerSet<TState> = (
   mergeType: "reducer" | "set"
 ) => void
 
-export type StoreErrorHandler = (error: unknown, transition: any[] | undefined) => void
+export type StoreErrorHandler = (
+  error: unknown,
+  transition: any[] | undefined
+) => void
 
 export type SomeStoreGeneric = SomeStore<any, any, any>
 
@@ -180,7 +207,7 @@ export type StoreInstantiator<
   TInitialProps,
   TState,
   TActions extends BaseAction<TState>,
-  TEvents extends EventsTuple
+  TEvents extends EventsTuple,
 > = (
   initialProps: RemoveDollarSignProps<TInitialProps>,
   config?: StoreConstructorConfig
@@ -188,7 +215,9 @@ export type StoreInstantiator<
 
 export type StoreInstantiatorGeneric = StoreInstantiator<any, any, any, any>
 
-export type ExtractEvents<T> = T extends SomeStore<any, any, infer E> ? E : never
-export type ExtractActions<T> = T extends SomeStore<any, infer A, any> ? A : never
+export type ExtractEvents<T> =
+  T extends SomeStore<any, any, infer E> ? E : never
+export type ExtractActions<T> =
+  T extends SomeStore<any, infer A, any> ? A : never
 
 export type CleanUpTransitionConfig = "skip-effects" | "with-effects"

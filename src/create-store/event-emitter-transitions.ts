@@ -10,7 +10,8 @@ export type ITransitionsStoreEvents = Omit<TransitionsStore, "once"> & {
 
 export class TransitionsStoreEvents extends EventEmitter {
   once(transition: any[] | string) {
-    const transitionName = typeof transition === "string" ? transition : transition.join(":")
+    const transitionName =
+      typeof transition === "string" ? transition : transition.join(":")
     const events = this
 
     return {

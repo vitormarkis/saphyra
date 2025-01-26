@@ -26,13 +26,17 @@ function defaultSelector<T>(data: T) {
 }
 
 export function createStoreUtils<
-  TStoreInstantiator extends StoreInstantiatorGeneric = StoreInstantiatorGeneric,
-  TStore extends ReturnType<TStoreInstantiator> = ReturnType<TStoreInstantiator>
+  TStoreInstantiator extends
+    StoreInstantiatorGeneric = StoreInstantiatorGeneric,
+  TStore extends
+    ReturnType<TStoreInstantiator> = ReturnType<TStoreInstantiator>,
 >(store?: TStore) {
   type TState = TStore["state"]
   type TActions = ExtractActions<TStore>
 
-  const Context = createContext<[TStore, React.Dispatch<React.SetStateAction<TStore>>] | null>(null)
+  const Context = createContext<
+    [TStore, React.Dispatch<React.SetStateAction<TStore>>] | null
+  >(null)
 
   function useUseState() {
     const ctx = useContext(Context)
@@ -40,23 +44,34 @@ export function createStoreUtils<
     return ctx
   }
 
-  const getDefaultStore: () => TStore = store ? () => store : () => useUseState()[0]
+  const getDefaultStore: () => TStore = store
+    ? () => store
+    : () => useUseState()[0]
 
-  function useTransition(transition: any[], store = getDefaultStore()): boolean {
+  function useTransition(
+    transition: any[],
+    store = getDefaultStore()
+  ): boolean {
     return useSyncExternalStore(
       cb => store.transitions.subscribe(cb),
       () => store.transitions.get(transition) > 0
     )
   }
 
-  function useErrorHandlers(handler: StoreErrorHandler, store = getDefaultStore()) {
+  function useErrorHandlers(
+    handler: StoreErrorHandler,
+    store = getDefaultStore()
+  ) {
     useEffect(() => {
       const unsub = store.registerErrorHandler(handler)
       return () => void unsub()
     }, [store])
   }
 
-  function useStore<R = TState>(selector?: (data: TState) => R, store = getDefaultStore()) {
+  function useStore<R = TState>(
+    selector?: (data: TState) => R,
+    store = getDefaultStore()
+  ) {
     const finalSelector = selector ?? (defaultSelector as (data: TState) => R)
     return useSyncExternalStore(
       cb => store.subscribe(cb),
@@ -77,7 +92,9 @@ export function createStoreUtils<
       if (hasFetched.current) return
       if (watchValue !== undefined || isLoading) return
       if (store.transitions.get(options.transition) > 0) {
-        throw new Error("Error! Would've dispatched a transition that is already running.")
+        throw new Error(
+          "Error! Would've dispatched a transition that is already running."
+        )
       }
       store.dispatch({
         type: "$$lazy-value",
@@ -88,7 +105,9 @@ export function createStoreUtils<
       hasFetched.current = true
     }, [watchValue, isLoading])
 
-    return watchValue !== undefined ? exact([watchValue, false]) : exact([undefined, true])
+    return watchValue !== undefined
+      ? exact([watchValue, false])
+      : exact([undefined, true])
   }
 
   const LocalDevtools = memo(<T,>(props: DevtoolsPropsWithoutStore<T>) => {
@@ -119,28 +138,52 @@ export interface LazyValueOptions<
   TActions extends BaseAction<TState>,
   TTransition extends any[],
   TPromiseResult,
-  R
+  R,
 > {
   transition: TTransition
   select: (state: TState) => R
   transitionFn: (options: TransitionFunctionOptions) => Promise<TPromiseResult>
-  onSuccess?: (value: TPromiseResult, actor: AsyncActor<TState, TActions>) => void
+  onSuccess?: (
+    value: TPromiseResult,
+    actor: AsyncActor<TState, TActions>
+  ) => void
 }
 
 export type StoreUtils<
   TState,
-  TStore extends ReturnType<StoreInstantiatorGeneric> = ReturnType<StoreInstantiatorGeneric>
+  TStore extends
+    ReturnType<StoreInstantiatorGeneric> = ReturnType<StoreInstantiatorGeneric>,
 > = {
   Provider: React.Provider<any>
-  Devtools: React.MemoExoticComponent<<T>(props: DevtoolsPropsWithoutStore<T>) => ReactNode>
+  Devtools: React.MemoExoticComponent<
+    <T>(props: DevtoolsPropsWithoutStore<T>) => ReactNode
+  >
   useStore: <R = TState>(selector?: (data: TState) => R, store?: TStore) => R
   useUseState: () => [TStore, React.Dispatch<React.SetStateAction<TStore>>]
   useTransition: (transition: any[], store?: TStore) => boolean
   useErrorHandlers: (handler: StoreErrorHandler, store?: TStore) => void
   useLazyValue: <const TTransition extends any[], TPromiseResult, R>(
-    options: LazyValueOptions<TState, ExtractActions<TStore>, TTransition, TPromiseResult, R>
+    options: LazyValueOptions<
+      TState,
+      ExtractActions<TStore>,
+      TTransition,
+      TPromiseResult,
+      R
+    >
   ) => [R, false] | [undefined, true]
   createLazyOptions: <const TTransition extends any[], TPromiseResult, R>(
-    options: LazyValueOptions<TState, ExtractActions<TStore>, TTransition, TPromiseResult, R>
-  ) => LazyValueOptions<TState, ExtractActions<TStore>, TTransition, TPromiseResult, R>
+    options: LazyValueOptions<
+      TState,
+      ExtractActions<TStore>,
+      TTransition,
+      TPromiseResult,
+      R
+    >
+  ) => LazyValueOptions<
+    TState,
+    ExtractActions<TStore>,
+    TTransition,
+    TPromiseResult,
+    R
+  >
 }

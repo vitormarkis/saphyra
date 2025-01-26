@@ -54,7 +54,9 @@ const newSimpleForm = newStoreDef<
 const SimpleForm = createStoreUtils<typeof newSimpleForm>()
 
 export function SimpleFormPage() {
-  const simpleFormState = useState(() => newSimpleForm({ fullName: "Vitor Markis" }))
+  const simpleFormState = useState(() =>
+    newSimpleForm({ fullName: "Vitor Markis" })
+  )
 
   return (
     <SimpleForm.Provider value={simpleFormState}>

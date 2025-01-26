@@ -9,7 +9,16 @@ import { updateCard } from "./fn/update-card"
 import { handleExpandNode } from "~/lib/utils"
 import { useHistory } from "~/hooks/use-history"
 
-type CardsContent = readonly [string, string, string, string, string, string, string, string]
+type CardsContent = readonly [
+  string,
+  string,
+  string,
+  string,
+  string,
+  string,
+  string,
+  string,
+]
 
 export type MemoryGameInitialProps = {
   cards: CardsContent
@@ -35,7 +44,11 @@ type MemoryGameActions =
       type: "match-cards"
     }
 
-const newMemoryGame = newStoreDef<MemoryGameInitialProps, MemoryGameState, MemoryGameActions>({
+const newMemoryGame = newStoreDef<
+  MemoryGameInitialProps,
+  MemoryGameState,
+  MemoryGameActions
+>({
   onConstruct({ initialProps }) {
     const cards = initialProps.cards.flatMap(flatMapCreateCards)
     return {
@@ -47,11 +60,15 @@ const newMemoryGame = newStoreDef<MemoryGameInitialProps, MemoryGameState, Memor
     console.log("fn")
     if (action.type === "tap-card") {
       const card = state.$cardById[action.cardId]
-      set(s => ({ cards: updateCard(s.cards, card.tap()) }))
+      set(s => ({
+        cards: updateCard(s.cards, card.tap()),
+      }))
     }
 
     if (action.type === "match-cards") {
-      const cardsToMatch = state.$visibleCardsIdList.map(id => state.$cardById[id])
+      const cardsToMatch = state.$visibleCardsIdList.map(
+        id => state.$cardById[id]
+      )
 
       cardsToMatch.forEach((card, index) => {
         const otherIdx = index === 0 ? 1 : 0
@@ -63,18 +80,30 @@ const newMemoryGame = newStoreDef<MemoryGameInitialProps, MemoryGameState, Memor
     }
 
     if (diff(["cards"])) {
-      set(s => ({ $cardIdList: s.cards.map(card => card.id) }))
-      set(s => ({ $cardById: s.cards.reduce(...reduceGroupById()) }))
-      set(s => ({ $visibleCardsIdList: filterVisible(s.cards) }))
-      set(s => ({ $matchedCardsIdList: filterMatched(s.cards) }))
+      set(s => ({
+        $cardIdList: s.cards.map(card => card.id),
+      }))
+      set(s => ({
+        $cardById: s.cards.reduce(...reduceGroupById()),
+      }))
+      set(s => ({
+        $visibleCardsIdList: filterVisible(s.cards),
+      }))
+      set(s => ({
+        $matchedCardsIdList: filterMatched(s.cards),
+      }))
     }
 
     if (diff(["$visibleCardsIdList"])) {
-      set(s => ({ $visibleCardsIdListSet: new Set(s.$visibleCardsIdList) }))
+      set(s => ({
+        $visibleCardsIdListSet: new Set(s.$visibleCardsIdList),
+      }))
     }
 
     if (diff(["$matchedCardsIdList"])) {
-      set(s => ({ $matchedCardsIdListSet: new Set(s.$matchedCardsIdList) }))
+      set(s => ({
+        $matchedCardsIdListSet: new Set(s.$matchedCardsIdList),
+      }))
     }
 
     if (state.$visibleCardsIdList.length === 2) {
@@ -94,7 +123,11 @@ type MemoryGameProviderProps = {
 } & PropsWithChildren &
   MemoryGameInitialProps
 
-export function MemoryGame({ children, index, ...initialState }: MemoryGameProviderProps) {
+export function MemoryGame({
+  children,
+  index,
+  ...initialState
+}: MemoryGameProviderProps) {
   const [expandedNodes, setExpandedNodes] = useState(new Set<string>())
   const memoryGameState = useState(() => newMemoryGame(initialState))
 

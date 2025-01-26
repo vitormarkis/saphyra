@@ -35,7 +35,12 @@ const newAuthStore = newStoreDef<
   reducer({ prevState, state, action, diff, set, async }) {
     if (action?.type === "change-role") {
       async
-        .promise(({ signal }) => fetchRole({ roleName: action.role, signal }))
+        .promise(({ signal }) =>
+          fetchRole({
+            roleName: action.role,
+            signal,
+          })
+        )
         .onSuccess((role, actor) => {
           actor.set({ role })
         })
@@ -43,13 +48,20 @@ const newAuthStore = newStoreDef<
 
     if (prevState.role !== state.role) {
       async
-        .promise(({ signal }) => fetchPermissions({ role: state.role, signal }))
+        .promise(({ signal }) =>
+          fetchPermissions({
+            role: state.role,
+            signal,
+          })
+        )
         .onSuccess((permissions, actor) => {
           actor.set({ $permissions: permissions })
         })
     }
 
-    set(s => (s.$permissions != null ? { $firstPermission: s.$permissions[0] } : s))
+    set(s =>
+      s.$permissions != null ? { $firstPermission: s.$permissions[0] } : s
+    )
 
     if (diff(["username", "role"])) {
       set(s => ({
@@ -145,7 +157,9 @@ function ChangeRolePageContent() {
               beforeDispatch: ({ action, meta }) => {
                 const now = Date.now()
                 meta.timestamps ??= []
-                meta.timestamps = meta.timestamps.filter((ts: number) => now - ts < 1000)
+                meta.timestamps = meta.timestamps.filter(
+                  (ts: number) => now - ts < 1000
+                )
                 if (meta.timestamps.length >= 2) return
                 meta.timestamps.push(now)
                 return action
@@ -164,16 +178,22 @@ function ChangeRolePageContent() {
       </pre> */}
       <Auth.Devtools allExpanded />
       <div className=" bg-fuchsia-300/10 dark:bg-fuchsia-700/10 border px-4 py-2 rounded-md border-fuchsia-500/20">
-        <h3 className="text-lg font-bold dark:text-fuchsia-200 text-fuchsia-600">Explanation:</h3>
+        <h3 className="text-lg font-bold dark:text-fuchsia-200 text-fuchsia-600">
+          Explanation:
+        </h3>
         <p className="dark:[&_strong]:text-white dark:[&_i]:text-fuchsia-300/50 dark:text-fuchsia-300 [&_strong]:text-fuchsia-700 [&_i]:text-fuchsia-800/50 text-fuchsia-500">
-          Changing role works as a transaction. It fetches the role, and based on the role info,
-          fetch the permissions. If one of the requests fails, all the changes made by the
-          transition <strong>are discarded</strong> and <strong>no changes are made</strong>.
+          Changing role works as a transaction. It fetches the role, and based
+          on the role info, fetch the permissions. If one of the requests fails,
+          all the changes made by the transition <strong>are discarded</strong>{" "}
+          and <strong>no changes are made</strong>.
           <br />
           <br />
-          It is made this way to prevent your store state to end up in a invalid state{" "}
-          <i>(e.g: user role, but admin permissions, or vice versa).</i> Firing a transition is
-          changing your app from the current, valid state, to another valid state.
+          It is made this way to prevent your store state to end up in a invalid
+          state <i>
+            (e.g: user role, but admin permissions, or vice versa).
+          </i>{" "}
+          Firing a transition is changing your app from the current, valid
+          state, to another valid state.
         </p>
       </div>
     </div>

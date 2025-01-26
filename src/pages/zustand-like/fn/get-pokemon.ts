@@ -28,8 +28,11 @@ export async function getPokemon({ id, signal }: GetPokemonProps) {
   //   gcTime: 10_000, // 10s
   // })
 
-  const response = await fetch(`https://pokeapi.co/api/v2/characteristic/${id}/`, {
-    signal,
-  })
+  const response = await fetch(
+    `https://pokeapi.co/api/v2/characteristic/${id}/`,
+    {
+      signal,
+    }
+  )
   return await response.json()
 }

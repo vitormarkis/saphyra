@@ -23,11 +23,15 @@ const newPokemonStore = newStoreDef<PokemonState, PokemonState>({
   },
   reducer({ prevState, state, action, diff, async, set, store }) {
     if (action.type === "next") {
-      set(s => ({ currentPokemonId: s.currentPokemonId + 1 }))
+      set(s => ({
+        currentPokemonId: s.currentPokemonId + 1,
+      }))
     }
 
     if (action.type === "previous") {
-      set(s => ({ currentPokemonId: s.currentPokemonId - 1 }))
+      set(s => ({
+        currentPokemonId: s.currentPokemonId - 1,
+      }))
     }
 
     if (diff(["currentPokemonId"])) {
@@ -53,13 +57,20 @@ const Pokemon = createStoreUtils<typeof newPokemonStore>()
 
 export function PokemonPage() {
   const instantiateStore = useCallback(
-    () => newPokemonStore({ currentPokemonId: 1, currentTransition: null }),
+    () =>
+      newPokemonStore({
+        currentPokemonId: 1,
+        currentTransition: null,
+      }),
     []
   )
   const pokemonStoreState = useState(instantiateStore)
   const [pokemonStore] = pokemonStoreState
   const isBootstraping = Pokemon.useTransition(["bootstrap"], pokemonStore)
-  const [error, tryAgain] = useBootstrapError(pokemonStoreState, instantiateStore)
+  const [error, tryAgain] = useBootstrapError(
+    pokemonStoreState,
+    instantiateStore
+  )
 
   if (error != null) {
     return (
@@ -90,7 +101,12 @@ export function PokemonPage() {
 
 type PokemonPageContentProps = {}
 
-const beforeDispatch = ({ action, meta, transition, transitionStore }: BeforeDispatchOptions) => {
+const beforeDispatch = ({
+  action,
+  meta,
+  transition,
+  transitionStore,
+}: BeforeDispatchOptions) => {
   if (transitionStore.isHappeningUnique(transition)) {
     const controller = transitionStore.controllers.get(transition)
     controller.abort()
@@ -105,7 +121,12 @@ export function PokemonPageContent({}: PokemonPageContentProps) {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className={cn("flex gap-4 p-4 border w-fit", isLoadingNewPokemon && "border-amber-400")}>
+      <div
+        className={cn(
+          "flex gap-4 p-4 border w-fit",
+          isLoadingNewPokemon && "border-amber-400"
+        )}
+      >
         <button
           onClick={() =>
             store.dispatch({

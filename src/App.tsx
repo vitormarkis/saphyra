@@ -38,7 +38,9 @@ const newCount = newStoreDef<CounterState, CounterState, CounterActions>({
       async
         .promise(ctx => sleep(2000, "incrementing a lot", ctx.signal))
         .onSuccess((_, actor) => {
-          actor.set(s => ({ count: s.count + 10 }))
+          actor.set(s => ({
+            count: s.count + 10,
+          }))
         })
     }
 

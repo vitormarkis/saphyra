@@ -8,7 +8,10 @@ import { toast } from "sonner"
 import { notifyOnChange } from "~/notify-on-change"
 import { getCommentsQueryOptions } from "~/pages/external-deps/query-options/get-comments-query-options"
 import { useQuery } from "@tanstack/react-query"
-import { postsController, PostsController } from "~/pages/external-deps/store.controller"
+import {
+  postsController,
+  PostsController,
+} from "~/pages/external-deps/store.controller"
 
 type EditingPostProps = {}
 
@@ -25,7 +28,9 @@ export function EditingPost({}: EditingPostProps) {
    * for the comments of the post
    */
   const [comments, isLoadingComments] = Posts.useLazyValue({
-    ...getCommentsLazyOptions({ postId: post.id }),
+    ...getCommentsLazyOptions({
+      postId: post.id,
+    }),
   })
 
   const isPlacingComment = Posts.useTransition(["place-comment", post.id])
@@ -102,7 +107,9 @@ export function EditingPost({}: EditingPostProps) {
                   key={comment.id}
                   className="text-sm/none px-3 py-2 rounded bg-gray-200 dark:bg-gray-900 dark:text-gray-300"
                 >
-                  <strong className="dark:text-white font-semibold">{comment.authorId}: </strong>
+                  <strong className="dark:text-white font-semibold">
+                    {comment.authorId}:{" "}
+                  </strong>
                   {comment.body}
                 </li>
               ))

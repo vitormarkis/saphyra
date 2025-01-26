@@ -2,8 +2,9 @@
   "semi": false,
   "trailingComma": "es5",
   "singleQuote": false,
-  "printWidth": 100,
+  "printWidth": 80,
   "tabWidth": 2,
   "singleAttributePerLine": true,
-  "arrowParens": "avoid"
+  "arrowParens": "avoid",
+  "quoteProps": "consistent"
 }

@@ -55,4 +55,6 @@ export const routesManifest = [
 
 const router = createBrowserRouter(routesManifest)
 
-createRoot(document.getElementById("root")!).render(<RouterProvider router={router} />)
+createRoot(document.getElementById("root")!).render(
+  <RouterProvider router={router} />
+)

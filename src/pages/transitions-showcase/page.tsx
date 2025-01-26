@@ -30,21 +30,37 @@ type TransitionsStoreActions =
       type: "fetch-todos"
     }
 
-const newTransitionsStore = newStoreDef<{}, TransitionsStoreState, TransitionsStoreActions>({
+const newTransitionsStore = newStoreDef<
+  {},
+  TransitionsStoreState,
+  TransitionsStoreActions
+>({
   onConstruct: () => ({
     count: 0,
     currentTransition: null,
     albums: [],
     todos: [],
   }),
-  reducer({ prevState, state, action, async, diff, dispatch, events, set, store }) {
+  reducer({
+    prevState,
+    state,
+    action,
+    async,
+    diff,
+    dispatch,
+    events,
+    set,
+    store,
+  }) {
     if (action.type === "increment-many") {
       async
         .promise(async ({ signal }) => {
           return await sleep(2000, "many", signal)
         })
         .onSuccess((_, actor) => {
-          actor.set(s => ({ count: s.count + 10 }))
+          actor.set(s => ({
+            count: s.count + 10,
+          }))
         })
     }
 
@@ -182,7 +198,9 @@ export function TransitionsShowcaseView({}: TransitionsShowcaseViewProps) {
           Cancel
         </button>
       </fieldset> */}
-      <fieldset className={cn("flex gap-2", isLoadingAlbums && "border-amber-600")}>
+      <fieldset
+        className={cn("flex gap-2", isLoadingAlbums && "border-amber-600")}
+      >
         <legend>Fetch albums (check network tab)</legend>
         <button
           onClick={() => {
@@ -192,7 +210,9 @@ export function TransitionsShowcaseView({}: TransitionsShowcaseViewProps) {
               beforeDispatch: ({ action, meta }) => {
                 const now = Date.now()
                 meta.timestamps ??= []
-                meta.timestamps = meta.timestamps.filter((ts: number) => now - ts < 4000)
+                meta.timestamps = meta.timestamps.filter(
+                  (ts: number) => now - ts < 4000
+                )
                 if (meta.timestamps.length >= 0) return
                 meta.timestamps.push(now)
                 return action
@@ -212,7 +232,9 @@ export function TransitionsShowcaseView({}: TransitionsShowcaseViewProps) {
           Cancel
         </button>
       </fieldset>
-      <fieldset className={cn("flex gap-2", isLoadingTodos && "border-amber-600")}>
+      <fieldset
+        className={cn("flex gap-2", isLoadingTodos && "border-amber-600")}
+      >
         <legend>Fetch todos (check network tab)</legend>
         <button
           onClick={() => {

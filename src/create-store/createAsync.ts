@@ -25,7 +25,7 @@ export const errorNoTransition = () =>
 function createTransitionDispatch<
   TState,
   TActions extends BaseAction<TState>,
-  TEvents extends EventsTuple
+  TEvents extends EventsTuple,
 >(
   store: SomeStore<TState, TActions, TEvents>,
   transition: any[] | null | undefined
@@ -41,7 +41,7 @@ function createTransitionDispatch<
 export function createAsync<
   TState = BaseState,
   TActions extends BaseAction<TState> = DefaultActions & BaseAction<TState>,
-  TEvents extends EventsTuple = EventsTuple
+  TEvents extends EventsTuple = EventsTuple,
 >(
   store: SomeStore<TState, TActions, TEvents>,
   state: TState,
@@ -50,18 +50,24 @@ export function createAsync<
 ): Async<TState, TActions> {
   type AsyncInner = Async<TState, TActions>
   type AsyncActorInner = AsyncActor<TState, TActions>
-  const dispatch: AsyncActorInner["dispatch"] = createTransitionDispatch(store, transition)
+  const dispatch: AsyncActorInner["dispatch"] = createTransitionDispatch(
+    store,
+    transition
+  )
   const set: AsyncActorInner["set"] = setter => {
     store.registerSet(setter, state, transition, "reducer")
   }
   type PromiseResult<T, TState, TActions extends BaseAction<TState>> = {
-    onSuccess: (callback: (value: T, actor: AsyncActor<TState, TActions>) => void) => void
+    onSuccess: (
+      callback: (value: T, actor: AsyncActor<TState, TActions>) => void
+    ) => void
   }
 
   const promise: AsyncInner["promise"] = <T>(
     promise: (props: AsyncPromiseProps) => Promise<T>
   ): PromiseResult<T, TState, TActions> => {
-    let onSuccess: (value: T, actor: AsyncActor<TState, TActions>) => void = noop
+    let onSuccess: (value: T, actor: AsyncActor<TState, TActions>) => void =
+      noop
     if (!transition) throw errorNoTransition()
     store.transitions.addKey(transition)
 
@@ -90,7 +96,10 @@ export function createAsync<
     }
   }
 
-  const timer = (callback: (actor: AsyncActor<TState, TActions>) => void, time = 0) => {
+  const timer = (
+    callback: (actor: AsyncActor<TState, TActions>) => void,
+    time = 0
+  ) => {
     if (!transition) throw errorNoTransition()
     const async = createAsync(store, state, transition, signal)
     store.transitions.addKey(transition)

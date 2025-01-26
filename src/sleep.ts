@@ -7,7 +7,11 @@
  * @param signal - Optional AbortSignal to cancel the sleep operation.
  * @returns A promise that resolves to `true` after the delay, or rejects if aborted.
  */
-export function sleep(ms: number, context?: string, signal?: AbortSignal): Promise<boolean> {
+export function sleep(
+  ms: number,
+  context?: string,
+  signal?: AbortSignal
+): Promise<boolean> {
   return new Promise((resolve, reject) => {
     if (signal?.aborted) {
       // console.log("[SLEEP ABORTED]", context)

@@ -44,9 +44,16 @@ type PostsActions =
       revalidateOnSameTransition?: boolean
     }
 
-export const newPostsStore = newStoreDef<PostsInitialProps, PostsState, PostsActions>({
+export const newPostsStore = newStoreDef<
+  PostsInitialProps,
+  PostsState,
+  PostsActions
+>({
   async onConstruct({ signal }) {
-    const [posts, likedPosts] = await Promise.all([fetchPosts(signal), fetchLikedPosts(signal)])
+    const [posts, likedPosts] = await Promise.all([
+      fetchPosts(signal),
+      fetchLikedPosts(signal),
+    ])
 
     return {
       likedPosts,
@@ -74,7 +81,9 @@ export const newPostsStore = newStoreDef<PostsInitialProps, PostsState, PostsAct
            */
           const revalidate = () =>
             queryClient.refetchQueries({
-              ...getCommentsQueryOptions({ postId: action.postId }),
+              ...getCommentsQueryOptions({
+                postId: action.postId,
+              }),
             })
 
           if (action.revalidateOnSameTransition) {

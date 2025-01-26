@@ -17,7 +17,10 @@ export function ExternalDepsPage() {
   const [postsStore] = postsStoreState
 
   const isBootstraping = Posts.useTransition(["bootstrap"], postsStore)
-  const isCommentingPost = Posts.useStore(s => s.commentingPostId != null, postsStore)
+  const isCommentingPost = Posts.useStore(
+    s => s.commentingPostId != null,
+    postsStore
+  )
   const allPosts = Posts.useStore(s => s.posts, postsStore)
 
   useHistory(postsStore)
@@ -30,7 +33,9 @@ export function ExternalDepsPage() {
 
     return notifyOnChangeList(
       allPosts.map(post => ({
-        ...getCommentsQueryOptions({ postId: post.id }),
+        ...getCommentsQueryOptions({
+          postId: post.id,
+        }),
         meta: { postId: post.id },
       })),
       (comments, meta) => {
@@ -47,7 +52,9 @@ export function ExternalDepsPage() {
   useEffect(() => {
     Object.assign(window, { postsStore })
     return () => {
-      Object.assign(window, { postsStore: undefined })
+      Object.assign(window, {
+        postsStore: undefined,
+      })
     }
   }, [])
 

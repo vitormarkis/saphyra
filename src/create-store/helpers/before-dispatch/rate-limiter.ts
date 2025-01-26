@@ -7,7 +7,9 @@ export const rateLimiter = <TBaseAction extends GenericAction = GenericAction>(
   return ({ action, meta }) => {
     const now = Date.now()
     meta.timestamps ??= []
-    meta.timestamps = meta.timestamps.filter((ts: number) => now - ts < intervalMs)
+    meta.timestamps = meta.timestamps.filter(
+      (ts: number) => now - ts < intervalMs
+    )
     if (meta.timestamps.length >= attempts) return
     meta.timestamps.push(now)
     return action

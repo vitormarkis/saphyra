@@ -37,7 +37,10 @@ export class EventEmitter<EventArgs extends EventsTuple = EventsTuple> {
     }
   }
 
-  emit<TEventName extends keyof EventArgs>(event: TEventName, ...args: EventArgs[TEventName]) {
+  emit<TEventName extends keyof EventArgs>(
+    event: TEventName,
+    ...args: EventArgs[TEventName]
+  ) {
     const handlers = this.handlers[event]
     if (!handlers) return
     for (const handler of handlers) {

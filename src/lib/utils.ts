@@ -26,7 +26,9 @@ export function randomString() {
 }
 
 export function handleExpandNode(
-  setExpandedNodes: (setter: (expandedNodes: Set<string>) => Set<string>) => void
+  setExpandedNodes: (
+    setter: (expandedNodes: Set<string>) => Set<string>
+  ) => void
 ) {
   return (nodeId: string) => {
     setExpandedNodes(expandedNodes => {
@@ -39,7 +41,9 @@ export function handleExpandNode(
   }
 }
 
-export function isAsyncFunction<Fn extends { constructor: { name: string } }>(fn: Fn) {
+export function isAsyncFunction<Fn extends { constructor: { name: string } }>(
+  fn: Fn
+) {
   return fn.constructor.name === "AsyncFunction"
 }
 
@@ -67,7 +71,10 @@ export function nonNullable<T>(value: T): value is NonNullable<T> {
   return value !== null && value !== undefined
 }
 
-export function createDebugableShallowCopy<T>(intendedState: T, debugProp?: keyof T): T {
+export function createDebugableShallowCopy<T>(
+  intendedState: T,
+  debugProp?: keyof T
+): T {
   const state = { ...intendedState }
 
   if (debugProp) {

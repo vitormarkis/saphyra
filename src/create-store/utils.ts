@@ -10,7 +10,7 @@ export function isNewActionError(error: unknown) {
 }
 
 export const createDefaultBeforeDispatch: <
-  TBaseAction extends GenericAction = GenericAction
+  TBaseAction extends GenericAction = GenericAction,
 >() => BeforeDispatch<TBaseAction> = () => {
   return options => {
     return options.action
