@@ -37,9 +37,7 @@ const createSimpleForm = newStoreDef<SimpleFormInitialProps, SimpleFormState>({
     }
 
     if (diff(["name", "surname"])) {
-      set(s => ({
-        $fullName: `${s.name} ${s.surname}`,
-      }))
+      set(s => ({ $fullName: `${s.name} ${s.surname}` }))
     }
 
     if (state.$fullName.length > 30) {
