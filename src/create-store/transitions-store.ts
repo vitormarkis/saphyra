@@ -90,6 +90,7 @@ export class TransitionsStore extends Subject {
     if (!shouldRunErrorCallback) return
     const transitionName = transition.join(":")
     this.callbacks.error.get(transitionName)?.(error)
+    this.doneKey(transition) // TODO
   }
 
   getController(transition: any[] | null | undefined | string) {

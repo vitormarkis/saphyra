@@ -112,7 +112,7 @@ describe("before dispatch: cancel previous", () => {
       test("before wait", () => {
         const info = getStoreTransitionInfo(store, transitionName)
         expect(info.controller.signal.aborted).toBe(false)
-        expect(info.setters).toStrictEqual([])
+        expect(info.setters).toBeUndefined()
         expect(info.doneCallback).toBeInstanceOf(Function)
         expect(info.errorCallback).toBeInstanceOf(Function)
         expect(info.transitions).toStrictEqual({
@@ -126,7 +126,7 @@ describe("before dispatch: cancel previous", () => {
         await vi.advanceTimersByTimeAsync(500)
         const info_before = getStoreTransitionInfo(store, transitionName)
         expect(info_before.controller.signal.aborted).toBe(false)
-        expect(info_before.setters).toStrictEqual([])
+        expect(info_before.setters).toBeUndefined()
         expect(info_before.doneCallback).toBeInstanceOf(Function)
         expect(info_before.errorCallback).toBeInstanceOf(Function)
         expect(info_before.transitions).toStrictEqual({

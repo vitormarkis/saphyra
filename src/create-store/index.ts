@@ -50,7 +50,7 @@ type OnConstructProps<
   TInitialProps,
   TState,
   TActions extends BaseAction<TState>,
-  TEvents extends EventsTuple,
+  TEvents extends EventsTuple
 > = {
   initialProps: TInitialProps
   store: SomeStore<TState, TActions, TEvents>
@@ -61,7 +61,7 @@ type OnConstruct<
   TInitialProps,
   TState,
   TActions extends BaseAction<TState>,
-  TEvents extends EventsTuple,
+  TEvents extends EventsTuple
 > = (
   props: OnConstructProps<TInitialProps, TState, TActions, TEvents>,
   config?: StoreConstructorConfig
@@ -71,7 +71,7 @@ function defaultOnConstruct<
   TInitialProps,
   TState,
   TActions extends BaseAction<TState>,
-  TEvents extends EventsTuple,
+  TEvents extends EventsTuple
 >(
   props: OnConstructProps<TInitialProps, TState, TActions, TEvents>,
   _config?: StoreConstructorConfig
@@ -88,7 +88,7 @@ function defaultOnConstruct<
 type ReducerProps<
   TState,
   TActions extends BaseAction<TState> & DefaultActions,
-  TEvents extends EventsTuple,
+  TEvents extends EventsTuple
 > = {
   prevState: TState
   state: TState
@@ -104,13 +104,13 @@ type ReducerProps<
 export type Reducer<
   TState,
   TActions extends BaseAction<TState>,
-  TEvents extends EventsTuple,
+  TEvents extends EventsTuple
 > = (props: ReducerProps<TState, TActions, TEvents>) => TState
 
 function defaultReducer<
   TState,
   TActions extends BaseAction<TState>,
-  TEvents extends EventsTuple,
+  TEvents extends EventsTuple
 >(props: ReducerProps<TState, TActions, TEvents>) {
   return props.state
 }
@@ -126,7 +126,7 @@ type CreateStoreOptions<
   TInitialProps,
   TState,
   TActions extends BaseAction<TState>,
-  TEvents extends EventsTuple,
+  TEvents extends EventsTuple
 > = {
   onConstruct?: OnConstruct<TInitialProps, TState, TActions, TEvents>
   reducer?: Reducer<TState, TActions, TEvents>
@@ -142,7 +142,7 @@ export function newStoreDef<
   TInitialProps,
   TState extends BaseState = TInitialProps & BaseState,
   TActions extends BaseAction<TState> = DefaultActions & BaseAction<TState>,
-  TEvents extends EventsTuple = EventsTuple,
+  TEvents extends EventsTuple = EventsTuple
 >(
   {
     onConstruct = defaultOnConstruct<TInitialProps, TState, TActions, TEvents>,
@@ -255,9 +255,11 @@ export function newStoreDef<
       if (transitionString === "bootstrap") {
         errorsStore.setState({ bootstrap: error })
       }
-      store.settersRegistry = {
-        ...store.settersRegistry,
-        [transitionString]: [],
+      if (store.settersRegistry[transitionString] != null) {
+        store.settersRegistry = {
+          ...store.settersRegistry,
+          [transitionString]: [],
+        }
       }
       console.log("66: CLEAN UP TRANSITION")
       const newActionAbort = isNewActionError(error)
@@ -392,6 +394,15 @@ export function newStoreDef<
         }
 
         const transitionName = initialAction.transition?.join(":")!
+        /**
+         * Sobreescrevendo controller, quando na verdade cada action
+         * deveria prover um controller
+         *
+         * No comportamento atual, ele quebra caso você clique duas vezes
+         * para disparar a ação, e aborte usando o primeiro controller
+         *
+         * A primeira promise tem apenas o controller do primeiro dispatch, e não de todos
+         */
         const controller = initialAction.controller ?? new AbortController()
         store.transitions.controllers.values[transitionName] = controller
         const actionsQueue: TActions[] = [initialAction]

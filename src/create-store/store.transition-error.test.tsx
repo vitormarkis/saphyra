@@ -28,16 +28,18 @@ afterAll(() => {
 })
 
 test("should handle transition error gracefully", async () => {
-  const info_before = deleteBootstrap(
+  const info_before_dispatch = deleteBootstrap(
     getStoreTransitionInfoSourceShallowCopy(store)
   )
 
-  expect(info_before.controllers).toStrictEqual({})
-  expect(info_before.setters).toStrictEqual({})
-  expect(info_before.doneCallbackList).toStrictEqual(new Map())
-  expect(info_before.errorCallbackList).toStrictEqual(new Map())
-  expect(info_before.transitions).toStrictEqual({})
-  expect(info_before.state).toEqual(expect.objectContaining({ count: 0 }))
+  expect(info_before_dispatch.controllers).toStrictEqual({})
+  expect(info_before_dispatch.setters).toStrictEqual({})
+  expect(info_before_dispatch.doneCallbackList).toStrictEqual(new Map())
+  expect(info_before_dispatch.errorCallbackList).toStrictEqual(new Map())
+  expect(info_before_dispatch.transitions).toStrictEqual({})
+  expect(info_before_dispatch.state).toEqual(
+    expect.objectContaining({ count: 0 })
+  )
   expect(spy_completeTransition).toHaveBeenCalledTimes(0)
 
   store.dispatch({
@@ -45,38 +47,45 @@ test("should handle transition error gracefully", async () => {
     transition: ["increment"],
   })
 
-  const info_after = deleteBootstrap(
+  const info_after_dispatch = deleteBootstrap(
     getStoreTransitionInfoSourceShallowCopy(store)
   )
-  expect(info_after.controllers).toStrictEqual({
+  expect(info_after_dispatch.controllers).toStrictEqual({
     increment: expect.any(AbortController),
   })
-  expect(info_after.setters).toStrictEqual({})
-  expect(info_after.doneCallbackList).toStrictEqual(
+  expect(info_after_dispatch.setters).toStrictEqual({})
+  expect(info_after_dispatch.doneCallbackList).toStrictEqual(
     new Map([["increment", expect.any(Function)]])
   )
-  expect(info_after.errorCallbackList).toStrictEqual(
+  expect(info_after_dispatch.errorCallbackList).toStrictEqual(
     new Map([["increment", expect.any(Function)]])
   )
-  expect(info_after.transitions).toStrictEqual({
+  expect(info_after_dispatch.transitions).toStrictEqual({
     increment: 1,
   })
-  expect(info_after.state).toEqual(expect.objectContaining({ count: 0 }))
+  expect(info_after_dispatch.state).toEqual(
+    expect.objectContaining({ count: 0 })
+  )
   expect(spy_completeTransition).toHaveBeenCalledTimes(0)
 
   await vi.advanceTimersByTimeAsync(1000)
 
-  expect(info_after.controllers).toStrictEqual({
+  const info_after_error = deleteBootstrap(
+    getStoreTransitionInfoSourceShallowCopy(store)
+  )
+
+  // ensure all the main entities were reseted
+  expect(info_after_error.controllers).toStrictEqual({
     increment: expect.any(AbortController),
   })
-  expect(info_after.setters).toStrictEqual({}) // empty because it never reachs the onSuccess
-  expect(info_after.doneCallbackList).toStrictEqual(
+  expect(info_after_error.setters).toStrictEqual({}) // empty because it never reachs the onSuccess
+  expect(info_after_error.doneCallbackList).toStrictEqual(
     new Map([["increment", null]])
   )
-  expect(info_after.errorCallbackList).toStrictEqual(
+  expect(info_after_error.errorCallbackList).toStrictEqual(
     new Map([["increment", null]])
   )
-  expect(info_after.transitions).toStrictEqual({})
-  expect(info_after.state).toEqual(expect.objectContaining({ count: 0 }))
+  expect(info_after_error.transitions).toStrictEqual({})
+  expect(info_after_error.state).toEqual(expect.objectContaining({ count: 0 }))
   expect(spy_completeTransition).toHaveBeenCalledTimes(0)
 })
