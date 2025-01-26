@@ -7,7 +7,7 @@ import {
 import { SomeStoreGeneric } from "~/create-store/types"
 
 let store: SomeStoreGeneric
-let spy_completeTransition: MockInstance<any>
+let spy_completeTransition: MockInstance
 
 beforeEach(() => {
   store = newStore({
@@ -151,6 +151,7 @@ describe("before dispatch: default", () => {
       })
       expect(info.transitions).toMatchObject({})
       expect(info.state).toEqual(expect.objectContaining({ count: 3 }))
+      expect(spy_completeTransition).toHaveBeenCalledTimes(3)
     })
   })
 
@@ -189,7 +190,7 @@ describe("before dispatch: default", () => {
       const info = getStoreTransitionInfo(store, transitionName)
 
       expect(info.controller.signal.aborted).toBe(false)
-      expect(info.setters).toHaveLength(0)
+      expect(info.setters).toStrictEqual([])
       expect(info.doneCallback).toBeNull()
       expect(info.errorCallback).toBeNull()
       expect(info.transitions).toMatchObject({})

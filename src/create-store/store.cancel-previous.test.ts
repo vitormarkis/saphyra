@@ -5,9 +5,6 @@ import { BeforeDispatch, SomeStoreGeneric } from "~/create-store/types"
 let store: SomeStoreGeneric
 let spy_completeTransition: MockInstance<any>
 
-// const log = console.log
-// console.log = () => {}
-
 const cancelPrevious: BeforeDispatch = ({
   action,
   transition,
