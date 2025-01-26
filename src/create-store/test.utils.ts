@@ -1,5 +1,5 @@
 import { newStoreDef } from "~/create-store"
-import { BaseState, SomeStoreGeneric } from "~/create-store/types"
+import { BaseState, SomeStore, SomeStoreGeneric } from "~/create-store/types"
 import { sleep } from "~/sleep"
 
 type CounterState = BaseState & {
@@ -13,6 +13,11 @@ type CounterActions =
   | {
       type: "increment-async"
     }
+  | {
+      type: "increment-async-error"
+    }
+
+export type TestCounterStore = SomeStore<CounterState, CounterActions, {}>
 
 export const newStore = newStoreDef<CounterState, CounterState, CounterActions>(
   {
@@ -25,9 +30,18 @@ export const newStore = newStoreDef<CounterState, CounterState, CounterActions>(
         async
           .promise(ctx => sleep(1000, undefined, ctx.signal))
           .onSuccess((_, actor) => {
-            actor.set(s => ({
-              count: s.count + 1,
-            }))
+            actor.set(s => ({ count: s.count + 1 }))
+          })
+      }
+
+      if (action.type === "increment-async-error") {
+        async
+          .promise(async ctx => {
+            await sleep(1000, undefined, ctx.signal)
+            throw new Error("Error while incrementing")
+          })
+          .onSuccess((_, actor) => {
+            actor.set(s => ({ count: s.count + 1 }))
           })
       }
 
@@ -57,13 +71,15 @@ export function getStoreTransitionInfo(
   }
 }
 
-export function getStoreTransitionInfoSource(store: SomeStoreGeneric) {
-  const controllers = store.transitions.controllers.values
-  const setters = store.settersRegistry
-  const doneCallbackList = store.transitions.callbacks.done
-  const errorCallbackList = store.transitions.callbacks.error
-  const transitions = store.transitions.state.transitions
-  const state = store.getState()
+export function getStoreTransitionInfoSourceShallowCopy(
+  store: SomeStoreGeneric
+) {
+  const controllers = { ...store.transitions.controllers.values }
+  const setters = { ...store.settersRegistry }
+  const doneCallbackList = new Map(store.transitions.callbacks.done)
+  const errorCallbackList = new Map(store.transitions.callbacks.error)
+  const transitions = { ...store.transitions.state.transitions }
+  const state = { ...store.getState() }
 
   return {
     controllers,
@@ -73,4 +89,16 @@ export function getStoreTransitionInfoSource(store: SomeStoreGeneric) {
     transitions,
     state,
   }
+}
+
+export function deleteBootstrap(
+  info: ReturnType<typeof getStoreTransitionInfoSourceShallowCopy>
+) {
+  delete info.controllers.bootstrap
+  delete info.setters.bootstrap
+  info.doneCallbackList.delete("bootstrap")
+  info.errorCallbackList.delete("bootstrap")
+  delete info.transitions.bootstrap
+
+  return info
 }

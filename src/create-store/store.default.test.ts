@@ -1,7 +1,7 @@
 import { describe, expect, MockInstance, vi } from "vitest"
 import {
   getStoreTransitionInfo,
-  getStoreTransitionInfoSource,
+  getStoreTransitionInfoSourceShallowCopy,
   newStore,
 } from "~/create-store/test.utils"
 import { SomeStoreGeneric } from "~/create-store/types"
@@ -141,7 +141,7 @@ describe("before dispatch: default", () => {
         "increment:three": [], // commit transition and cleanup
       })
 
-      const info = getStoreTransitionInfoSource(store)
+      const info = getStoreTransitionInfoSourceShallowCopy(store)
       expect(Object.keys(info.controllers)).toHaveLength(3 + 1) // + 1 for bootstrap
       info.doneCallbackList.forEach(fn => {
         expect(fn).toBeNull()
@@ -201,7 +201,7 @@ describe("before dispatch: default", () => {
 function captureValueHistory<
   T extends Record<string, any>,
   TKey extends keyof T,
-  TValue extends T[TKey],
+  TValue extends T[TKey]
 >(
   source: T,
   key: TKey,
