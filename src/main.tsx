@@ -9,6 +9,7 @@ import "./index.css"
 import { myRoutesManifest } from "./my-routes-manifest.tsx"
 import { Providers } from "./providers.tsx"
 import { VideoPage } from "~/pages/VideoPage.tsx"
+import { PostHogProvider, usePostHog } from "posthog-js/react"
 
 function onThemeChange(event: any, theme: string) {
   if (event.matches) {
@@ -56,5 +57,27 @@ export const routesManifest = [
 const router = createBrowserRouter(routesManifest)
 
 createRoot(document.getElementById("root")!).render(
-  <RouterProvider router={router} />
+  <PostHog>
+    <RouterProvider router={router} />
+  </PostHog>
 )
+
+export type PostHogProps = {
+  children: React.ReactNode
+}
+
+function PostHog({ children }: PostHogProps) {
+  if (import.meta.env.DEV) return children
+
+  return (
+    <PostHogProvider
+      apiKey={import.meta.env.VITE_PUBLIC_POSTHOG_KEY}
+      options={{
+        api_host: import.meta.env.VITE_PUBLIC_POSTHOG_HOST,
+        person_profiles: "always",
+      }}
+    >
+      {children}
+    </PostHogProvider>
+  )
+}

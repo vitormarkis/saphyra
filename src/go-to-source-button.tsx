@@ -1,4 +1,5 @@
 import { Icon } from "@blueprintjs/core"
+import { usePostHog } from "posthog-js/react"
 import { useLocation, Link } from "react-router-dom"
 
 type GoToSourceButtonProps = {}
@@ -11,6 +12,7 @@ export function GoToSourceButton({}: GoToSourceButtonProps) {
     pathname === "/"
       ? "https://github.com/vitormarkis/auth-machine/blob/main/src/App.tsx"
       : href.replace("$$$", pathname)
+  const posthog = usePostHog()
 
   return (
     <div className="absolute top-2 right-2 ">
@@ -20,6 +22,11 @@ export function GoToSourceButton({}: GoToSourceButtonProps) {
         className={
           "border border-black px-4 h-8 text-xs flex bg-lime-400 text-black items-center gap-2 rounded-md hover:text-black hover:bg-lime-500"
         }
+        onClick={() => {
+          posthog.capture("go_to_source", {
+            source: finalHref,
+          })
+        }}
       >
         <Icon
           icon="add-column-right"

@@ -1,7 +1,6 @@
 import { TransitionsStoreEvents } from "~/create-store/event-emitter-transitions"
 import { Subject } from "../Subject"
 import { DoneKeyOptions, OnFinishTransition } from "~/create-store/types"
-import { produce } from "immer"
 
 export type TransitionsStoreState = {
   transitions: Record<string, number>
@@ -101,9 +100,10 @@ export class TransitionsStore extends Subject {
     const key =
       typeof transition === "string" ? transition : transition.join(":")
     // this.controllers.values[key] = value
-    this.controllers = produce(this.controllers, draft => {
-      draft.values[key] = value
-    })
+    this.controllers = {
+      ...this.controllers,
+      values: { ...this.controllers.values, [key]: value },
+    }
   }
 
   ensureController(transition: any[] | null | undefined | string) {
@@ -111,9 +111,10 @@ export class TransitionsStore extends Subject {
     const transitionName =
       typeof transition === "string" ? transition : transition.join(":")
     if (!this.controllers.values[transitionName]) {
-      this.controllers = produce(this.controllers, draft => {
-        draft.values[transitionName] = new AbortController()
-      })
+      this.controllers = {
+        ...this.controllers,
+        [transitionName]: new AbortController(),
+      }
     }
     return this.controllers.values[transitionName]
   }
