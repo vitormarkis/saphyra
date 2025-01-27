@@ -4,7 +4,7 @@ import { GithubProfilePage } from "./pages/github-profile/page"
 import { MemoryGamePage } from "./pages/memory-game/page"
 import { ZustandLikePage } from "./pages/zustand-like/page"
 import { TransitionsShowcasePage } from "~/pages/transitions-showcase/page"
-import { PokemonPage } from "~/pages/PokemonPage"
+import { PokemonPage } from "~/pages/pokemon/page"
 
 export const myRoutesManifest = [
   {

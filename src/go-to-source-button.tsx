@@ -4,13 +4,16 @@ import { useLocation, Link } from "react-router-dom"
 
 type GoToSourceButtonProps = {}
 
+const showProvider = new Set(["/memory-game"])
+
 export function GoToSourceButton({}: GoToSourceButtonProps) {
-  const href =
-    "https://github.com/vitormarkis/auth-machine/blob/main/src/pages$$$/page.tsx"
   const { pathname } = useLocation()
+  const href = showProvider.has(pathname)
+    ? "https://github.com/vitormarkis/saphyra/blob/main/src/pages$$$/game/provider.tsx"
+    : "https://github.com/vitormarkis/saphyra/blob/main/src/pages$$$/page.tsx"
   const finalHref =
     pathname === "/"
-      ? "https://github.com/vitormarkis/auth-machine/blob/main/src/App.tsx"
+      ? "https://github.com/vitormarkis/saphyra/blob/main/src/App.tsx"
       : href.replace("$$$", pathname)
   const posthog = usePostHog()
 
