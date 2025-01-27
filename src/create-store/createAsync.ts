@@ -7,7 +7,6 @@ import {
   BaseState,
   DefaultActions,
   Dispatch,
-  isSetter,
   PromiseResult,
   SomeStore,
 } from "./types"
@@ -25,7 +24,7 @@ export const errorNoTransition = () =>
 function createTransitionDispatch<
   TState,
   TActions extends BaseAction<TState>,
-  TEvents extends EventsTuple,
+  TEvents extends EventsTuple
 >(
   store: SomeStore<TState, TActions, TEvents>,
   transition: any[] | null | undefined
@@ -41,7 +40,7 @@ function createTransitionDispatch<
 export function createAsync<
   TState = BaseState,
   TActions extends BaseAction<TState> = DefaultActions & BaseAction<TState>,
-  TEvents extends EventsTuple = EventsTuple,
+  TEvents extends EventsTuple = EventsTuple
 >(
   store: SomeStore<TState, TActions, TEvents>,
   state: TState,
@@ -74,6 +73,13 @@ export function createAsync<
     async function handlePromise(promise: Promise<T>) {
       if (!transition) throw errorNoTransition()
       const async = createAsync(store, state, transition, signal)
+      const transitionHasAbortedStr = `abort::${JSON.stringify(transition)}`
+
+      let wasAborted = false
+      const abortLocally = () => {
+        wasAborted = true
+      }
+      const off = store.events.once(transitionHasAbortedStr).run(abortLocally)
       try {
         if (!transition) throw errorNoTransition()
         const value = await promise
@@ -82,9 +88,13 @@ export function createAsync<
           set,
           async,
         })
-        store.transitions.doneKey(transition)
+        store.transitions.doneKey(transition, "with-effects")
       } catch (error) {
+        if (wasAborted) return
         store.transitions.emitError(transition, error)
+        store.transitions.doneKey(transition, "skip-effects")
+      } finally {
+        off()
       }
     }
     handlePromise(promise({ signal }))
@@ -110,13 +120,14 @@ export function createAsync<
           set,
           async,
         })
-        store.transitions.doneKey(transition, null)
+        store.transitions.doneKey(transition, "with-effects")
       } catch (error) {
         console.log(
           "%cSomething went wrong! Rolling back the store state. [TODO]",
           "color: palevioletred"
         )
-        store.transitions.doneKey(transition, error)
+        store.transitions.doneKey(transition, "skip-effects") // TODO
+        store.transitions.emitError(transition, error)
       }
     }, time)
   }

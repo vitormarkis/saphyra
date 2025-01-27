@@ -50,8 +50,8 @@ export function GithubProfilePage() {
           userStore.dispatch({
             type: "fetch-user",
             transition: ["user", "fetch"],
-            beforeDispatch({ action, currentTransition }) {
-              if (currentTransition.checkIsRunning) return
+            beforeDispatch({ action, transitionStore, transition }) {
+              if (transitionStore.isHappeningUnique(transition)) return
               return action
             },
           })

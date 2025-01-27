@@ -72,25 +72,31 @@ export class TransitionsStore extends Subject {
     this.callbacks.error.set(transitionName, null)
   }
 
-  checkShouldHandleError(transition: any[]) {
-    const transitionName = transition.join(":")
-    const record = this.meta.values[transitionName]["$$_shouldHandleError"]
-    const shouldSkipErrorHandling = record === false
-    const shouldRunErrorCallback = !shouldSkipErrorHandling
-    if (record != null) {
-      delete this.meta.values[transitionName]["$$_shouldHandleError"]
-    }
+  // checkShouldHandleError(transition: any[], error: unknown) {
+  //   if (!isNewActionError(error)) return true
+  //   const transitionName = transition.join(":")
+  //   this.meta.values[transitionName]["$$_skipErrorTokens"] ??= []
+  //   const skipErrorToken =
+  //     this.meta.values[transitionName]["$$_skipErrorTokens"].pop()
+  //   const shouldSkipErrorHandling = skipErrorToken != null
+  //   const shouldRunErrorCallback = !shouldSkipErrorHandling
 
-    return shouldRunErrorCallback
-  }
+  //   return shouldRunErrorCallback
+  // }
 
   emitError(transition: any[], error: unknown) {
-    console.log("66:x! EMITTING ERROR!", transition, error)
-    const shouldRunErrorCallback = this.checkShouldHandleError(transition)
-    if (!shouldRunErrorCallback) return
+    //   error,
+    //   meta: this.getMeta(transition),
+    // })
+    // const shouldRunErrorCallback = this.checkShouldHandleError(
+    //   transition,
+    //   error
+    // )
+    // if (!shouldRunErrorCallback) return
     const transitionName = transition.join(":")
-    this.callbacks.error.get(transitionName)?.(error)
-    this.doneKey(transition) // TODO
+    const errorCallback = this.callbacks.error.get(transitionName)
+    errorCallback?.(error)
+    this.cleanup(transitionName)
   }
 
   getController(transition: any[] | null | undefined | string) {
@@ -103,7 +109,6 @@ export class TransitionsStore extends Subject {
 
   private setState(newState: TransitionsStoreState) {
     this.state = newState
-    console.log("66:x!", this.state.transitions)
     this.notify()
   }
 
@@ -120,8 +125,6 @@ export class TransitionsStore extends Subject {
   }
 
   addKey(transition: any[] | null | undefined) {
-    console.log(`44: adding key ${JSON.stringify(transition)}!`)
-
     if (!transition) return
 
     const state = {
@@ -138,13 +141,13 @@ export class TransitionsStore extends Subject {
 
     this.setState(newState)
 
-    return () => this.doneKey(transition)
+    return () => this.doneKey(transition, "with-effects")
   }
 
   done(
     state: TransitionsStoreState,
     transitionName: string | null,
-    config: CleanUpTransitionConfig = "with-effects"
+    config: CleanUpTransitionConfig
   ) {
     if (!transitionName) return
     state.transitions[transitionName] ??= 0
@@ -152,10 +155,10 @@ export class TransitionsStore extends Subject {
 
     if (state.transitions[transitionName] <= 0) {
       delete state.transitions[transitionName]
-      console.log(`44: done ${transitionName}!`)
       if (config !== "skip-effects") {
         const doneCallback = this.callbacks.done.get(transitionName)
         doneCallback?.()
+        this.cleanup(transitionName)
       }
     }
 
@@ -175,17 +178,11 @@ export class TransitionsStore extends Subject {
 
   doneKey(
     transition: any[] | null | undefined,
-    config: CleanUpTransitionConfig = "with-effects"
+    config: CleanUpTransitionConfig
   ) {
-    console.log(`44: done key ${JSON.stringify(transition)}!`)
-    console.log(`66: done key ${JSON.stringify(transition)}!`)
     if (!transition) return
 
-    // let clearKeys = false
-
-    // if (isNewActionError(error)) {
-
-    let state = {
+    const state = {
       ...this.state,
       transitions: { ...this.state.transitions },
     }

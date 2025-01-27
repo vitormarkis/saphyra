@@ -135,8 +135,8 @@ export function TransitionsShowcaseView({}: TransitionsShowcaseViewProps) {
           transitionsStore.dispatch({
             type: "fetch-albums",
             transition: ["fetch", "albums"],
-            beforeDispatch({ action, currentTransition, meta }) {
-              if (currentTransition.checkIsRunning) return
+            beforeDispatch({ action, transitionStore, transition }) {
+              if (transitionStore.isHappeningUnique(transition)) return
               return action
             },
           })

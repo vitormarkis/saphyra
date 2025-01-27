@@ -18,7 +18,7 @@ type Eventable = {
 export function useHistory<
   TState = BaseState,
   TActions extends BaseAction<TState> = DefaultActions & BaseAction<TState>,
-  TEvents extends EventsTuple = EventsTuple,
+  TEvents extends EventsTuple = EventsTuple
 >(store: SomeStore<TState, TActions, TEvents>, el: Eventable = document) {
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {

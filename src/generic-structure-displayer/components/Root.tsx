@@ -95,7 +95,7 @@ export const GenericStructureDisplayer = memo(
           allExpanded,
         }}
       >
-        <ul className="flex gap-1 flex-col overflow-auto">
+        <ul className="flex gap-1 flex-col overflow-auto h-full">
           {nodes.map(node => (
             <li key={node.id}>
               <Tree {...node} />

@@ -21,9 +21,13 @@ type SettersRegistry<TState> = Record<
   Array<SetterOrPartialState<TState>>
 >
 
+export type KeyAbort = `abort::${string}`
+
+export type EventsFormat = EventsTuple | Record<KeyAbort, []>
+
 export type GenericStoreValues<
   TState,
-  TEvents extends EventsTuple = EventsTuple,
+  TEvents extends EventsTuple = EventsTuple
 > = {
   errors: ErrorsStore
   events: EventEmitter<TEvents>
@@ -36,7 +40,7 @@ export type GenericStoreValues<
 export type GenericStoreMethods<
   TState,
   TActions extends BaseAction<TState>,
-  TEvents extends EventsTuple,
+  TEvents extends EventsTuple
 > = {
   getState(): TState
   dispatch: Dispatch<TState, TActions>
@@ -59,7 +63,7 @@ export type GenericStoreMethods<
 export type SomeStore<
   TState,
   TActions extends BaseAction<TState>,
-  TEvents extends EventsTuple,
+  TEvents extends EventsTuple
 > = GenericStoreValues<TState, TEvents> &
   GenericStoreMethods<TState, TActions, TEvents> &
   SubjectType
@@ -84,7 +88,7 @@ export type DefaultActions =
     }
 
 export type TransitionStartConfig<
-  TBaseAction extends GenericAction = GenericAction,
+  TBaseAction extends GenericAction = GenericAction
 > = {
   /**
    * The action that is being dispatched, except the key 'beforeDispatch'
@@ -109,7 +113,7 @@ export type GenericAction = {
 } & Record<string, any>
 
 export type BeforeDispatchOptions<
-  TBaseAction extends GenericAction = GenericAction,
+  TBaseAction extends GenericAction = GenericAction
 > = TransitionStartConfig<TBaseAction>
 
 export type BeforeDispatch<TBaseAction extends GenericAction = GenericAction> =
@@ -117,7 +121,7 @@ export type BeforeDispatch<TBaseAction extends GenericAction = GenericAction> =
 
 export type BaseAction<
   TState,
-  TBaseAction extends GenericAction = GenericAction,
+  TBaseAction extends GenericAction = GenericAction
 > = {
   type: string
   onTransitionEnd?: (state: TState) => void
@@ -207,7 +211,7 @@ export type StoreInstantiator<
   TInitialProps,
   TState,
   TActions extends BaseAction<TState>,
-  TEvents extends EventsTuple,
+  TEvents extends EventsTuple
 > = (
   initialProps: RemoveDollarSignProps<TInitialProps>,
   config?: StoreConstructorConfig
@@ -215,9 +219,11 @@ export type StoreInstantiator<
 
 export type StoreInstantiatorGeneric = StoreInstantiator<any, any, any, any>
 
-export type ExtractEvents<T> =
-  T extends SomeStore<any, any, infer E> ? E : never
-export type ExtractActions<T> =
-  T extends SomeStore<any, infer A, any> ? A : never
+export type ExtractEvents<T> = T extends SomeStore<any, any, infer E>
+  ? E
+  : never
+export type ExtractActions<T> = T extends SomeStore<any, infer A, any>
+  ? A
+  : never
 
 export type CleanUpTransitionConfig = "skip-effects" | "with-effects"

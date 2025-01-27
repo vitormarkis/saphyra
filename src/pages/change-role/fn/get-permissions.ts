@@ -8,7 +8,7 @@ type FetchPermissionsProps = {
   signal: AbortSignal
 }
 
-const { getLuck } = createLuck([1, 0, 1])
+const { getLuck } = createLuck([1, 1, 1, 0, 1, 0])
 
 export async function fetchPermissions({
   role,
@@ -16,7 +16,7 @@ export async function fetchPermissions({
 }: FetchPermissionsProps) {
   await sleep(700, "fetching permissions", signal)
   if (getLuck()) {
-    throw new Error("Error while fetching permissions!")
+    throw new Error("Error while fetching permissions! Try again.")
   }
   return PERMISSIONS()[role]
 }

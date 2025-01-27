@@ -11,7 +11,6 @@ import { queryClient } from "~/query-client"
 import { getCommentsQueryOptions } from "~/pages/external-deps/query-options/get-comments-query-options"
 
 type PostsState = {
-  newTodoTitle: string
   currentTransition: null
   $postsByUserId: Record<string, PostType[]>
   $postsByPostId: Record<string, PostType>
@@ -60,7 +59,6 @@ export const newPostsStore = newStoreDef<
       posts,
       commentingPostId: null,
       currentTransition: null,
-      newTodoTitle: "",
       commentsByPostId: {},
     }
   },

@@ -8,7 +8,7 @@ export async function likePost(
 ) {
   if (signal.aborted) throw new Error("Aborted!")
   FAKE_DB_VALUE.likedPosts ??= likedPosts
-  await sleep(1200, `like-post [${postId}]`)
+  await sleep(1200, `like-post [${postId}]`, signal)
   if (signal.aborted) throw new Error("Aborted!")
   if (FAKE_DB_VALUE.likedPosts.includes(postId)) {
     FAKE_DB_VALUE.likedPosts = FAKE_DB_VALUE.likedPosts.filter(

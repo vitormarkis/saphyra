@@ -10,14 +10,15 @@ import {
   AsyncPromiseProps,
   BaseAction,
   BaseState,
-  CleanUpTransitionConfig,
   DefaultActions,
   Diff,
   Dispatch,
+  EventsFormat,
   GenericAction,
   GenericStoreMethods,
   GenericStoreValues,
   isSetter,
+  KeyAbort,
   newSetter,
   ReducerSet,
   Setter,
@@ -28,11 +29,7 @@ import {
   TransitionFunctionOptions,
 } from "./types"
 import { EventEmitter, EventsTuple } from "~/create-store/event-emitter"
-import {
-  createDebugableShallowCopy,
-  isAsyncFunction,
-  nonNullable,
-} from "~/lib/utils"
+import { createDebugableShallowCopy, isAsyncFunction } from "~/lib/utils"
 import { noop } from "~/create-store/fn/noop"
 import { ErrorsStore } from "~/create-store/errors-store"
 import {
@@ -196,15 +193,12 @@ export function newStoreDef<
       transition: any[] | null | undefined,
       onTransitionEnd?: (state: TState) => void
     ) => {
-      console.log("66x: COMITTING TRANSITION")
-
       if (!transition) {
         debugger
         throw errorNoTransition()
       }
       const transitionKey = transition.join(":")
       const setters = store.settersRegistry[transitionKey] ?? []
-      console.log("66: Comitting transition with setters!", setters)
       if (!setters) {
         console.log(
           "No setters found for this transition. It's most likely you didn't use the `set` function in your reducer."
@@ -223,12 +217,6 @@ export function newStoreDef<
         },
         { ...store.state }
       )
-      console.log("66: COMITTING TRANSITION", {
-        setters,
-        prevState: store.state,
-        newState,
-      })
-
       defineState(newState)
       store.history.push(newState)
       store.historyRedo = []
@@ -244,13 +232,22 @@ export function newStoreDef<
         "color: lightgreen"
       )
       commitTransition(transition, action.onTransitionEnd)
-      store.transitions.cleanup(transitionString)
+    }
+
+    function getAbortController(props: {
+      transition?: any[] | null | undefined
+      controller?: AbortController | null | undefined
+    }): AbortController {
+      if (!props.transition) return new AbortController()
+      const key = props.transition.join(":")
+      const controller = store.transitions.controllers.get(key)
+      if (controller != null) return controller
+      store.transitions.controllers.values[key] =
+        props.controller ?? new AbortController()
+      return getAbortController(props)
     }
 
     const cleanUpTransition = (transition: any[], error: unknown | null) => {
-      // store.transitions.doneKey(transition, config)
-      // store.transitions.doneKey(transition)
-
       const transitionString = transition.join(":")
       if (transitionString === "bootstrap") {
         errorsStore.setState({ bootstrap: error })
@@ -261,18 +258,16 @@ export function newStoreDef<
           [transitionString]: [],
         }
       }
-      console.log("66: CLEAN UP TRANSITION")
       const newActionAbort = isNewActionError(error)
       if (!newActionAbort) {
-        console.log(`%cTransition failed! [${transitionString}]`, "color: red")
         handleError(error, transition)
+        console.log(`%cTransition failed! [${transitionString}]`, "color: red")
       } else {
         console.log(
           `%cPrevious transition canceled! [${transitionString}], creating new one.`,
           "color: orange"
         )
       }
-      store.transitions.cleanup(transitionString)
     }
 
     const handleRegisterTransition = (
@@ -285,17 +280,9 @@ export function newStoreDef<
       const isNewTransition = currentTransitionName !== actionTransitionName
 
       if (initialAction.transition != null && isNewTransition) {
-        let isRunning = store.transitions.get(initialAction.transition) > 0
-        // const checkIsRunning = () => {
-        //   if (!initialAction.transition) throw errorNoTransition()
-        //   return store.transitions.get(initialAction.transition) > 0
-        // }
-
         const { beforeDispatch = createDefaultBeforeDispatch() } = initialAction
 
-        const controller = getAbortController({
-          transition: initialAction.transition,
-        })
+        const controller = getAbortController(initialAction)
 
         const action = beforeDispatch({
           action: getSnapshotAction(initialAction),
@@ -305,17 +292,22 @@ export function newStoreDef<
         })
 
         if (action == null || action.transition == null) {
-          return {
-            skip: true,
-          }
+          // throw rollback
+          return { skip: true } // TODO
         }
 
-        const hasAborted = controller.signal.aborted
+        const wasAborted = controller.signal.aborted
 
-        if (hasAborted) {
-          store.transitions.meta.values[actionTransitionName][
-            "$$_shouldHandleError"
-          ] = false
+        if (wasAborted) {
+          // @ts-expect-error
+          store.events.emit(`abort::${JSON.stringify(action.transition)}`, null)
+
+          // store.transitions.meta.values[actionTransitionName][
+          //   "$$_skipErrorTokens"
+          // ] ??= []
+          // store.transitions.meta.values[actionTransitionName][
+          //   "$$_skipErrorTokens"
+          // ].push(randomString())
           // store.transitions.emitError(action.transition, { code: 20 })
           store.transitions.eraseKey(action.transition, "skip-effects")
           cleanUpTransition(action.transition, {
@@ -323,20 +315,9 @@ export function newStoreDef<
           })
         }
 
-        // const cleanUpTransition = createCleanUpTransition(action.transition, () => cleanupCommitTransition())
-
-        console.log("88: hasAborted", hasAborted)
-
-        // if (prevController) {
-        //   // console.log("%cSupposed to abort transition!", "color: purple")
-        //   prevController.abort()
-        // }
-
         newState.currentTransition = action.transition
         store.transitions.controllers.values[actionTransitionName] =
           action.controller
-
-        console.log("55: ADD!")
 
         /**
          * After running `beforeDispatch`, user may have aborted the transition,
@@ -344,41 +325,28 @@ export function newStoreDef<
          * with the error, which mean the transition should not be running
          * from this point forward
          */
-        // setTimeout(() => {
-        // const isRunning = checkIsRunning()
-        console.log(
-          "66: IS RUNNING?",
-          isRunning,
-          store.transitions.get(initialAction.transition) > 0
-        )
-        isRunning = store.transitions.get(initialAction.transition) > 0
+        const isRunning = store.transitions.get(initialAction.transition) > 0
         store.transitions.addKey(initialAction.transition)
         if (!isRunning) {
           const transition = action.transition
           const transitionString = transition.join(":")
 
-          console.log("66: REGISTERING HANDLERS!")
-
-          store.transitions.callbacks.done.set(transitionString, () =>
+          store.transitions.callbacks.done.set(transitionString, () => {
             store.completeTransition(action, transition)
-          )
+          })
 
           store.transitions.callbacks.error.set(transitionString, error => {
             cleanUpTransition(action.transition, error)
           })
         }
-        // })
-
-        // }
       }
 
+      // TODO
       return { skip: false }
     }
 
     const dispatch: Met["dispatch"] = (initialAction: TActions) => {
-      console.log("44: dispatching!")
       try {
-        console.log("STORE STATE", store.state)
         let newState = { ...store.state }
 
         const { skip } = handleRegisterTransition(
@@ -387,9 +355,6 @@ export function newStoreDef<
           store
         )
         if (initialAction.transition != null && skip) {
-          // store.transitions.doneKey(initialAction.transition, null)
-          console.log("66: DISPATCH DONE ~~")
-
           return
         }
 
@@ -433,7 +398,7 @@ export function newStoreDef<
             dispatch: (action: TActions) => {
               actionsQueue.push({
                 ...action,
-                transition: initialAction.transition ?? null,
+                transition: initialAction.transition ?? null, // sobreescrevendo transition, deve agrupar varias TODO
                 onTransitionEnd: initialAction.onTransitionEnd ?? null,
               })
             },
@@ -486,8 +451,7 @@ export function newStoreDef<
         }
 
         if (initialAction.transition != null) {
-          console.log("55: DONE!")
-          store.transitions.doneKey(initialAction.transition)
+          store.transitions.doneKey(initialAction.transition, "with-effects")
           // the observers will be notified
           // when the transition is done
         } else {
@@ -497,7 +461,6 @@ export function newStoreDef<
       } catch (error) {
         handleError(error, initialAction.transition)
       }
-      console.log("66: DISPATCH DONE ~~")
     }
 
     const handleError: Met["handleError"] = (error, transition) => {
@@ -555,10 +518,7 @@ export function newStoreDef<
       transition,
       mergeType
     ) => {
-      const { signal } = getAbortController({
-        controller: new AbortController(),
-        transition,
-      })
+      const { signal } = getAbortController({ transition })
       if (transition) {
         const transitionKey = transition.join(":")
         store.settersRegistry = {
@@ -568,7 +528,6 @@ export function newStoreDef<
             setterOrPartialStateList,
           ],
         }
-        console.log("77: JUST PUSHED SETTER")
       }
 
       const setter = mergeSetterWithState(
@@ -665,22 +624,6 @@ export function newStoreDef<
       ...methods,
     }
 
-    type GetAbortControllerProps = {
-      transition?: any[] | null | undefined
-      controller?: AbortController | null | undefined
-    }
-    function getAbortController(
-      props: GetAbortControllerProps
-    ): AbortController {
-      if (!props.transition) return new AbortController()
-      const key = props.transition.join(":")
-      const controller = store.transitions.controllers.get(key)
-      if (controller != null) return controller
-      store.transitions.controllers.values[key] =
-        props.controller ?? new AbortController()
-      return getAbortController(props)
-    }
-
     function construct(
       initialProps: TInitialProps,
       config: StoreConstructorConfig
@@ -713,7 +656,9 @@ export function newStoreDef<
           return initialState
         }
 
-        const { signal } = getAbortController(bootstrapAction)
+        const { signal } = getAbortController({
+          transition: BOOTSTRAP_TRANSITION,
+        })
         const async = createAsync(
           store,
           prevState,
@@ -746,9 +691,6 @@ export function newStoreDef<
                 console.log("dispatch", action)
               },
             })
-
-            const isSameAsPrev = Object.is(processedState, prevState)
-            console.log(isSameAsPrev)
 
             // Don't use actor.set since the prevState would be the same
             // as the one returned in the onConstruct again, causing derivations to run twice
@@ -791,7 +733,7 @@ export function newStoreDef<
         }
       }
 
-      store.transitions.doneKey(BOOTSTRAP_TRANSITION)
+      store.transitions.doneKey(BOOTSTRAP_TRANSITION, "with-effects")
 
       store.history = [store.state]
       store.historyRedo = []

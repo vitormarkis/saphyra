@@ -4,6 +4,7 @@ import {
   newStore,
   deleteBootstrap,
   TestCounterStore,
+  captureValueHistory,
 } from "~/create-store/test.utils"
 
 let store: TestCounterStore
@@ -28,6 +29,15 @@ afterAll(() => {
 })
 
 test("should handle transition error gracefully", async () => {
+  let getSettersHistory = captureValueHistory(
+    store,
+    "settersRegistry",
+    null,
+    v => {
+      v
+    }
+  )
+
   const info_before_dispatch = deleteBootstrap(
     getStoreTransitionInfoSourceShallowCopy(store)
   )
@@ -74,7 +84,10 @@ test("should handle transition error gracefully", async () => {
     getStoreTransitionInfoSourceShallowCopy(store)
   )
 
+  const history = getSettersHistory()
+
   // ensure all the main entities were reseted
+  expect(spy_completeTransition).toHaveBeenCalledTimes(0)
   expect(info_after_error.controllers).toStrictEqual({
     increment: expect.any(AbortController),
   })
@@ -87,5 +100,4 @@ test("should handle transition error gracefully", async () => {
   )
   expect(info_after_error.transitions).toStrictEqual({})
   expect(info_after_error.state).toEqual(expect.objectContaining({ count: 0 }))
-  expect(spy_completeTransition).toHaveBeenCalledTimes(0)
 })

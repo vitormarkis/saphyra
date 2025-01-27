@@ -1,5 +1,6 @@
 import { describe, expect, MockInstance, vi } from "vitest"
 import {
+  captureValueHistory,
   getStoreTransitionInfo,
   getStoreTransitionInfoSourceShallowCopy,
   newStore,
@@ -198,33 +199,3 @@ describe("before dispatch: default", () => {
     })
   })
 })
-
-function captureValueHistory<
-  T extends Record<string, any>,
-  TKey extends keyof T,
-  TValue extends T[TKey]
->(
-  source: T,
-  key: TKey,
-  initialValue: TValue[] | null = null,
-  cb?: (vale: T[TKey]) => void
-) {
-  const history: TValue[] = initialValue ?? []
-
-  let memory = source[key]
-
-  Object.defineProperty(source, key, {
-    get: () => memory,
-    set: newValue => {
-      memory = newValue
-      history.push(newValue)
-      cb?.(newValue)
-    },
-    enumerable: true,
-    configurable: true,
-  })
-
-  return () => {
-    return history
-  }
-}

@@ -37,8 +37,6 @@ const newPokemonStore = newStoreDef<PokemonState, PokemonState>({
     if (diff(["currentPokemonId"])) {
       async
         .promise(async ({ signal }) => {
-          console.log("66:x trigger promise!")
-          // console.log("44: fetching pokemon!")
           return await getPokemon({
             id: state.currentPokemonId,
             signal,

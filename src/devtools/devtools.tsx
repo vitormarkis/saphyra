@@ -6,7 +6,7 @@ import {
 } from "../generic-structure-displayer/components/Root"
 
 export type DevtoolsProps<
-  T extends StoreInstantiatorGeneric = StoreInstantiatorGeneric,
+  T extends StoreInstantiatorGeneric = StoreInstantiatorGeneric
 > = {
   store: ReturnType<T>
 } & Omit<GenericStructureDisplayerProps<T>, "source">
@@ -20,7 +20,7 @@ export type DevtoolsPropsWithoutStore<T> = Omit<
 >
 
 export function Devtools<
-  T extends StoreInstantiatorGeneric = StoreInstantiatorGeneric,
+  T extends StoreInstantiatorGeneric = StoreInstantiatorGeneric
 >({
   store,
   allNodes,
@@ -61,7 +61,10 @@ export function Devtools<
         <TabsTrigger value="state">State</TabsTrigger>
         <TabsTrigger value="transitions">Transitions</TabsTrigger>
       </TabsList>
-      <TabsContent value="state">
+      <TabsContent
+        value="state"
+        className="h-full"
+      >
         <GenericStructureDisplayer
           source={state}
           allNodes={allNodes}

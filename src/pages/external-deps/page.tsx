@@ -195,6 +195,12 @@ export function Post({ post }: PostProps) {
               type: "like-post",
               postId: post.id,
               transition: ["post", post.id, "like"],
+              beforeDispatch({ action, transitionStore, transition }) {
+                if (transitionStore.isHappeningUnique(transition)) {
+                  transitionStore.controllers.get(transition)?.abort()
+                }
+                return action
+              },
             })
           }}
           className={cn(
