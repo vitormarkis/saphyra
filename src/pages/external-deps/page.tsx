@@ -2,8 +2,8 @@ import { Spinner } from "@blueprintjs/core"
 import { useEffect, useState } from "react"
 import { IconHeartFull } from "~/generic-structure-displayer/components/IconHearFull"
 import { IconHeart } from "~/generic-structure-displayer/components/IconHeart"
-import { useHistory } from "~/hooks/use-history"
-import { cn } from "~/lib/utils"
+import { useHistory } from "~/create-store/hooks/use-history"
+import { cn } from "~/lib/cn"
 import { newPostsStore, Posts } from "~/pages/external-deps/store"
 import { PostType } from "./types"
 import { PostsController } from "~/pages/external-deps/store.controller"
@@ -11,6 +11,7 @@ import { IconComment } from "~/generic-structure-displayer/components/IconCommen
 import { EditingPost } from "~/pages/external-deps/components/editing-post"
 import { notifyOnChangeList } from "~/notify-on-change"
 import { getCommentsQueryOptions } from "~/pages/external-deps/query-options/get-comments-query-options"
+import { Devtools } from "~/devtools/devtools"
 
 export function ExternalDepsPage() {
   const postsStoreState = useState(() => newPostsStore({}))
@@ -78,7 +79,7 @@ export function ExternalDepsPage() {
           )}
         </div>
         <div className="flex-1 min-h-0 min-w-0 h-full overflow-auto">
-          <Posts.Devtools />
+          <Devtools store={postsStore} />
         </div>
       </div>
     </Posts.Provider>

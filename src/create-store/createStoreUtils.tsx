@@ -10,26 +10,20 @@ import {
 import {
   AsyncActor,
   BaseAction,
-  BaseState,
-  DefaultActions,
   ExtractActions,
   StoreErrorHandler,
   StoreInstantiatorGeneric,
   TransitionFunctionOptions,
-} from "./create-store/types"
-import { Devtools, DevtoolsPropsWithoutStore } from "./devtools/devtools"
+} from "./types"
 import { exact } from "~/lib/module-response-type"
-import { NonUndefined } from "~/types"
 
 function defaultSelector<T>(data: T) {
   return data
 }
 
 export function createStoreUtils<
-  TStoreInstantiator extends
-    StoreInstantiatorGeneric = StoreInstantiatorGeneric,
-  TStore extends
-    ReturnType<TStoreInstantiator> = ReturnType<TStoreInstantiator>,
+  TStoreInstantiator extends StoreInstantiatorGeneric = StoreInstantiatorGeneric,
+  TStore extends ReturnType<TStoreInstantiator> = ReturnType<TStoreInstantiator>
 >(store?: TStore) {
   type TState = TStore["state"]
   type TActions = ExtractActions<TStore>
@@ -110,18 +104,8 @@ export function createStoreUtils<
       : exact([undefined, true])
   }
 
-  const LocalDevtools = memo(<T,>(props: DevtoolsPropsWithoutStore<T>) => {
-    return (
-      <Devtools
-        store={getDefaultStore()}
-        {...props}
-      />
-    )
-  })
-
   const utils: StoreUtils<TState, TStore> = {
     Provider: Context.Provider,
-    Devtools: LocalDevtools,
     useStore,
     useUseState,
     useTransition,
@@ -138,7 +122,7 @@ export interface LazyValueOptions<
   TActions extends BaseAction<TState>,
   TTransition extends any[],
   TPromiseResult,
-  R,
+  R
 > {
   transition: TTransition
   select: (state: TState) => R
@@ -151,13 +135,9 @@ export interface LazyValueOptions<
 
 export type StoreUtils<
   TState,
-  TStore extends
-    ReturnType<StoreInstantiatorGeneric> = ReturnType<StoreInstantiatorGeneric>,
+  TStore extends ReturnType<StoreInstantiatorGeneric> = ReturnType<StoreInstantiatorGeneric>
 > = {
   Provider: React.Provider<any>
-  Devtools: React.MemoExoticComponent<
-    <T>(props: DevtoolsPropsWithoutStore<T>) => ReactNode
-  >
   useStore: <R = TState>(selector?: (data: TState) => R, store?: TStore) => R
   useUseState: () => [TStore, React.Dispatch<React.SetStateAction<TStore>>]
   useTransition: (transition: any[], store?: TStore) => boolean

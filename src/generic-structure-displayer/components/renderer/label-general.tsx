@@ -2,7 +2,7 @@ import React, { useContext } from "react"
 import { RendererContext } from "../../fn/types"
 import { LabelObjectLike } from "./object-like"
 import { LabelPrimitiveLike } from "./primitive-like"
-import { cn } from "~/lib/utils"
+import { cn } from "~/lib/cn"
 import { TreeContext } from "~/generic-structure-displayer/components/Tree.context"
 import { IconCaret } from "~/generic-structure-displayer/components/IconCaret"
 

@@ -1,5 +1,5 @@
-import { newStoreDef } from "~/create-store"
-import { createStoreUtils } from "~/createStoreUtils"
+import { newStoreDef } from "~/create-store/store"
+import { createStoreUtils } from "~/create-store/createStoreUtils"
 import { fetchPosts } from "./fn/fetch-posts"
 import { likePost } from "./fn/like-post"
 import { reduceGroupById } from "./fn/reduce-group-by-user-id"

@@ -1,12 +1,9 @@
 import { useEffect, useRef, useState } from "react"
-import { newStoreDef } from "~/create-store"
+import { createStoreUtils } from "~/create-store/createStoreUtils"
 import { EventEmitter } from "~/create-store/event-emitter"
-import { rateLimiter } from "~/create-store/helpers/before-dispatch/rate-limiter"
-import { throttle } from "~/create-store/helpers/before-dispatch/throttle"
-import { BaseState } from "~/create-store/types"
-import { createStoreUtils } from "~/createStoreUtils"
-import { useAbortController } from "~/hooks/use-abort-controller"
-import { cn } from "~/lib/utils"
+import { newStoreDef } from "~/create-store/store"
+import { Devtools } from "~/devtools/devtools"
+import { cn } from "~/lib/cn"
 import { sleep } from "~/sleep"
 
 type TransitionsStoreState = {
@@ -113,12 +110,13 @@ const TransitionsStore = createStoreUtils<typeof newTransitionsStore>()
  */
 export function TransitionsShowcasePage() {
   const transitionsStoreState = useState(() => newTransitionsStore({}))
+  const [transitionsStore] = transitionsStoreState
 
   return (
     <TransitionsStore.Provider value={transitionsStoreState}>
       <div className="flex flex-col gap-4 h-full">
         <TransitionsShowcaseView />
-        <TransitionsStore.Devtools />
+        <Devtools store={transitionsStore} />
       </div>
     </TransitionsStore.Provider>
   )

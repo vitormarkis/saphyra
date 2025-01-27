@@ -1,4 +1,4 @@
-import { newStoreDef } from "~/create-store"
+import { newStoreDef } from "~/create-store/store"
 import { BaseState, SomeStore, SomeStoreGeneric } from "~/create-store/types"
 import { sleep } from "~/sleep"
 

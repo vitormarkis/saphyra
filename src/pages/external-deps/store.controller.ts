@@ -1,5 +1,5 @@
-import { newStoreDef } from "~/create-store"
-import { createStoreUtils } from "~/createStoreUtils"
+import { newStoreDef } from "~/create-store/store"
+import { createStoreUtils } from "~/create-store/createStoreUtils"
 
 type PostsControllerState = {
   batchLikes: boolean

@@ -1,4 +1,4 @@
-import { cn } from "~/lib/utils"
+import { cn } from "~/lib/cn"
 import { Spinner } from "@blueprintjs/core"
 import { useCallback, useEffect, useState } from "react"
 import { Posts } from "~/pages/external-deps/store"

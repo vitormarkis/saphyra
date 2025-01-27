@@ -1,6 +1,6 @@
 import { useRef, useState } from "react"
-import { newStoreDef } from "~/create-store"
-import { createStoreUtils } from "~/createStoreUtils"
+import { newStoreDef } from "~/create-store/store"
+import { createStoreUtils } from "~/create-store/createStoreUtils"
 import { sleep } from "~/sleep"
 
 type TransitionsStoreState = {

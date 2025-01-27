@@ -1,9 +1,10 @@
 import { Spinner } from "@blueprintjs/core"
 import { useEffect, useState } from "react"
-import { newStoreDef } from "~/create-store"
+import { newStoreDef } from "~/create-store/store"
 import { BaseState } from "~/create-store/types"
-import { createStoreUtils } from "~/createStoreUtils"
+import { createStoreUtils } from "~/create-store/createStoreUtils"
 import { createSession } from "~/pages/zustand-like/fn/create-session"
+import { Devtools } from "~/devtools/devtools"
 
 type SimpleFormInitialProps = {
   fullName: string
@@ -56,11 +57,12 @@ export function SimpleFormPage() {
       fullName: "Vitor Markis",
     })
   )
+  const [simpleForm] = simpleFormState
 
   return (
     <SimpleForm.Provider value={simpleFormState}>
       <SimpleFormView onGetToken={console.log} />
-      <SimpleForm.Devtools />
+      <Devtools store={simpleForm} />
     </SimpleForm.Provider>
   )
 }

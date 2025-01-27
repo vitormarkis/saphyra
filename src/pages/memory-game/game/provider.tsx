@@ -1,13 +1,14 @@
 import { PropsWithChildren, useEffect, useState } from "react"
-import { newStoreDef } from "../../../create-store"
-import { createStoreUtils } from "../../../createStoreUtils"
+import { newStoreDef } from "../../../create-store/store"
+import { createStoreUtils } from "../../../create-store/createStoreUtils"
 import { MemoryCard } from "../card/type"
 import { reduceGroupById } from "./fn/reduce-group-by-id"
 import { filterMatched, filterVisible } from "./fn/filter-cards"
 import { flatMapCreateCards } from "./fn/flat-map-create-cards"
 import { updateCard } from "./fn/update-card"
 import { handleExpandNode } from "~/lib/utils"
-import { useHistory } from "~/hooks/use-history"
+import { useHistory } from "~/create-store/hooks/use-history"
+import { Devtools } from "~/devtools/devtools"
 
 type CardsContent = readonly [
   string,
@@ -17,7 +18,7 @@ type CardsContent = readonly [
   string,
   string,
   string,
-  string,
+  string
 ]
 
 export type MemoryGameInitialProps = {
@@ -144,7 +145,8 @@ export function MemoryGame({
   return (
     <Game.Provider value={memoryGameState}>
       {children}
-      <Game.Devtools
+      <Devtools
+        store={memoryGame}
         expandedNodes={expandedNodes}
         onExpandNode={handleExpandNode(setExpandedNodes)}
       />

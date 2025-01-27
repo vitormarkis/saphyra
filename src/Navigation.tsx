@@ -1,5 +1,6 @@
 import { PropsWithChildren, useEffect, useState } from "react"
-import { capitalize, cn } from "./lib/utils"
+import { capitalize } from "./lib/utils"
+import { cn } from "./lib/cn"
 import { myRoutesManifest } from "./my-routes-manifest"
 import { NavLink } from "react-router-dom"
 

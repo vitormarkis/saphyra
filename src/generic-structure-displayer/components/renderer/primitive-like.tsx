@@ -1,4 +1,4 @@
-import { cn } from "../../../lib/utils"
+import { cn } from "~/lib/cn"
 import { RendererContext } from "../../fn/types"
 import { KeyContainer } from "./common/key-container"
 

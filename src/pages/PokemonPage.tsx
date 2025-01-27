@@ -1,12 +1,13 @@
 import { Spinner } from "@blueprintjs/core"
 import { useCallback, useState } from "react"
 import { ErrorPage } from "~/components/error-page"
-import { newStoreDef } from "~/create-store"
-import { useBootstrapError } from "~/create-store/hooks/useBootstrapError"
+import { newStoreDef } from "~/create-store/store"
+import { useBootstrapError } from "~/create-store/hooks/use-bootstrap-error"
 import { BeforeDispatchOptions } from "~/create-store/types"
-import { createStoreUtils } from "~/createStoreUtils"
-import { cn } from "~/lib/utils"
+import { createStoreUtils } from "~/create-store/createStoreUtils"
+import { cn } from "~/lib/cn"
 import { getPokemon } from "~/pages/zustand-like/fn/get-pokemon"
+import { Devtools } from "~/devtools/devtools"
 
 type PokemonState = {
   currentPokemonId: number
@@ -150,7 +151,7 @@ export function PokemonPageContent({}: PokemonPageContentProps) {
         </button>
       </div>
       <div className="h-full">
-        <Pokemon.Devtools />
+        <Devtools store={store} />
       </div>
       {/* <pre>{JSON.stringify({ state }, null, 2)}</pre> */}
     </div>

@@ -29,6 +29,7 @@ export default defineConfig({
   },
 
   build: {
+    outDir: "dist_vite",
     rollupOptions: {
       // external: ["@blueprintjs/icons/lib/css/blueprint-icons.css", "normalize.css"],
       output: {

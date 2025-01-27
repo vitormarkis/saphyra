@@ -1,13 +1,14 @@
 import { Spinner } from "@blueprintjs/core"
-import { createStoreUtils } from "../../createStoreUtils"
-import { cn } from "../../lib/utils"
+import { createStoreUtils } from "../../create-store/createStoreUtils"
 import { fetchRole } from "./fn/fetch-role"
-import { useHistory } from "~/hooks/use-history"
-import { newStoreDef } from "~/create-store"
+import { useHistory } from "~/create-store/hooks/use-history"
+import { newStoreDef } from "~/create-store/store"
 import { useCallback, useState } from "react"
-import { useBootstrapError } from "~/create-store/hooks/useBootstrapError"
+import { useBootstrapError } from "~/create-store/hooks/use-bootstrap-error"
 import { ErrorPage } from "~/components/error-page"
 import { fetchPermissions } from "~/pages/change-role/fn/get-permissions"
+import { Devtools } from "~/devtools/devtools"
+import { cn } from "~/lib/cn"
 
 type SelectedRole = "user" | "admin"
 
@@ -176,7 +177,10 @@ function ChangeRolePageContent() {
       {/* <pre className={cn("disabled:opacity-30 disabled:cursor-not-allowed")}>
         {JSON.stringify(state, null, 2)}
       </pre> */}
-      <Auth.Devtools allExpanded />
+      <Devtools
+        store={authStore}
+        allExpanded
+      />
       <div className=" bg-fuchsia-300/10 dark:bg-fuchsia-700/10 border px-4 py-2 rounded-md border-fuchsia-500/20">
         <h3 className="text-lg font-bold dark:text-fuchsia-200 text-fuchsia-600">
           Explanation:

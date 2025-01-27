@@ -1,6 +1,7 @@
-import { newStoreDef } from "../../create-store"
+import { newStoreDef } from "../../create-store/store"
 import { GithubProfile } from "./types"
-import { createStoreUtils } from "../../createStoreUtils"
+import { createStoreUtils } from "../../create-store/createStoreUtils"
+import { Devtools } from "~/devtools/devtools"
 
 type UserStoreInitialProps = {
   username: string
@@ -77,7 +78,7 @@ export function GithubProfilePage() {
         >
           Fetch user
         </button>
-        <User.Devtools />
+        <Devtools store={userStore} />
       </form>
     </div>
   )

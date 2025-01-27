@@ -1,10 +1,11 @@
 import { Spinner } from "@blueprintjs/core"
 import { Fragment, useEffect, useState } from "react"
-import { useHistory } from "~/hooks/use-history"
-import { newStoreDef } from "./create-store"
+import { useHistory } from "~/create-store/hooks/use-history"
+import { newStoreDef } from "./create-store/store"
 import { BaseState } from "./create-store/types"
-import { createStoreUtils } from "./createStoreUtils"
+import { createStoreUtils } from "./create-store/createStoreUtils"
 import { sleep } from "./sleep"
+import { Devtools } from "~/devtools/devtools"
 
 type CounterState = BaseState & {
   count: number
@@ -85,7 +86,7 @@ export default function App() {
     <Todos.Provider value={countStoreState}>
       <Content />
       <div className="mt-4">
-        <Todos.Devtools />
+        <Devtools store={countStore} />
       </div>
     </Todos.Provider>
   )

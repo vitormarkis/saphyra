@@ -1,11 +1,8 @@
-import { toast } from "sonner"
-import { StoreErrorHandler } from "../types"
+import { StoreErrorHandler } from "./create-store/types"
 
 export const defaultErrorHandler: StoreErrorHandler = error => {
   function onError(error: string) {
-    toast.error(error, {
-      className: "bg-red-500 text-white",
-    })
+    console.log("Saphyra error:", error)
   }
 
   if (!error) {

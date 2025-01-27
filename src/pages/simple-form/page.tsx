@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react"
-import { newStoreDef } from "~/create-store"
+import { newStoreDef } from "~/create-store/store"
 import { BaseState } from "~/create-store/types"
-import { createStoreUtils } from "~/createStoreUtils"
+import { createStoreUtils } from "~/create-store/createStoreUtils"
 import { createSession } from "~/pages/zustand-like/fn/create-session"
 
 type SimpleFormEvents = {

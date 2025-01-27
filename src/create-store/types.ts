@@ -1,6 +1,6 @@
 import { EventEmitter, EventsTuple } from "~/create-store/event-emitter"
 import { RemoveDollarSignProps } from "~/types"
-import { StoreConstructorConfig } from "."
+import { StoreConstructorConfig } from "./store"
 import { TransitionsStore } from "./transitions-store"
 import { SubjectType } from "~/Subject"
 import { ErrorsStore } from "~/create-store/errors-store"

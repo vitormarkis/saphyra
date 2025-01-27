@@ -1,43 +1,66 @@
 {
-  "name": "auth-external-store",
-  "private": true,
-  "version": "0.0.0",
+  "name": "saphyra",
+  "description": "A tool for creating declarative stores and managing state that embraces async behavior.",
+  "version": "0.0.8",
   "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "keywords": [
+    "react",
+    "state",
+    "management",
+    "redux",
+    "zustand",
+    "declarative",
+    "typescript",
+    "xstate"
+  ],
+  "author": "vitormarkis",
+  "license": "MIT",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "require": "./dist/index.js",
+      "import": "./dist/index.mjs"
+    }
+  },
+  "files": [
+    "dist/",
+    "README.md",
+    "LICENSE",
+    "package.json"
+  ],
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build:vite": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview",
+    "preview": "vite preview --outDir vite_build",
     "check": "tsc --noEmit --project ./tsconfig.app.json",
     "pr": "prettier --write src",
     "test": "vitest --config vitest.config.ts --silent",
-    "test:debug": "vitest --config vitest.config.ts --inspect-brk --browser --no-file-parallelism"
+    "test:debug": "vitest --config vitest.config.ts --inspect-brk --browser --no-file-parallelism",
+    "build": "tsup"
   },
   "dependencies": {
-    "@blueprintjs/core": "^5.14.2",
-    "@blueprintjs/icons": "^5.16.0",
-    "@radix-ui/react-tabs": "^1.1.2",
-    "@tailwindcss/container-queries": "^0.1.1",
-    "@tanstack/react-query": "^5.64.1",
-    "@tanstack/react-query-devtools": "^5.64.1",
+    "react": "^18.3.1"
+  },
+  "devDependencies": {
+    "lodash": "^4.17.21",
     "@types/node": "^22.8.6",
     "@vercel/analytics": "^1.4.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "immer": "^10.1.1",
     "jsdom": "^26.0.0",
-    "lodash": "^4.17.21",
     "lucide-react": "^0.471.0",
     "normalize.css": "^8.0.1",
-    "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^7.1.1",
     "sonner": "^1.5.0",
     "tailwind-merge": "^2.6.0",
     "tailwindcss-animate": "^1.0.7",
-    "vite-tsconfig-paths": "^5.1.4"
-  },
-  "devDependencies": {
+    "tsup": "^8.3.6",
+    "vite-tsconfig-paths": "^5.1.4",
     "@eslint/js": "^9.9.0",
     "@types/lodash": "^4.17.14",
     "@types/react": "^18.3.3",
@@ -53,6 +76,12 @@
     "typescript": "^5.5.3",
     "typescript-eslint": "^8.0.1",
     "vite": "^5.4.1",
-    "vitest": "^3.0.4"
+    "vitest": "^3.0.4",
+    "@blueprintjs/core": "^5.14.2",
+    "@blueprintjs/icons": "^5.16.0",
+    "@radix-ui/react-tabs": "^1.1.2",
+    "@tailwindcss/container-queries": "^0.1.1",
+    "@tanstack/react-query": "^5.64.1",
+    "@tanstack/react-query-devtools": "^5.64.1"
   }
 }
