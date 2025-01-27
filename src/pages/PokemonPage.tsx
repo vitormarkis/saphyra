@@ -8,6 +8,7 @@ import { createStoreUtils } from "~/create-store/createStoreUtils"
 import { cn } from "~/lib/cn"
 import { getPokemon } from "~/pages/zustand-like/fn/get-pokemon"
 import { Devtools } from "~/devtools/devtools"
+import invariant from "tiny-invariant"
 
 type PokemonState = {
   currentPokemonId: number
@@ -108,6 +109,7 @@ const beforeDispatch = ({
 }: BeforeDispatchOptions) => {
   if (transitionStore.isHappeningUnique(transition)) {
     const controller = transitionStore.controllers.get(transition)
+    invariant(controller)
     controller.abort()
   }
   return action

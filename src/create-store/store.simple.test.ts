@@ -1,8 +1,12 @@
 import { expect, MockInstance, vi } from "vitest"
-import { newStore } from "~/create-store/test.utils"
-import { SomeStoreGeneric } from "~/create-store/types"
+import {
+  getStoreTransitionInfoSourceShallowCopy,
+  newStore,
+  prepareInfo,
+  TestCounterStore,
+} from "~/create-store/test.utils"
 
-let store: SomeStoreGeneric
+let store: TestCounterStore
 let spy_completeTransition: MockInstance<any>
 
 beforeEach(() => {
@@ -18,7 +22,8 @@ test("simple dispatch interaction", () => {
   const spy_done = vi.spyOn(store.transitions, "doneKey")
 
   store.dispatch({ type: "increment" })
-  const state = store.getState()
+  const info = prepareInfo(getStoreTransitionInfoSourceShallowCopy(store))
+  const state = store.state
   expect(state).toEqual(expect.objectContaining({ count: 1 }))
 
   // don't interact with the transition

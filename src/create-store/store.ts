@@ -26,7 +26,6 @@ import {
   SomeStore,
   StoreErrorHandler,
   StoreInstantiator,
-  TransitionFunctionOptions,
 } from "./types"
 import { EventEmitter, EventsTuple } from "~/create-store/event-emitter"
 import { createDebugableShallowCopy, isAsyncFunction } from "~/lib/utils"
@@ -37,6 +36,10 @@ import {
   isNewActionError,
 } from "~/create-store/utils"
 import { getSnapshotAction } from "~/create-store/helpers/get-snapshot-action"
+import { Rollback } from "~/create-store/helpers/rollback"
+import { mockActor } from "~/create-store/helpers/mock-actor"
+import invariant from "tiny-invariant"
+import { GENERAL_TRANSITION } from "~/create-store/const"
 
 export type ExternalProps = Record<string, any> | null
 
@@ -234,17 +237,38 @@ export function newStoreDef<
       commitTransition(transition, action.onTransitionEnd)
     }
 
-    function getAbortController(props: {
-      transition?: any[] | null | undefined
+    function ensureAbortController(props: {
+      transition: any[]
       controller?: AbortController | null | undefined
     }): AbortController {
-      if (!props.transition) return new AbortController()
       const key = props.transition.join(":")
-      const controller = store.transitions.controllers.get(key)
+      let controller = store.transitions.controllers.get(key)
       if (controller != null) return controller
-      store.transitions.controllers.values[key] =
-        props.controller ?? new AbortController()
-      return getAbortController(props)
+      controller = props.controller ?? new AbortController()
+      store.transitions.controllers.set(props.transition, controller)
+      return controller
+    }
+
+    function getAbortController(props: {
+      transition?: any[] | null | undefined
+    }) {
+      if (!props.transition)
+        return {
+          controller: undefined,
+          rollback: noop,
+        }
+      const key = props.transition.join(":")
+      const initial = store.transitions.controllers.values[key]
+      return {
+        controller: initial,
+        rollback: () => {
+          if (initial == null) {
+            delete store.transitions.controllers.values[key]
+            return
+          }
+          store.transitions.controllers.set(key, initial)
+        },
+      }
     }
 
     const cleanUpTransition = (transition: any[], error: unknown | null) => {
@@ -273,7 +297,8 @@ export function newStoreDef<
     const handleRegisterTransition = (
       newState: TState & BaseState,
       initialAction: TActions,
-      store: SomeStore<TState, TActions, TEvents>
+      store: SomeStore<TState, TActions, TEvents>,
+      rollback: Rollback
     ) => {
       const currentTransitionName = store.state.currentTransition?.join(":")
       const actionTransitionName = initialAction.transition?.join(":")!
@@ -282,7 +307,12 @@ export function newStoreDef<
       if (initialAction.transition != null && isNewTransition) {
         const { beforeDispatch = createDefaultBeforeDispatch() } = initialAction
 
-        const controller = getAbortController(initialAction)
+        const initialAbort = getAbortController(initialAction)
+        rollback.add(initialAbort.rollback)
+        const controller = ensureAbortController({
+          transition: initialAction.transition,
+          controller: initialAbort.controller,
+        })
 
         const action = beforeDispatch({
           action: getSnapshotAction(initialAction),
@@ -292,9 +322,10 @@ export function newStoreDef<
         })
 
         if (action == null || action.transition == null) {
-          // throw rollback
-          return { skip: true } // TODO
+          throw rollback
         }
+
+        invariant(controller, "NSTH: a transition")
 
         const wasAborted = controller.signal.aborted
 
@@ -311,8 +342,7 @@ export function newStoreDef<
         }
 
         newState.currentTransition = action.transition
-        store.transitions.controllers.values[actionTransitionName] =
-          action.controller
+        store.transitions.setController(action.transition, action.controller)
 
         /**
          * After running `beforeDispatch`, user may have aborted the transition,
@@ -335,128 +365,104 @@ export function newStoreDef<
           })
         }
       }
-
-      // TODO
-      return { skip: false }
     }
 
     const dispatch: Met["dispatch"] = (initialAction: TActions) => {
       try {
-        let newState = { ...store.state }
-
-        const { skip } = handleRegisterTransition(
-          newState,
-          initialAction,
-          store
-        )
-        if (initialAction.transition != null && skip) {
+        const rollback = new Rollback()
+        return dispatchImpl(initialAction, rollback)
+      } catch (error) {
+        if (error instanceof Rollback) {
+          error.rollback()
           return
         }
 
-        const transitionName = initialAction.transition?.join(":")!
-        /**
-         * Sobreescrevendo controller, quando na verdade cada action
-         * deveria prover um controller
-         *
-         * No comportamento atual, ele quebra caso você clique duas vezes
-         * para disparar a ação, e aborte usando o primeiro controller
-         *
-         * A primeira promise tem apenas o controller do primeiro dispatch, e não de todos
-         */
-        const controller = initialAction.controller ?? new AbortController()
-        store.transitions.controllers.values[transitionName] = controller
-        const actionsQueue: TActions[] = [initialAction]
-
-        let prevState = store.state
-        for (const action of actionsQueue) {
-          const scheduleSetter = createSetScheduler(
-            newState,
-            "set",
-            action.transition
-          )
-
-          const futurePrevState = { ...newState }
-          const context: ReducerProps<TState, TActions, TEvents> = {
-            prevState: prevState,
-            state: newState,
-            action,
-            events: store.events,
-            store,
-            async: createAsync(
-              store,
-              newState,
-              action.transition,
-              controller.signal
-            ),
-            set: scheduleSetter,
-            diff: createDiff(prevState, newState),
-            dispatch: (action: TActions) => {
-              actionsQueue.push({
-                ...action,
-                transition: initialAction.transition ?? null, // sobreescrevendo transition, deve agrupar varias TODO
-                onTransitionEnd: initialAction.onTransitionEnd ?? null,
-              })
-            },
-          }
-          const reducer: Reducer<TState, TActions, TEvents> = (
-            context: ReducerProps<TState, TActions, TEvents>
-          ) => {
-            if (context.action.type === "$$lazy-value") {
-              const {
-                transition,
-                transitionFn,
-                onSuccess = noop,
-              } = context.action
-              context.async
-                .promise(async ({ signal }) => {
-                  const options: TransitionFunctionOptions = {
-                    transition,
-                    actor: {
-                      set() {
-                        debugger
-                      },
-                      dispatch() {
-                        debugger
-                      },
-                      async: {
-                        promise() {
-                          return {
-                            onSuccess() {
-                              debugger
-                            },
-                          }
-                        },
-                        timer() {
-                          debugger
-                        },
-                      },
-                    },
-                    signal,
-                  }
-                  return await transitionFn(options)
-                })
-                .onSuccess(onSuccess)
-            }
-            return userReducer(context)
-          }
-          const producedState = reducer(context)
-          // looks redundant but user might return prev state
-          newState = producedState
-          prevState = futurePrevState
-        }
-
-        if (initialAction.transition != null) {
-          store.transitions.doneKey(initialAction.transition, {
-            onFinishTransition: runSuccessCallback,
-          })
-          // the observers will be notified
-          // when the transition is done
-        } else {
-          defineState(newState)
-          subject.notify()
-        }
-      } catch (error) {
         handleError(error, initialAction.transition)
+      }
+    }
+
+    const dispatchImpl = (initialAction: TActions, rollback: Rollback) => {
+      let newState = { ...store.state }
+
+      handleRegisterTransition(newState, initialAction, store, rollback)
+
+      /**
+       * Sobreescrevendo controller, quando na verdade cada action
+       * deveria prover um controller
+       *
+       * No comportamento atual, ele quebra caso você clique duas vezes
+       * para disparar a ação, e aborte usando o primeiro controller
+       *
+       * A primeira promise tem apenas o controller do primeiro dispatch, e não de todos
+       */
+      const controller = ensureAbortController({
+        transition: initialAction.transition ?? [GENERAL_TRANSITION],
+        controller: initialAction.controller,
+      })
+      const actionsQueue: TActions[] = [initialAction]
+
+      let prevState = store.state
+      for (const action of actionsQueue) {
+        const scheduleSetter = createSetScheduler(
+          newState,
+          "set",
+          action.transition
+        )
+
+        const futurePrevState = { ...newState }
+        const context: ReducerProps<TState, TActions, TEvents> = {
+          prevState: prevState,
+          state: newState,
+          action,
+          events: store.events,
+          store,
+          async: createAsync(
+            store,
+            newState,
+            action.transition,
+            controller.signal
+          ),
+          set: scheduleSetter,
+          diff: createDiff(prevState, newState),
+          dispatch: (action: TActions) => {
+            actionsQueue.push({
+              ...action,
+              transition: initialAction.transition ?? null, // sobreescrevendo transition, deve agrupar varias TODO
+              onTransitionEnd: initialAction.onTransitionEnd ?? null,
+            })
+          },
+        }
+        const reducer: Reducer<TState, TActions, TEvents> = (
+          props: ReducerProps<TState, TActions, TEvents>
+        ) => {
+          if (props.action.type === "$$lazy-value") {
+            props.async
+              .promise(ctx => {
+                return props.action.transitionFn({
+                  transition: props.action.transition,
+                  actor: mockActor(),
+                  signal: ctx.signal,
+                })
+              })
+              .onSuccess(props.action.onSuccess ?? noop)
+          }
+          return userReducer(props)
+        }
+        const producedState = reducer(context)
+        // looks redundant but user might return prev state
+        newState = producedState
+        prevState = futurePrevState
+      }
+
+      if (initialAction.transition != null) {
+        store.transitions.doneKey(initialAction.transition, {
+          onFinishTransition: runSuccessCallback,
+        })
+        // the observers will be notified
+        // when the transition is done
+      } else {
+        defineState(newState)
+        subject.notify()
       }
     }
 
@@ -515,7 +521,9 @@ export function newStoreDef<
       transition,
       mergeType
     ) => {
-      const { signal } = getAbortController({ transition })
+      const { signal } = ensureAbortController({
+        transition: transition ?? [GENERAL_TRANSITION],
+      })
       if (transition) {
         const transitionKey = transition.join(":")
         store.settersRegistry = {
@@ -576,7 +584,10 @@ export function newStoreDef<
         ...newPartialState,
       }
       const action = { type: "noop" } as TActions
-      const { signal } = getAbortController(action)
+      const { signal } = ensureAbortController({
+        transition: action.transition ?? [GENERAL_TRANSITION],
+        controller: action.controller,
+      })
       const result = userReducer({
         action,
         diff: createDiff(store.state, newState),
@@ -625,6 +636,7 @@ export function newStoreDef<
       initialProps: TInitialProps,
       config: StoreConstructorConfig
     ) {
+      const rollback = new Rollback()
       Object.assign(window, { _store: store })
 
       store.errorHandlers = config.errorHandlers
@@ -640,7 +652,7 @@ export function newStoreDef<
         type: "bootstrap",
         transition: BOOTSTRAP_TRANSITION,
       } as TActions
-      handleRegisterTransition(prevState, bootstrapAction, store)
+      handleRegisterTransition(prevState, bootstrapAction, store, rollback)
 
       if (isAsync) {
         async function handleConstruction(ctx: AsyncPromiseProps) {
@@ -653,7 +665,7 @@ export function newStoreDef<
           return initialState
         }
 
-        const { signal } = getAbortController({
+        const { signal } = ensureAbortController({
           transition: BOOTSTRAP_TRANSITION,
         })
         const async = createAsync(
@@ -696,7 +708,9 @@ export function newStoreDef<
             subject.notify()
           })
       } else {
-        const { signal } = getAbortController(bootstrapAction)
+        const { signal } = ensureAbortController({
+          transition: bootstrapAction.transition!,
+        })
         try {
           const initialState = onConstruct({
             initialProps,

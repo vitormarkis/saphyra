@@ -1,14 +1,24 @@
+import { noop } from "lodash"
 import { describe, expect, MockInstance, vi } from "vitest"
+import { GENERAL_TRANSITION } from "~/create-store/const"
 import {
+  captureCallbackHistory,
   captureValueHistory,
   getStoreTransitionInfoShallowCopy,
   getStoreTransitionInfoSourceShallowCopy,
   newStore,
+  prepareInfo,
+  TestCounterStore,
 } from "~/create-store/test.utils"
-import { SomeStoreGeneric } from "~/create-store/types"
+import { BeforeDispatch } from "~/create-store/types"
 
-let store: SomeStoreGeneric
+let store: TestCounterStore
 let spy_completeTransition: MockInstance
+
+const earlyReturn: BeforeDispatch = () => {
+  // always skip actoin
+  return
+}
 
 beforeEach(() => {
   store = newStore({
@@ -25,34 +35,86 @@ afterEach(() => {
 const transitionName = "increment"
 
 describe("before dispatch: default", () => {
-  describe("DIFFERENT TRANSITIONS", () => {
-    test("ensure effects are settled after sync action", () => {
+  describe("should rollback any effects if no action will be dispatched", () => {
+    test("transition", () => {
+      const xx = captureCallbackHistory(
+        store.transitions.controllers,
+        "set",
+        [],
+        v => {
+          noop()
+        }
+      )
       store.dispatch({
         type: "increment",
         transition: ["increment"],
+        beforeDispatch: earlyReturn,
       })
 
-      const info = getStoreTransitionInfoShallowCopy(store, transitionName)
-      expect(info.controller.signal.aborted).toBe(false)
-      expect(info.setters).toHaveLength(0)
-      expect(info.doneCallback).toBeNull()
-      expect(info.errorCallback).toBeNull()
+      const info = prepareInfo(getStoreTransitionInfoSourceShallowCopy(store))
+      expect(info.setters).toStrictEqual({})
+      expect(info.doneCallbackList).toStrictEqual(new Map())
+      expect(info.errorCallbackList).toStrictEqual(new Map())
       expect(info.transitions).toMatchObject({})
-      expect(info.state).toEqual(expect.objectContaining({ count: 1 }))
+      expect(info.state).toEqual(expect.objectContaining({ count: 0 }))
+      expect(info.controllers).toStrictEqual({
+        [GENERAL_TRANSITION]: expect.any(AbortController),
+      })
+    })
+
+    test.only("no transition", () => {
+      store.dispatch({
+        type: "increment",
+        beforeDispatch: earlyReturn,
+      })
+
+      const info = prepareInfo(getStoreTransitionInfoSourceShallowCopy(store))
+      expect(info.setters).toStrictEqual({})
+      expect(info.doneCallbackList).toStrictEqual(new Map())
+      expect(info.errorCallbackList).toStrictEqual(new Map())
+      expect(info.transitions).toMatchObject({})
+      expect(info.controllers).toStrictEqual({
+        [GENERAL_TRANSITION]: expect.any(AbortController),
+      })
+      expect(info.state).toEqual(expect.objectContaining({ count: 0 }))
+    })
+
+    test("async transition", () => {
+      const getHistory = captureCallbackHistory(store, "dispatch", [], v => {
+        noop()
+      })
+      store.dispatch({
+        type: "increment-async",
+        transition: ["increment"],
+        beforeDispatch: earlyReturn,
+      })
+
+      const hh = getHistory()
+
+      const info = prepareInfo(getStoreTransitionInfoSourceShallowCopy(store))
+      expect(info.setters).toStrictEqual({})
+      expect(info.doneCallbackList).toStrictEqual(new Map())
+      expect(info.errorCallbackList).toStrictEqual(new Map())
+      expect(info.transitions).toMatchObject({})
+      expect(info.state).toEqual(expect.objectContaining({ count: 0 }))
+      expect(info.controllers).toStrictEqual({})
     })
 
     it("should increment 3 times", () => {
       store.dispatch({
         type: "increment",
         transition: ["increment"],
+        beforeDispatch: earlyReturn,
       })
       store.dispatch({
         type: "increment",
         transition: ["increment"],
+        beforeDispatch: earlyReturn,
       })
       store.dispatch({
         type: "increment",
         transition: ["increment"],
+        beforeDispatch: earlyReturn,
       })
 
       const info = getStoreTransitionInfoShallowCopy(store, transitionName)
@@ -174,6 +236,7 @@ describe("before dispatch: default", () => {
         store.dispatch({
           type: "increment-async",
           transition: ["increment"],
+          beforeDispatch: earlyReturn,
         })
       }
 

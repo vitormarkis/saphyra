@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react"
+import invariant from "tiny-invariant"
 import { createStoreUtils } from "~/create-store/createStoreUtils"
 import { EventEmitter } from "~/create-store/event-emitter"
 import { newStoreDef } from "~/create-store/store"
@@ -236,9 +237,6 @@ export function TransitionsShowcaseView({}: TransitionsShowcaseViewProps) {
         <legend>Fetch todos (check network tab)</legend>
         <button
           onClick={() => {
-            /**
-             *
-             */
             store.dispatch({
               type: "fetch-todos",
               transition: ["fetch", "todos"],
@@ -250,15 +248,12 @@ export function TransitionsShowcaseView({}: TransitionsShowcaseViewProps) {
                 // }, 1000)
                 if (transitionStore.isHappeningUnique(transition)) {
                   const controller = transitionStore.controllers.get(transition)
+                  invariant(controller)
                   controller.abort()
                 }
                 return action
               },
             })
-
-            /**
-             *
-             */
           }}
           // className={cn(isLoadingTodos && "border-red-800 ring-red-500 ring-2")}
         >

@@ -50,7 +50,7 @@ export const newStore = newStoreDef<CounterState, CounterState, CounterActions>(
   }
 )
 
-export function getStoreTransitionInfo(
+export function getStoreTransitionInfoShallowCopy(
   store: SomeStoreGeneric,
   transitionName: string
 ) {
@@ -63,11 +63,11 @@ export function getStoreTransitionInfo(
 
   return {
     controller,
-    setters,
-    doneCallback,
-    errorCallback,
-    transitions,
-    state,
+    setters: setters ? [...setters] : setters,
+    doneCallback: typeof doneCallback === "function" ? doneCallback : null,
+    errorCallback: typeof errorCallback === "function" ? errorCallback : null,
+    transitions: transitions ? { ...transitions } : transitions,
+    state: state ? { ...state } : state,
   }
 }
 
@@ -103,6 +103,24 @@ export function deleteBootstrap(
   return info
 }
 
+export function handleState({
+  state: { currentTransition, ...restState },
+  ...info
+}: ReturnType<typeof getStoreTransitionInfoSourceShallowCopy>) {
+  return {
+    ...info,
+    state: restState,
+  }
+}
+
+export function prepareInfo(
+  info: ReturnType<typeof getStoreTransitionInfoSourceShallowCopy>
+) {
+  info = deleteBootstrap(info)
+  info = handleState(info)
+  return info
+}
+
 export function captureValueHistory<
   T extends Record<string, any>,
   TKey extends keyof T,
@@ -126,6 +144,33 @@ export function captureValueHistory<
     },
     enumerable: true,
     configurable: true,
+  })
+
+  return () => {
+    return history
+  }
+}
+
+export function captureCallbackHistory<
+  T extends Record<string, any>,
+  TKey extends keyof T,
+  TValue extends T[TKey]
+>(
+  source: T,
+  key: TKey,
+  initialValue: TValue[] | null = null,
+  cb?: (vale: any[]) => void
+) {
+  const history: any[] = initialValue ?? []
+
+  let oldCallback = source[key]
+
+  Object.assign(source, {
+    [key]: (...args: any[]) => {
+      oldCallback?.(...args)
+      history.push(args)
+      cb?.(args)
+    },
   })
 
   return () => {

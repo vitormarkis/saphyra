@@ -1,8 +1,13 @@
+import invariant from "tiny-invariant"
 import { describe, expect, MockInstance, vi } from "vitest"
-import { getStoreTransitionInfo, newStore } from "~/create-store/test.utils"
-import { BeforeDispatch, SomeStoreGeneric } from "~/create-store/types"
+import {
+  getStoreTransitionInfoShallowCopy,
+  newStore,
+  TestCounterStore,
+} from "~/create-store/test.utils"
+import { BeforeDispatch } from "~/create-store/types"
 
-let store: SomeStoreGeneric
+let store: TestCounterStore
 let spy_completeTransition: MockInstance<any>
 let spy_emitError: MockInstance<any>
 
@@ -13,6 +18,7 @@ const cancelPrevious: BeforeDispatch = ({
 }) => {
   if (transitionStore.isHappeningUnique(transition)) {
     const controller = transitionStore.controllers.get(transition)
+    invariant(controller)
     controller.abort()
   }
 
@@ -42,7 +48,7 @@ describe("before dispatch: cancel previous", () => {
       beforeDispatch: cancelPrevious,
     })
 
-    const info = getStoreTransitionInfo(store, transitionName)
+    const info = getStoreTransitionInfoShallowCopy(store, transitionName)
     expect(info.controller.signal.aborted).toBe(false)
     expect(info.setters).toHaveLength(0)
     expect(info.doneCallback).toBeNull()
@@ -63,7 +69,7 @@ describe("before dispatch: cancel previous", () => {
     })
 
     test("after run dispatch", () => {
-      const info = getStoreTransitionInfo(store, transitionName)
+      const info = getStoreTransitionInfoShallowCopy(store, transitionName)
 
       expect(info.controller.signal.aborted).toBe(false)
       expect(info.setters).toBeUndefined()
@@ -78,7 +84,7 @@ describe("before dispatch: cancel previous", () => {
 
     test("after promise resolve", async () => {
       await vi.advanceTimersByTimeAsync(1000)
-      const info = getStoreTransitionInfo(store, transitionName)
+      const info = getStoreTransitionInfoShallowCopy(store, transitionName)
 
       expect(info.controller.signal.aborted).toBe(false)
       expect(info.setters).toStrictEqual([])
@@ -92,7 +98,7 @@ describe("before dispatch: cancel previous", () => {
 
     describe("abort", () => {
       beforeEach(async () => {
-        const info = getStoreTransitionInfo(store, transitionName)
+        const info = getStoreTransitionInfoShallowCopy(store, transitionName)
         const spy_abort = vi.spyOn(info.controller, "abort")
 
         await vi.advanceTimersByTimeAsync(500)
@@ -104,12 +110,12 @@ describe("before dispatch: cancel previous", () => {
 
         expect(spy_abort).toHaveBeenCalledTimes(1)
         // abort, and make a new abort controller for the transition
-        const info_2 = getStoreTransitionInfo(store, transitionName)
+        const info_2 = getStoreTransitionInfoShallowCopy(store, transitionName)
         expect(info_2.controller.signal.aborted).toBe(false)
       })
 
       test("before wait", () => {
-        const info = getStoreTransitionInfo(store, transitionName)
+        const info = getStoreTransitionInfoShallowCopy(store, transitionName)
         expect(info.controller.signal.aborted).toBe(false)
         expect(info.setters).toBeUndefined()
         expect(info.doneCallback).toBeInstanceOf(Function)
@@ -124,7 +130,10 @@ describe("before dispatch: cancel previous", () => {
 
       test("after promise resolve", async () => {
         await vi.advanceTimersByTimeAsync(500)
-        const info_before = getStoreTransitionInfo(store, transitionName)
+        const info_before = getStoreTransitionInfoShallowCopy(
+          store,
+          transitionName
+        )
         expect(info_before.controller.signal.aborted).toBe(false)
         expect(info_before.setters).toBeUndefined()
         expect(info_before.doneCallback).toBeInstanceOf(Function)
@@ -137,7 +146,7 @@ describe("before dispatch: cancel previous", () => {
 
         // await vi.advanceTimersByTimeAsync(1000 -> 500) // TODO
         await vi.advanceTimersByTimeAsync(500)
-        const info = getStoreTransitionInfo(store, transitionName)
+        const info = getStoreTransitionInfoShallowCopy(store, transitionName)
         expect(info.controller.signal.aborted).toBe(false)
         expect(info.setters).toStrictEqual([])
         expect(info.doneCallback).toBeNull()
@@ -152,7 +161,7 @@ describe("before dispatch: cancel previous", () => {
 
     describe("abort twice", () => {
       beforeEach(async () => {
-        const info = getStoreTransitionInfo(store, transitionName)
+        const info = getStoreTransitionInfoShallowCopy(store, transitionName)
         const spy_abort = vi.spyOn(info.controller, "abort")
 
         await vi.advanceTimersByTimeAsync(500)
@@ -164,10 +173,13 @@ describe("before dispatch: cancel previous", () => {
 
         expect(spy_abort).toHaveBeenCalledTimes(1)
         // abort, and make a new abort controller for the transition
-        const info_after = getStoreTransitionInfo(store, transitionName)
+        const info_after = getStoreTransitionInfoShallowCopy(
+          store,
+          transitionName
+        )
         expect(info_after.controller.signal.aborted).toBe(false)
 
-        const info_2 = getStoreTransitionInfo(store, transitionName)
+        const info_2 = getStoreTransitionInfoShallowCopy(store, transitionName)
         const spy_abort_2 = vi.spyOn(info_2.controller, "abort")
 
         expect(spy_abort_2).not.toBe(spy_abort)
@@ -181,13 +193,13 @@ describe("before dispatch: cancel previous", () => {
 
         expect(spy_abort_2).toHaveBeenCalledTimes(1)
         // abort, and make a new abort controller for the transition
-        const info_3 = getStoreTransitionInfo(store, transitionName)
+        const info_3 = getStoreTransitionInfoShallowCopy(store, transitionName)
         expect(info_3.controller.signal.aborted).toBe(false)
         expect(spy_emitError).not.toHaveBeenCalled()
       })
 
       test("before wait", () => {
-        const info = getStoreTransitionInfo(store, transitionName)
+        const info = getStoreTransitionInfoShallowCopy(store, transitionName)
         expect(info.controller.signal.aborted).toBe(false)
         expect(info.setters).toBeUndefined()
         expect(info.doneCallback).toBeInstanceOf(Function)
@@ -203,7 +215,10 @@ describe("before dispatch: cancel previous", () => {
 
       test("after promise resolve", async () => {
         await vi.advanceTimersByTimeAsync(500)
-        const info_before = getStoreTransitionInfo(store, transitionName)
+        const info_before = getStoreTransitionInfoShallowCopy(
+          store,
+          transitionName
+        )
         expect(info_before.controller.signal.aborted).toBe(false)
         expect(info_before.setters).toBeUndefined()
         expect(info_before.doneCallback).toBeInstanceOf(Function)
@@ -215,7 +230,7 @@ describe("before dispatch: cancel previous", () => {
         expect(spy_completeTransition).toHaveBeenCalledTimes(0)
 
         await vi.advanceTimersByTimeAsync(500)
-        const info = getStoreTransitionInfo(store, transitionName)
+        const info = getStoreTransitionInfoShallowCopy(store, transitionName)
         expect(info.controller.signal.aborted).toBe(false)
         expect(info.setters).toStrictEqual([])
         expect(info.doneCallback).toBeNull()

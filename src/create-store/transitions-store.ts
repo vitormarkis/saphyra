@@ -1,6 +1,7 @@
 import { TransitionsStoreEvents } from "~/create-store/event-emitter-transitions"
 import { Subject } from "../Subject"
 import { DoneKeyOptions, OnFinishTransition } from "~/create-store/types"
+import { produce } from "immer"
 
 export type TransitionsStoreState = {
   transitions: Record<string, number>
@@ -18,7 +19,14 @@ export const runSuccessCallback: OnFinishTransition = ({
 
 export class TransitionsStore extends Subject {
   controllers: {
-    get: (transition: any[] | null | undefined | string) => AbortController
+    get: (
+      transition: any[] | null | undefined | string,
+      controller?: AbortController | null | undefined
+    ) => AbortController | undefined
+    set: (
+      transition: any[] | null | undefined | string,
+      value: AbortController
+    ) => void
     values: Record<string, AbortController>
   }
   state: TransitionsStoreState
@@ -48,7 +56,8 @@ export class TransitionsStore extends Subject {
     }
 
     this.controllers = {
-      get: this.getController.bind(this),
+      get: this.ensureController.bind(this),
+      set: this.setController.bind(this),
       values: {},
     }
   }
@@ -84,12 +93,29 @@ export class TransitionsStore extends Subject {
     this.callbacks.error.set(transitionName, null)
   }
 
-  getController(transition: any[] | null | undefined | string) {
-    if (!transition) return new AbortController() // TODO
+  setController(
+    transition: any[] | null | undefined | string,
+    value: AbortController
+  ) {
+    if (!transition) return
     const key =
       typeof transition === "string" ? transition : transition.join(":")
-    this.controllers.values[key] ??= new AbortController()
-    return this.controllers.values[key]
+    // this.controllers.values[key] = value
+    this.controllers = produce(this.controllers, draft => {
+      draft.values[key] = value
+    })
+  }
+
+  ensureController(transition: any[] | null | undefined | string) {
+    if (!transition) return
+    const transitionName =
+      typeof transition === "string" ? transition : transition.join(":")
+    if (!this.controllers.values[transitionName]) {
+      this.controllers = produce(this.controllers, draft => {
+        draft.values[transitionName] = new AbortController()
+      })
+    }
+    return this.controllers.values[transitionName]
   }
 
   private setState(newState: TransitionsStoreState) {
