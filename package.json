@@ -1,7 +1,7 @@
 {
   "name": "saphyra",
   "description": "A tool for creating declarative stores and managing state that embraces async behavior.",
-  "version": "0.0.8",
+  "version": "0.1.1",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -40,7 +40,8 @@
     "pr": "prettier --write src",
     "test": "vitest --config vitest.config.ts --silent",
     "test:debug": "vitest --config vitest.config.ts --inspect-brk --browser --no-file-parallelism",
-    "build": "tsup"
+    "build": "tsup",
+    "publish": "npm run build && npm publish"
   },
   "dependencies": {
     "react": "^18.3.1"

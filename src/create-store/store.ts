@@ -4,7 +4,7 @@ import { createSubject, Subject } from "../Subject"
 import { RemoveDollarSignProps } from "../types"
 import { createAsync, errorNoTransition } from "./createAsync"
 import { defaultErrorHandler } from "../default-error-handler"
-import { TransitionsStore } from "./transitions-store"
+import { runSuccessCallback, TransitionsStore } from "./transitions-store"
 import {
   Async,
   AsyncPromiseProps,
@@ -302,14 +302,9 @@ export function newStoreDef<
           // @ts-expect-error
           store.events.emit(`abort::${JSON.stringify(action.transition)}`, null)
 
-          // store.transitions.meta.values[actionTransitionName][
-          //   "$$_skipErrorTokens"
-          // ] ??= []
-          // store.transitions.meta.values[actionTransitionName][
-          //   "$$_skipErrorTokens"
-          // ].push(randomString())
-          // store.transitions.emitError(action.transition, { code: 20 })
-          store.transitions.eraseKey(action.transition, "skip-effects")
+          store.transitions.eraseKey(action.transition, {
+            onFinishTransition: noop,
+          })
           cleanUpTransition(action.transition, {
             code: 20,
           })
@@ -451,7 +446,9 @@ export function newStoreDef<
         }
 
         if (initialAction.transition != null) {
-          store.transitions.doneKey(initialAction.transition, "with-effects")
+          store.transitions.doneKey(initialAction.transition, {
+            onFinishTransition: runSuccessCallback,
+          })
           // the observers will be notified
           // when the transition is done
         } else {
@@ -733,7 +730,9 @@ export function newStoreDef<
         }
       }
 
-      store.transitions.doneKey(BOOTSTRAP_TRANSITION, "with-effects")
+      store.transitions.doneKey(BOOTSTRAP_TRANSITION, {
+        onFinishTransition: runSuccessCallback,
+      })
 
       store.history = [store.state]
       store.historyRedo = []

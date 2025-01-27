@@ -11,6 +11,7 @@ import {
   SomeStore,
 } from "./types"
 import { noop } from "~/create-store/fn/noop"
+import { runSuccessCallback } from "~/create-store/transitions-store"
 
 export const errorNoTransition = () =>
   new Error(
@@ -88,11 +89,15 @@ export function createAsync<
           set,
           async,
         })
-        store.transitions.doneKey(transition, "with-effects")
+        store.transitions.doneKey(transition, {
+          onFinishTransition: runSuccessCallback,
+        })
       } catch (error) {
         if (wasAborted) return
         store.transitions.emitError(transition, error)
-        store.transitions.doneKey(transition, "skip-effects")
+        store.transitions.doneKey(transition, {
+          onFinishTransition: noop,
+        })
       } finally {
         off()
       }
@@ -120,13 +125,17 @@ export function createAsync<
           set,
           async,
         })
-        store.transitions.doneKey(transition, "with-effects")
+        store.transitions.doneKey(transition, {
+          onFinishTransition: runSuccessCallback,
+        })
       } catch (error) {
         console.log(
           "%cSomething went wrong! Rolling back the store state. [TODO]",
           "color: palevioletred"
         )
-        store.transitions.doneKey(transition, "skip-effects") // TODO
+        store.transitions.doneKey(transition, {
+          onFinishTransition: noop,
+        }) // TODO
         store.transitions.emitError(transition, error)
       }
     }, time)

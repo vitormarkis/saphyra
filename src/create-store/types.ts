@@ -226,4 +226,17 @@ export type ExtractActions<T> = T extends SomeStore<any, infer A, any>
   ? A
   : never
 
-export type CleanUpTransitionConfig = "skip-effects" | "with-effects"
+type OnFinishTransitionProps = {
+  transitionName: string
+  transitionStore: TransitionsStore
+}
+
+export type OnFinishTransition = (options: OnFinishTransitionProps) => void
+
+export type DoneKeyOptions = {
+  onFinishTransition: OnFinishTransition
+}
+
+export type EmitErrorOptions = {
+  onFinishTransition: OnFinishTransition
+}

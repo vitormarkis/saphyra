@@ -1,13 +1,19 @@
 import { TransitionsStoreEvents } from "~/create-store/event-emitter-transitions"
 import { Subject } from "../Subject"
-import { CleanUpTransitionConfig } from "~/create-store/types"
+import { DoneKeyOptions, OnFinishTransition } from "~/create-store/types"
 
 export type TransitionsStoreState = {
   transitions: Record<string, number>
 }
 
-type EventsType = {
-  [K: string]: [error: unknown | null]
+export const runSuccessCallback: OnFinishTransition = ({
+  transitionName,
+  transitionStore,
+}) => {
+  const doneCallback = transitionStore.callbacks.done.get(transitionName)
+  doneCallback?.()
+  transitionStore.callbacks.done.set(transitionName, null)
+  transitionStore.callbacks.error.set(transitionName, null)
 }
 
 export class TransitionsStore extends Subject {
@@ -54,15 +60,12 @@ export class TransitionsStore extends Subject {
     return this.meta.values[key]
   }
 
-  eraseKey(
-    transition: any[] | null | undefined,
-    config: CleanUpTransitionConfig = "with-effects"
-  ) {
+  eraseKey(transition: any[] | null | undefined, options: DoneKeyOptions) {
     if (!transition) return
     const key = transition.join(":")
     const subTransitions = this.state.transitions[key]
     for (let i = 0; i < subTransitions; i++) {
-      this.doneKey(transition, config)
+      this.doneKey(transition, options)
     }
   }
 
@@ -72,31 +75,13 @@ export class TransitionsStore extends Subject {
     this.callbacks.error.set(transitionName, null)
   }
 
-  // checkShouldHandleError(transition: any[], error: unknown) {
-  //   if (!isNewActionError(error)) return true
-  //   const transitionName = transition.join(":")
-  //   this.meta.values[transitionName]["$$_skipErrorTokens"] ??= []
-  //   const skipErrorToken =
-  //     this.meta.values[transitionName]["$$_skipErrorTokens"].pop()
-  //   const shouldSkipErrorHandling = skipErrorToken != null
-  //   const shouldRunErrorCallback = !shouldSkipErrorHandling
-
-  //   return shouldRunErrorCallback
-  // }
-
   emitError(transition: any[], error: unknown) {
-    //   error,
-    //   meta: this.getMeta(transition),
-    // })
-    // const shouldRunErrorCallback = this.checkShouldHandleError(
-    //   transition,
-    //   error
-    // )
-    // if (!shouldRunErrorCallback) return
     const transitionName = transition.join(":")
     const errorCallback = this.callbacks.error.get(transitionName)
     errorCallback?.(error)
-    this.cleanup(transitionName)
+
+    this.callbacks.done.set(transitionName, null)
+    this.callbacks.error.set(transitionName, null)
   }
 
   getController(transition: any[] | null | undefined | string) {
@@ -141,13 +126,16 @@ export class TransitionsStore extends Subject {
 
     this.setState(newState)
 
-    return () => this.doneKey(transition, "with-effects")
+    return () =>
+      this.doneKey(transition, {
+        onFinishTransition: runSuccessCallback,
+      })
   }
 
   done(
     state: TransitionsStoreState,
     transitionName: string | null,
-    config: CleanUpTransitionConfig
+    options: DoneKeyOptions
   ) {
     if (!transitionName) return
     state.transitions[transitionName] ??= 0
@@ -155,11 +143,10 @@ export class TransitionsStore extends Subject {
 
     if (state.transitions[transitionName] <= 0) {
       delete state.transitions[transitionName]
-      if (config !== "skip-effects") {
-        const doneCallback = this.callbacks.done.get(transitionName)
-        doneCallback?.()
-        this.cleanup(transitionName)
-      }
+      options.onFinishTransition({
+        transitionName,
+        transitionStore: this,
+      })
     }
 
     return state
@@ -176,10 +163,7 @@ export class TransitionsStore extends Subject {
     this.setState(state)
   }
 
-  doneKey(
-    transition: any[] | null | undefined,
-    config: CleanUpTransitionConfig
-  ) {
+  doneKey(transition: any[] | null | undefined, options: DoneKeyOptions) {
     if (!transition) return
 
     const state = {
@@ -191,7 +175,7 @@ export class TransitionsStore extends Subject {
     const newState = transition.reduce((acc, key) => {
       if (meta !== "") key = `${meta}:${key}`
       meta = key
-      return this.done(acc, key, config)
+      return this.done(acc, key, options)
     }, state)
 
     this.setState(newState)
