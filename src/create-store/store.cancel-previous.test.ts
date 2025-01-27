@@ -4,6 +4,7 @@ import { BeforeDispatch, SomeStoreGeneric } from "~/create-store/types"
 
 let store: SomeStoreGeneric
 let spy_completeTransition: MockInstance<any>
+let spy_emitError: MockInstance<any>
 
 const cancelPrevious: BeforeDispatch = ({
   action,
@@ -24,6 +25,7 @@ beforeEach(() => {
     currentTransition: null,
   })
   spy_completeTransition = vi.spyOn(store, "completeTransition")
+  spy_emitError = vi.spyOn(store.transitions, "emitError")
 })
 
 afterEach(() => {
@@ -117,6 +119,7 @@ describe("before dispatch: cancel previous", () => {
         })
         expect(info.state).toEqual(expect.objectContaining({ count: 0 }))
         expect(spy_completeTransition).not.toHaveBeenCalledTimes(1)
+        expect(spy_emitError).not.toHaveBeenCalled()
       })
 
       test("after promise resolve", async () => {
@@ -142,6 +145,8 @@ describe("before dispatch: cancel previous", () => {
         expect(info.transitions).toStrictEqual({})
         expect(info.state).toEqual(expect.objectContaining({ count: 1 }))
         expect(spy_completeTransition).toHaveBeenCalledTimes(1)
+
+        expect(spy_emitError).not.toHaveBeenCalled()
       })
     })
 
@@ -178,6 +183,7 @@ describe("before dispatch: cancel previous", () => {
         // abort, and make a new abort controller for the transition
         const info_3 = getStoreTransitionInfo(store, transitionName)
         expect(info_3.controller.signal.aborted).toBe(false)
+        expect(spy_emitError).not.toHaveBeenCalled()
       })
 
       test("before wait", () => {
@@ -191,6 +197,8 @@ describe("before dispatch: cancel previous", () => {
         })
         expect(info.state).toEqual(expect.objectContaining({ count: 0 }))
         expect(spy_completeTransition).not.toHaveBeenCalledTimes(1)
+
+        expect(spy_emitError).not.toHaveBeenCalled()
       })
 
       test("after promise resolve", async () => {
@@ -215,6 +223,8 @@ describe("before dispatch: cancel previous", () => {
         expect(info.transitions).toStrictEqual({})
         expect(info.state).toEqual(expect.objectContaining({ count: 1 }))
         expect(spy_completeTransition).toHaveBeenCalledTimes(1)
+
+        expect(spy_emitError).not.toHaveBeenCalled()
       })
     })
   })

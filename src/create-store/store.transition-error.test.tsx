@@ -9,6 +9,7 @@ import {
 
 let store: TestCounterStore
 let spy_completeTransition: MockInstance<any>
+let spy_emitError: MockInstance<any>
 
 beforeEach(() => {
   store = newStore({
@@ -16,6 +17,7 @@ beforeEach(() => {
     currentTransition: null,
   })
   spy_completeTransition = vi.spyOn(store, "completeTransition")
+  spy_emitError = vi.spyOn(store.transitions, "emitError")
 })
 
 const transitionName = "increment"
@@ -100,4 +102,6 @@ test("should handle transition error gracefully", async () => {
   )
   expect(info_after_error.transitions).toStrictEqual({})
   expect(info_after_error.state).toEqual(expect.objectContaining({ count: 0 }))
+
+  expect(spy_emitError).toHaveBeenCalledTimes(1)
 })
