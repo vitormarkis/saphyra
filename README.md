@@ -1,7 +1,7 @@
-Se você está curioso por que eu decidi criar uma biblioteca de gerenciamento de estado mesmo sabendo que já existe uma infinidade no mercado, é porque essa biblioteca se baseia em cima de alguns bons princípios, os quais eu recomendo fortemente [a leitura aqui]().
+Se você está curioso por que eu decidi criar uma biblioteca de gerenciamento de estado mesmo sabendo que já existe uma infinidade no mercado, é porque essa biblioteca se baseia em alguns bons princípios, os quais eu recomendo fortemente [a leitura aqui]().
 
-### Promessa de Saphyra?
-Aguentar stress testes. Tirar aquele aspecto de medo de usar a UI porque vai quebrar ou entrar em estado inválido.
+### Qual a promessa de Saphyra?
+Você consegue renderizar um botão que quando clicado, faz uma chamada para uma API de forma simples. O problema começa quando você precisa precisa introduzir throttling, cancelamento de requisições, fila, error handling, retry, 
 
 ### O que é Saphyra?
 Saphyra é uma biblioteca de gerenciamento de estado minimalista assim como Zustand, com uma abordagem declarativa. TL;DR: Zustand para stores imperativas, Saphyra para stores declarativas.

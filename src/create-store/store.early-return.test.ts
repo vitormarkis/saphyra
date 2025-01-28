@@ -37,14 +37,6 @@ const transitionName = "increment"
 describe("before dispatch: default", () => {
   describe("should rollback any effects if no action will be dispatched", () => {
     test("transition", () => {
-      const xx = captureCallbackHistory(
-        store.transitions.controllers,
-        "set",
-        [],
-        v => {
-          noop()
-        }
-      )
       store.dispatch({
         type: "increment",
         transition: ["increment"],
@@ -57,12 +49,10 @@ describe("before dispatch: default", () => {
       expect(info.errorCallbackList).toStrictEqual(new Map())
       expect(info.transitions).toMatchObject({})
       expect(info.state).toEqual(expect.objectContaining({ count: 0 }))
-      expect(info.controllers).toStrictEqual({
-        [GENERAL_TRANSITION]: expect.any(AbortController),
-      })
+      expect(info.controllers).toStrictEqual({})
     })
 
-    test.only("no transition", () => {
+    test("no transition", () => {
       store.dispatch({
         type: "increment",
         beforeDispatch: earlyReturn,
@@ -73,9 +63,7 @@ describe("before dispatch: default", () => {
       expect(info.doneCallbackList).toStrictEqual(new Map())
       expect(info.errorCallbackList).toStrictEqual(new Map())
       expect(info.transitions).toMatchObject({})
-      expect(info.controllers).toStrictEqual({
-        [GENERAL_TRANSITION]: expect.any(AbortController),
-      })
+      expect(info.controllers).toStrictEqual({})
       expect(info.state).toEqual(expect.objectContaining({ count: 0 }))
     })
 
@@ -117,13 +105,13 @@ describe("before dispatch: default", () => {
         beforeDispatch: earlyReturn,
       })
 
-      const info = getStoreTransitionInfoShallowCopy(store, transitionName)
-      expect(info.controller.signal.aborted).toBe(false)
-      expect(info.setters).toHaveLength(0)
-      expect(info.doneCallback).toBeNull()
-      expect(info.errorCallback).toBeNull()
+      const info = prepareInfo(getStoreTransitionInfoSourceShallowCopy(store))
+      expect(info.controllers).toStrictEqual({})
+      expect(info.setters).toStrictEqual({})
+      expect(info.doneCallbackList).toStrictEqual(new Map())
+      expect(info.errorCallbackList).toStrictEqual(new Map())
       expect(info.transitions).toMatchObject({})
-      expect(info.state).toEqual(expect.objectContaining({ count: 3 }))
+      expect(info.state).toEqual(expect.objectContaining({ count: 0 }))
     })
 
     it("DIFFERENT TRANSITIONS", () => {
@@ -136,20 +124,11 @@ describe("before dispatch: default", () => {
       store.dispatch({
         type: "increment",
         transition: ["increment", "one"],
+        beforeDispatch: earlyReturn,
       })
 
       settersHistory = getSettersHistory().toReversed()
-      const one_dispatch = settersHistory.pop()
-      expect(one_dispatch).toStrictEqual({
-        "bootstrap": [],
-        "increment:one": [expect.any(Function)], // add setter
-      })
-
-      const one_transition_done = settersHistory.pop()
-      expect(one_transition_done).toStrictEqual({
-        "bootstrap": [],
-        "increment:one": [], // commit transition and cleanup
-      })
+      expect(settersHistory).toStrictEqual([])
 
       /**
        * Two
@@ -159,22 +138,10 @@ describe("before dispatch: default", () => {
       store.dispatch({
         type: "increment",
         transition: ["increment", "two"],
+        beforeDispatch: earlyReturn,
       })
       settersHistory = getSettersHistory().toReversed()
-
-      const two_dispatch = settersHistory.pop()
-      expect(two_dispatch).toStrictEqual({
-        "bootstrap": [],
-        "increment:one": [],
-        "increment:two": [expect.any(Function)], // add setter
-      })
-
-      const two_transition_done = settersHistory.pop()
-      expect(two_transition_done).toStrictEqual({
-        "bootstrap": [],
-        "increment:one": [],
-        "increment:two": [], // commit transition and cleanup
-      })
+      expect(settersHistory).toStrictEqual([])
 
       /**
        * Three
@@ -184,37 +151,19 @@ describe("before dispatch: default", () => {
       store.dispatch({
         type: "increment",
         transition: ["increment", "three"],
+        beforeDispatch: earlyReturn,
       })
 
       settersHistory = getSettersHistory().toReversed()
+      expect(settersHistory).toStrictEqual([])
 
-      const three_dispatch = settersHistory.pop()
-      expect(three_dispatch).toStrictEqual({
-        "bootstrap": [],
-        "increment:one": [],
-        "increment:two": [],
-        "increment:three": [expect.any(Function)], // add setter
-      })
-
-      const three_transition_done = settersHistory.pop()
-      expect(three_transition_done).toStrictEqual({
-        "bootstrap": [],
-        "increment:one": [],
-        "increment:two": [],
-        "increment:three": [], // commit transition and cleanup
-      })
-
-      const info = getStoreTransitionInfoSourceShallowCopy(store)
-      expect(Object.keys(info.controllers)).toHaveLength(3 + 1) // + 1 for bootstrap
-      info.doneCallbackList.forEach(fn => {
-        expect(fn).toBeNull()
-      })
-      info.errorCallbackList.forEach(fn => {
-        expect(fn).toBeNull()
-      })
+      const info = prepareInfo(getStoreTransitionInfoSourceShallowCopy(store))
+      expect(info.controllers).toStrictEqual({})
+      expect(info.doneCallbackList).toStrictEqual(new Map())
+      expect(info.errorCallbackList).toStrictEqual(new Map())
       expect(info.transitions).toMatchObject({})
-      expect(info.state).toEqual(expect.objectContaining({ count: 3 }))
-      expect(spy_completeTransition).toHaveBeenCalledTimes(3)
+      expect(info.state).toEqual(expect.objectContaining({ count: 0 }))
+      expect(spy_completeTransition).toHaveBeenCalledTimes(0)
     })
   })
 
@@ -231,7 +180,6 @@ describe("before dispatch: default", () => {
       const getSettersHistory = captureValueHistory(store, "settersRegistry")
 
       const TIMES = 3
-      const SETS_PER_ACTION = 1
       for (let i = 0; i < TIMES; i++) {
         store.dispatch({
           type: "increment-async",
@@ -243,22 +191,16 @@ describe("before dispatch: default", () => {
       await vi.advanceTimersByTimeAsync(1000)
 
       const settersHistory = getSettersHistory()
-      expect(settersHistory).toHaveLength(3 + 1) // + 1 for done cleanup
+      expect(settersHistory).toHaveLength(0)
 
-      const [_completedTransitionSetters, lastSetters] =
-        settersHistory.toReversed()
-      const incrementSetters = lastSetters[transitionName]
+      const info = prepareInfo(getStoreTransitionInfoSourceShallowCopy(store))
 
-      expect(incrementSetters).toHaveLength(SETS_PER_ACTION * TIMES)
-
-      const info = getStoreTransitionInfoShallowCopy(store, transitionName)
-
-      expect(info.controller.signal.aborted).toBe(false)
-      expect(info.setters).toStrictEqual([])
-      expect(info.doneCallback).toBeNull()
-      expect(info.errorCallback).toBeNull()
+      expect(info.controllers).toStrictEqual({})
+      expect(info.setters).toStrictEqual({})
+      expect(info.doneCallbackList).toStrictEqual(new Map())
+      expect(info.errorCallbackList).toStrictEqual(new Map())
       expect(info.transitions).toMatchObject({})
-      expect(info.state).toEqual(expect.objectContaining({ count: 3 }))
+      expect(info.state).toEqual(expect.objectContaining({ count: 0 }))
     })
   })
 })

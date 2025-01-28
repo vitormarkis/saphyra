@@ -296,36 +296,23 @@ export function newStoreDef<
 
     const handleRegisterTransition = (
       newState: TState & BaseState,
-      initialAction: TActions,
+      action: TActions,
       store: SomeStore<TState, TActions, TEvents>,
       rollback: Rollback
     ) => {
       const currentTransitionName = store.state.currentTransition?.join(":")
-      const actionTransitionName = initialAction.transition?.join(":")!
+      const actionTransitionName = action.transition?.join(":")!
       const isNewTransition = currentTransitionName !== actionTransitionName
 
-      if (initialAction.transition != null && isNewTransition) {
-        const { beforeDispatch = createDefaultBeforeDispatch() } = initialAction
-
-        const initialAbort = getAbortController(initialAction)
+      if (action.transition != null && isNewTransition) {
+        const initialAbort = getAbortController(action)
         rollback.add(initialAbort.rollback)
         const controller = ensureAbortController({
-          transition: initialAction.transition,
+          transition: action.transition,
           controller: initialAbort.controller,
         })
 
-        const action = beforeDispatch({
-          action: getSnapshotAction(initialAction),
-          meta: store.transitions.meta.get(initialAction.transition),
-          transitionStore: store.transitions,
-          transition: initialAction.transition,
-        })
-
-        if (action == null || action.transition == null) {
-          throw rollback
-        }
-
-        invariant(controller, "NSTH: a transition")
+        invariant(controller, "NSTH: controller is ensured")
 
         const wasAborted = controller.signal.aborted
 
@@ -350,8 +337,8 @@ export function newStoreDef<
          * with the error, which mean the transition should not be running
          * from this point forward
          */
-        const isRunning = store.transitions.get(initialAction.transition) > 0
-        store.transitions.addKey(initialAction.transition)
+        const isRunning = store.transitions.get(action.transition) > 0
+        store.transitions.addKey(action.transition)
         if (!isRunning) {
           const transition = action.transition
           const transitionString = transition.join(":")
@@ -361,6 +348,7 @@ export function newStoreDef<
           })
 
           store.transitions.callbacks.error.set(transitionString, error => {
+            invariant(action.transition, "NSTH: a transition")
             cleanUpTransition(action.transition, error)
           })
         }
@@ -384,7 +372,18 @@ export function newStoreDef<
     const dispatchImpl = (initialAction: TActions, rollback: Rollback) => {
       let newState = { ...store.state }
 
-      handleRegisterTransition(newState, initialAction, store, rollback)
+      const { beforeDispatch = createDefaultBeforeDispatch() } = initialAction
+
+      const action = beforeDispatch({
+        action: getSnapshotAction(initialAction),
+        meta: store.transitions.meta.get(initialAction.transition),
+        transitionStore: store.transitions,
+        transition: initialAction.transition,
+      })
+
+      if (action == null) throw rollback
+
+      handleRegisterTransition(newState, action as TActions, store, rollback)
 
       /**
        * Sobreescrevendo controller, quando na verdade cada action
