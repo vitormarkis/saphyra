@@ -1,6 +1,7 @@
 import { TransitionsStoreEvents } from "~/create-store/event-emitter-transitions"
 import { Subject } from "../Subject"
 import { DoneKeyOptions, OnFinishTransition } from "~/create-store/types"
+import { EventEmitter } from "~/create-store/event-emitter"
 
 export type TransitionsStoreState = {
   transitions: Record<string, number>
@@ -30,8 +31,8 @@ export class TransitionsStore extends Subject {
   }
   state: TransitionsStoreState
   events = {
-    done: new TransitionsStoreEvents(),
-    error: new TransitionsStoreEvents(),
+    done: new EventEmitter(),
+    error: new EventEmitter(),
   }
   meta: {
     get: (transition: any[] | null | undefined) => Record<string, any>
@@ -170,6 +171,7 @@ export class TransitionsStore extends Subject {
 
     if (state.transitions[transitionName] <= 0) {
       delete state.transitions[transitionName]
+      this.events.done.emit(transitionName)
       options.onFinishTransition({
         transitionName,
         transitionStore: this,

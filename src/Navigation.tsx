@@ -51,7 +51,7 @@ export function RootLayoutWrapper({ children }: RootLayoutWrapperProps) {
         </div>
       </div>
       <div className="flex-1 flex flex-col text-sm min-w-[240px]">
-        <div className="border border-dashed container-2 h-full flex flex-col px-4 py-6 text-sm rounded-md @container">
+        <div className="border border-dashed container-2 h-full flex flex-col px-4 py-6 text-sm rounded-md @container overflow-y-auto">
           {children}
         </div>
       </div>

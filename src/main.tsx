@@ -10,13 +10,16 @@ import { myRoutesManifest } from "./my-routes-manifest.tsx"
 import { Providers } from "./providers.tsx"
 import { VideoPage } from "~/pages/VideoPage.tsx"
 import { PostHogProvider, usePostHog } from "posthog-js/react"
+import { Theme, themeStore } from "~/theme.tsx"
 
 function onThemeChange(event: any, theme: string) {
   if (event.matches) {
     if (theme === "dark") {
       document.documentElement.classList.add("dark")
+      themeStore.setState({ theme: "dark" })
     } else {
       document.documentElement.classList.remove("dark")
+      themeStore.setState({ theme: "light" })
     }
   }
 }

@@ -9,6 +9,7 @@ import { ErrorPage } from "~/components/error-page"
 import { fetchPermissions } from "~/pages/change-role/fn/get-permissions"
 import { Devtools } from "~/devtools/devtools"
 import { cn } from "~/lib/cn"
+import { TextChart } from "~/components/text-chart"
 
 type SelectedRole = "user" | "admin"
 
@@ -181,15 +182,14 @@ function ChangeRolePageContent() {
         store={authStore}
         allExpanded
       />
-      <div className=" bg-fuchsia-300/10 dark:bg-fuchsia-700/10 border px-4 py-2 rounded-md border-fuchsia-500/20">
-        <h3 className="text-lg font-bold dark:text-fuchsia-200 text-fuchsia-600">
-          Explanation:
-        </h3>
-        <p className="dark:[&_strong]:text-white dark:[&_i]:text-fuchsia-300/50 dark:text-fuchsia-300 [&_strong]:text-fuchsia-700 [&_i]:text-fuchsia-800/50 text-fuchsia-500">
+      <TextChart.Wrapper>
+        <TextChart.Title>Explanation:</TextChart.Title>
+        <TextChart.Text>
           Changing role works as a transaction. It fetches the role, and based
           on the role info, fetch the permissions. If one of the requests fails,
-          all the changes made by the transition <strong>are discarded</strong>{" "}
-          and <strong>no changes are made</strong>.
+          all the changes made by the transition{" "}
+          <TextChart.Strong>are discarded</TextChart.Strong> and{" "}
+          <TextChart.Strong>no changes are made</TextChart.Strong>.
           <br />
           <br />
           It is made this way to prevent your store state to end up in a invalid
@@ -198,8 +198,8 @@ function ChangeRolePageContent() {
           </i>{" "}
           Firing a transition is changing your app from the current, valid
           state, to another valid state.
-        </p>
-      </div>
+        </TextChart.Text>
+      </TextChart.Wrapper>
     </div>
   )
 }

@@ -13,5 +13,5 @@ export default defineConfig({
   outExtension: ({ format }) => ({
     js: format === "esm" ? ".mjs" : ".js",
   }),
-  // minify: true,
+  minify: true,
 })

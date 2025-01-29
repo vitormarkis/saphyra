@@ -3,8 +3,8 @@ import { ChangeRolePage } from "./pages/change-role/page"
 import { GithubProfilePage } from "./pages/github-profile/page"
 import { MemoryGamePage } from "./pages/memory-game/page"
 import { ZustandLikePage } from "./pages/zustand-like/page"
-import { TransitionsShowcasePage } from "~/pages/transitions-showcase/page"
 import { PokemonPage } from "~/pages/pokemon/page"
+import { BeforeDispatchPage } from "./pages/before-dispatch/page"
 
 export const myRoutesManifest = [
   {
@@ -28,8 +28,8 @@ export const myRoutesManifest = [
     element: <ExternalDepsPage />,
   },
   {
-    path: "/transitions-showcase",
-    element: <TransitionsShowcasePage />,
+    path: "/before-dispatch",
+    element: <BeforeDispatchPage />,
   },
   {
     path: "/pokemon",

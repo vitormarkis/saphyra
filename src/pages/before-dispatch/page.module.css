@@ -1,0 +1,11 @@
+.fixStyles :global(.token.operator) {
+  background-color: unset;
+}
+
+.color_light_mode :global(.token.operator) {
+  color: black;
+}
+
+.color_light_mode :global(.token.punctuation) {
+  color: black;
+}
