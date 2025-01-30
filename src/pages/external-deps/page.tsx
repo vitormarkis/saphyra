@@ -83,7 +83,7 @@ export function ExternalDepsPage() {
             </div>
           )}
         </div>
-        <div className="flex-1 min-h-0 min-w-0 h-full overflow-auto">
+        <div className="flex-1 min-h-0 min-w-0 h-full">
           <Devtools store={postsStore} />
         </div>
       </div>

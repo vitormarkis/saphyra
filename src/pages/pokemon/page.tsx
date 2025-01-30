@@ -107,7 +107,7 @@ const beforeDispatch = ({
   meta,
   transition,
   transitionStore,
-}: BeforeDispatchOptions) => {
+}: BeforeDispatchOptions<any, any>) => {
   if (transitionStore.isHappeningUnique(transition)) {
     const controller = transitionStore.controllers.get(transition)
     invariant(controller)
@@ -124,20 +124,30 @@ export function PokemonPageContent({}: PokemonPageContentProps) {
   return (
     <div className="flex flex-col gap-4">
       <div className="w-fit">
-        <div className="grid grid-cols-[1fr,1fr,auto] gap-4 mb-6">
-          <TextChart.Wrapper className="h-fit w-72 min-w-0">
+        <div
+          className={cn(`
+        grid gap-4 mb-6
+
+        grid-cols-[1fr,1fr]
+        grid-rows-[auto,auto,auto]
+        @5xl:grid-cols-[1fr,1fr,1fr]
+          `)}
+        >
+          <TextChart.Wrapper className="h-fit w-full self-center">
             To experience the examples below{" "}
             <TextChart.Important>
               put your network to 3G on the network tab
             </TextChart.Important>{" "}
             and start testing
           </TextChart.Wrapper>
-          <img
-            className="rounded-md border border-black/50 shadow min-w-[18rem] w-72"
-            src="/3g.png"
-            alt=""
-          />
-          <TextChart.Wrapper className="h-fit w-full min-w-0">
+          <div className="min-w-[18rem] grid place-items-center w-full">
+            <img
+              className="rounded-md border border-black/50 shadow"
+              src="/3g.png"
+              alt=""
+            />
+          </div>
+          <TextChart.Wrapper className="h-fit w-full min-w-0 col-span-2 @5xl:col-span-1">
             <TextChart.Title>Page example:</TextChart.Title>
             <TextChart.Text>
               If you click thousand times in the Next button and click once on

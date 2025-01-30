@@ -66,10 +66,11 @@ TabsTrigger.displayName = TabsPrimitive.Trigger.displayName
 const TabsContent = React.forwardRef<
   React.ElementRef<typeof TabsPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof TabsPrimitive.Content>
->(({ className, ...props }, ref) => (
+>(({ className, style, ...props }, ref) => (
   <TabsPrimitive.Content
     ref={ref}
-    className={cn("mt-2 outline-none px-1 py-2 overflow-auto", className)}
+    className={cn("mt-2 outline-none px-1 py-2", className)}
+    style={{ overflow: "unset", ...style }}
     {...props}
   />
 ))
