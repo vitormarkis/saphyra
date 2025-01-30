@@ -9,6 +9,7 @@ import { cn } from "~/lib/cn"
 import { getPokemon } from "~/pages/zustand-like/fn/get-pokemon"
 import { Devtools } from "~/devtools/devtools"
 import invariant from "tiny-invariant"
+import { TextChart } from "~/components/text-chart"
 
 type PokemonState = {
   currentPokemonId: number
@@ -122,6 +123,39 @@ export function PokemonPageContent({}: PokemonPageContentProps) {
 
   return (
     <div className="flex flex-col gap-4">
+      <div className="w-fit">
+        <div className="grid grid-cols-[1fr,1fr,auto] gap-4 mb-6">
+          <TextChart.Wrapper className="h-fit w-72 min-w-0">
+            To experience the examples below{" "}
+            <TextChart.Important>
+              put your network to 3G on the network tab
+            </TextChart.Important>{" "}
+            and start testing
+          </TextChart.Wrapper>
+          <img
+            className="rounded-md border border-black/50 shadow min-w-[18rem] w-72"
+            src="/3g.png"
+            alt=""
+          />
+          <TextChart.Wrapper className="h-fit w-full min-w-0">
+            <TextChart.Title>Page example:</TextChart.Title>
+            <TextChart.Text>
+              If you click thousand times in the Next button and click once on
+              Prev, it will cancel the fetch retrieving the next pokemon and
+              will start the fetch retrieving the previous pokemon. <br />
+              <br />
+              <TextChart.Strong>
+                All under the same transition, all under the same loading state.
+              </TextChart.Strong>
+              <br />
+              <br />
+              <TextChart.Important>
+                Don't forget to check the source code!
+              </TextChart.Important>
+            </TextChart.Text>
+          </TextChart.Wrapper>
+        </div>
+      </div>
       <div
         className={cn(
           "flex gap-4 p-4 border w-fit",

@@ -10,7 +10,7 @@ import "prismjs/themes/prism.css"
 // prettier-ignore
 import "prismjs/themes/prism-okaidia.css"
 
-import { Spinner } from "@blueprintjs/core"
+import { Spinner, Text } from "@blueprintjs/core"
 import { useSuspenseQuery } from "@tanstack/react-query"
 import { noop } from "lodash"
 import { CSSProperties, ReactNode, Suspense, useState } from "react"
@@ -28,6 +28,7 @@ import { cn } from "~/lib/cn"
 import { formatScript } from "~/lib/prettify-code"
 import { Theme } from "~/theme"
 import { CodeEditor } from "~/components/code-editor"
+import { TextChart } from "~/components/text-chart"
 
 type TransitionsStoreState = {
   count: number
@@ -297,6 +298,26 @@ const EXAMPLES_FACTORY: ExampleFactory[] = [
 export function BeforeDispatchView() {
   return (
     <div className="flex flex-wrap gap-2">
+      <div className="grid grid-cols-[1fr,1fr,auto] gap-4 mb-6">
+        <TextChart.Wrapper className="h-fit w-72 min-w-0">
+          To experience the examples below{" "}
+          <TextChart.Important>
+            put your network to 3G on the network tab
+          </TextChart.Important>{" "}
+          and start testing
+        </TextChart.Wrapper>
+        <img
+          className="rounded-md border border-black/50 shadow w-72"
+          src="/3g.png"
+          alt=""
+        />
+        <TextChart.Wrapper className="h-fit w-72 min-w-0">
+          <TextChart.Italic>
+            Os códigos podem estar bugados devido ao build, vou arrumar isso em
+            breve.
+          </TextChart.Italic>
+        </TextChart.Wrapper>
+      </div>
       <ul className="grid grid-rows-[auto,1fr,auto] grid-cols-1 @md:grid-cols-1 @lg:grid-cols-2 @5xl:grid-cols-3 gap-x-3 gap-y-8">
         {EXAMPLES_FACTORY.map((createExample, i) => (
           <StoreProvider>
