@@ -50,7 +50,7 @@ type OnConstructProps<
   TInitialProps,
   TState,
   TActions extends BaseAction<TState>,
-  TEvents extends EventsTuple
+  TEvents extends EventsTuple,
 > = {
   initialProps: TInitialProps
   store: SomeStore<TState, TActions, TEvents>
@@ -61,7 +61,7 @@ type OnConstruct<
   TInitialProps,
   TState,
   TActions extends BaseAction<TState>,
-  TEvents extends EventsTuple
+  TEvents extends EventsTuple,
 > = (
   props: OnConstructProps<TInitialProps, TState, TActions, TEvents>,
   config?: StoreConstructorConfig
@@ -71,7 +71,7 @@ function defaultOnConstruct<
   TInitialProps,
   TState,
   TActions extends BaseAction<TState>,
-  TEvents extends EventsTuple
+  TEvents extends EventsTuple,
 >(
   props: OnConstructProps<TInitialProps, TState, TActions, TEvents>,
   _config?: StoreConstructorConfig
@@ -88,7 +88,7 @@ function defaultOnConstruct<
 type ReducerProps<
   TState,
   TActions extends BaseAction<TState> & DefaultActions,
-  TEvents extends EventsTuple
+  TEvents extends EventsTuple,
 > = {
   prevState: TState
   state: TState
@@ -104,13 +104,13 @@ type ReducerProps<
 export type Reducer<
   TState,
   TActions extends BaseAction<TState>,
-  TEvents extends EventsTuple
+  TEvents extends EventsTuple,
 > = (props: ReducerProps<TState, TActions, TEvents>) => TState
 
 function defaultReducer<
   TState,
   TActions extends BaseAction<TState>,
-  TEvents extends EventsTuple
+  TEvents extends EventsTuple,
 >(props: ReducerProps<TState, TActions, TEvents>) {
   return props.state
 }
@@ -126,7 +126,7 @@ type CreateStoreOptions<
   TInitialProps,
   TState,
   TActions extends BaseAction<TState>,
-  TEvents extends EventsTuple
+  TEvents extends EventsTuple,
 > = {
   onConstruct?: OnConstruct<TInitialProps, TState, TActions, TEvents>
   reducer?: Reducer<TState, TActions, TEvents>
@@ -142,7 +142,7 @@ export function newStoreDef<
   TInitialProps,
   TState extends BaseState = TInitialProps & BaseState,
   TActions extends BaseAction<TState> = DefaultActions & BaseAction<TState>,
-  TEvents extends EventsTuple = EventsTuple
+  TEvents extends EventsTuple = EventsTuple,
 >(
   {
     onConstruct = defaultOnConstruct<TInitialProps, TState, TActions, TEvents>,
@@ -192,9 +192,9 @@ export function newStoreDef<
       store.state = newState
     }
 
-    const commitTransition = (
-      transition: any[] | null | undefined,
-      onTransitionEnd?: (state: TState) => void
+    const commitTransition: Met["commitTransition"] = (
+      transition,
+      onTransitionEnd
     ) => {
       if (!transition) {
         debugger
@@ -223,7 +223,13 @@ export function newStoreDef<
       defineState(newState)
       store.history.push(newState)
       store.historyRedo = []
-      onTransitionEnd?.(newState)
+      onTransitionEnd?.({
+        events: store.events,
+        meta: store.transitions.meta.get(transition),
+        state: newState,
+        transition,
+        transitionStore: store.transitions,
+      })
       subject.notify()
     }
 
@@ -350,6 +356,14 @@ export function newStoreDef<
           store.transitions.callbacks.error.set(transitionString, error => {
             invariant(action.transition, "NSTH: a transition")
             cleanUpTransition(action.transition, error)
+            action.onTransitionEnd?.({
+              error,
+              events: store.events,
+              meta: store.transitions.meta.get(transition),
+              state: store.state,
+              transition,
+              transitionStore: store.transitions,
+            })
           })
         }
       }
@@ -379,6 +393,7 @@ export function newStoreDef<
         meta: store.transitions.meta.get(initialAction.transition),
         transitionStore: store.transitions,
         transition: initialAction.transition,
+        events: store.events,
       })
 
       if (action == null) throw rollback
@@ -623,6 +638,7 @@ export function newStoreDef<
       rerender,
       rebuild,
       completeTransition,
+      commitTransition,
     }
 
     store = {

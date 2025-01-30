@@ -43,7 +43,7 @@ const Text = React.forwardRef<React.ElementRef<"p">, TextProps>(
       <p
         ref={ref}
         className={cn(
-          "dark:[&_strong]:text-white dark:[&_i]:text-stone-300/50 dark:text-stone-300 [&_strong]:text-stone-700 [&_i]:text-stone-800/50 text-stone-500",
+          "dark:[&_i]:text-stone-300/50 dark:text-stone-300  [&_i]:text-stone-800/50 text-stone-500",
           className
         )}
         {...props}
@@ -59,7 +59,10 @@ const Strong = React.forwardRef<React.ElementRef<"strong">, StrongProps>(
     return (
       <strong
         ref={ref}
-        className={cn("", className)}
+        className={cn(
+          "dark:[&_strong]:text-white [&_strong]:text-stone-700",
+          className
+        )}
         {...props}
       />
     )
@@ -80,10 +83,26 @@ const Italic = React.forwardRef<React.ElementRef<"i">, ItalicProps>(
   }
 )
 
+export type ImportantProps = React.ComponentPropsWithoutRef<"strong">
+
+export const Important = React.forwardRef<
+  React.ElementRef<"strong">,
+  ImportantProps
+>(function ImportantComponent({ className, ...props }, ref) {
+  return (
+    <strong
+      ref={ref}
+      className={cn("text-lime-400 dark:text-lime-400", className)}
+      {...props}
+    />
+  )
+})
+
 export const TextChart = {
   Wrapper,
   Title,
   Text,
   Strong,
   Italic,
+  Important,
 }

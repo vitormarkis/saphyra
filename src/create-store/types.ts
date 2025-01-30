@@ -27,7 +27,7 @@ export type EventsFormat = EventsTuple | Record<KeyAbort, []>
 
 export type GenericStoreValues<
   TState,
-  TEvents extends EventsTuple = EventsTuple
+  TEvents extends EventsTuple = EventsTuple,
 > = {
   errors: ErrorsStore
   events: EventEmitter<TEvents>
@@ -40,7 +40,7 @@ export type GenericStoreValues<
 export type GenericStoreMethods<
   TState,
   TActions extends BaseAction<TState>,
-  TEvents extends EventsTuple
+  TEvents extends EventsTuple,
 > = {
   getState(): TState
   dispatch: Dispatch<TState, TActions>
@@ -58,12 +58,16 @@ export type GenericStoreMethods<
   redo(): void
   rebuild(): () => SomeStore<TState, TActions, TEvents>
   completeTransition(action: GenericAction, transition: any[]): void
+  commitTransition(
+    transition: any[] | null | undefined,
+    onTransitionEnd?: OnTransitionEnd<TState, TEvents>
+  ): void
 }
 
 export type SomeStore<
   TState,
   TActions extends BaseAction<TState>,
-  TEvents extends EventsTuple
+  TEvents extends EventsTuple,
 > = GenericStoreValues<TState, TEvents> &
   GenericStoreMethods<TState, TActions, TEvents> &
   SubjectType
@@ -88,7 +92,8 @@ export type DefaultActions =
     }
 
 export type TransitionStartConfig<
-  TBaseAction extends GenericAction = GenericAction
+  TBaseAction extends GenericAction,
+  TEvents extends EventsTuple,
 > = {
   /**
    * The action that is being dispatched, except the key 'beforeDispatch'
@@ -106,6 +111,10 @@ export type TransitionStartConfig<
    * A stable reference to the current transition metadata
    */
   meta: Record<string, any>
+  /**
+   * The store events
+   */
+  events: EventEmitter<TEvents>
 }
 
 export type GenericAction = {
@@ -113,26 +122,41 @@ export type GenericAction = {
 } & Record<string, any>
 
 export type BeforeDispatchOptions<
-  TBaseAction extends GenericAction = GenericAction
-> = TransitionStartConfig<TBaseAction>
+  TBaseAction extends GenericAction,
+  TEvents extends EventsTuple,
+> = TransitionStartConfig<TBaseAction, TEvents>
 
-export type BeforeDispatch<TBaseAction extends GenericAction = GenericAction> =
-  (options: BeforeDispatchOptions<TBaseAction>) => TBaseAction | void
+export type BeforeDispatch<
+  TBaseAction extends GenericAction = GenericAction,
+  TEvents extends EventsTuple = EventsTuple,
+> = (options: BeforeDispatchOptions<TBaseAction, TEvents>) => TBaseAction | void
+
+export type OnTransitionEndProps<TState, TEvents extends EventsTuple> = {
+  transition: any[]
+  transitionStore: TransitionsStore
+  state: TState
+  meta: Record<string, any>
+  events: EventEmitter<TEvents>
+  error?: unknown
+}
+
+export type OnTransitionEnd<TState, TEvents extends EventsTuple> = (
+  props: OnTransitionEndProps<TState, TEvents>
+) => void
 
 export type BaseAction<
   TState,
-  TBaseAction extends GenericAction = GenericAction
+  TBaseAction extends GenericAction = GenericAction,
+  TEvents extends EventsTuple = EventsTuple,
 > = {
   type: string
-  onTransitionEnd?: (state: TState) => void
+  onTransitionEnd?: OnTransitionEnd<TState, TEvents>
   /**
-   * Receive action as parameter and return it.
+   * Receive the action as parameter and return it.
    *
    * You can modify the action before returning.
    *
-   * If you return a nullish value from this function, the action will be ignored.
-   *
-   * You can abort the current transition running under the same transition key.
+   * If you return the action, it will be dispatched to the store. If you return a nullish value, the action will be ignored.
    */
   beforeDispatch?: BeforeDispatch<TBaseAction>
   transition?: any[]
@@ -211,7 +235,7 @@ export type StoreInstantiator<
   TInitialProps,
   TState,
   TActions extends BaseAction<TState>,
-  TEvents extends EventsTuple
+  TEvents extends EventsTuple,
 > = (
   initialProps: RemoveDollarSignProps<TInitialProps>,
   config?: StoreConstructorConfig
@@ -219,12 +243,10 @@ export type StoreInstantiator<
 
 export type StoreInstantiatorGeneric = StoreInstantiator<any, any, any, any>
 
-export type ExtractEvents<T> = T extends SomeStore<any, any, infer E>
-  ? E
-  : never
-export type ExtractActions<T> = T extends SomeStore<any, infer A, any>
-  ? A
-  : never
+export type ExtractEvents<T> =
+  T extends SomeStore<any, any, infer E> ? E : never
+export type ExtractActions<T> =
+  T extends SomeStore<any, infer A, any> ? A : never
 
 type OnFinishTransitionProps = {
   transitionName: string

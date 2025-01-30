@@ -1,3 +1,4 @@
+import invariant from "tiny-invariant"
 import { noop } from "~/create-store/fn/noop"
 
 type ArgsTuple = any[]
@@ -9,7 +10,7 @@ type HandlersMapping<Events extends EventsTuple> = {
 }
 
 export class EventEmitter<EventArgs extends EventsTuple = EventsTuple> {
-  protected handlers: Partial<HandlersMapping<EventArgs>> = {}
+  handlers: Partial<HandlersMapping<EventArgs>> = {}
 
   on<TEventName extends keyof EventArgs>(
     event: TEventName,
@@ -18,7 +19,11 @@ export class EventEmitter<EventArgs extends EventsTuple = EventsTuple> {
     this.handlers[event] ??= new Set()
     this.handlers[event].add(handler)
     return () => {
-      this.handlers[event]?.delete(handler)
+      if (!this.handlers[event]?.has(handler)) debugger
+      invariant(this.handlers[event])
+      this.handlers[event].delete(handler)
+      function noop() {}
+      noop()
     }
   }
 
@@ -46,5 +51,9 @@ export class EventEmitter<EventArgs extends EventsTuple = EventsTuple> {
     for (const handler of handlers) {
       handler(...args)
     }
+  }
+
+  clear<TEventName extends keyof EventArgs>(event: TEventName) {
+    this.handlers[event]?.clear()
   }
 }

@@ -12,6 +12,7 @@ import { EditingPost } from "~/pages/external-deps/components/editing-post"
 import { notifyOnChangeList } from "~/notify-on-change"
 import { getCommentsQueryOptions } from "~/pages/external-deps/query-options/get-comments-query-options"
 import { Devtools } from "~/devtools/devtools"
+import { toastWithSonner } from "~/sonner-error-handler"
 
 export function ExternalDepsPage() {
   const postsStoreState = useState(() => newPostsStore({}))
@@ -23,6 +24,10 @@ export function ExternalDepsPage() {
     postsStore
   )
   const allPosts = Posts.useStore(s => s.posts, postsStore)
+
+  Posts.useErrorHandlers(toastWithSonner, postsStore)
+
+  useEffect(() => {}, [])
 
   useHistory(postsStore)
 

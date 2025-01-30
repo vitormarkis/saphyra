@@ -7,7 +7,7 @@ type HandlersMapping<Events extends EventsTuple> = {
 }
 
 export class EventEmitterXX<EventArgs extends EventsTuple = EventsTuple> {
-  private handlers: Partial<HandlersMapping<EventArgs>> = {}
+  handlers: Partial<HandlersMapping<EventArgs>> = {}
 
   on<TEventName extends keyof EventArgs>(
     event: TEventName,

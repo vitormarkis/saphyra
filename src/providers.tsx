@@ -25,9 +25,21 @@ export function Providers({ children }: ProvidersProps) {
   return (
     <QueryClientProvider client={queryClient}>
       {children}
-      <Toaster />
       {displayGoToSourceButton && <GoToSourceButton />}
       <Analytics />
+      <Toaster
+        toastOptions={{
+          className: "border",
+          classNames: {
+            error: "bg-red-600 text-white dark:border-red-400 border-red-700",
+            success:
+              "bg-green-400 text-black dark:border-green-300 border-green-500",
+            warning:
+              "bg-yellow-400 text-black dark:border-yellow-300 border-yellow-500",
+            info: "bg-blue-400 text-white dark:border-blue-300 border-blue-500",
+          },
+        }}
+      />
       <ReactQueryDevtools />
     </QueryClientProvider>
   )

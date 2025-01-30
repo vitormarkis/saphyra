@@ -3,13 +3,20 @@ import { createStoreUtils } from "../../create-store/createStoreUtils"
 import { fetchRole } from "./fn/fetch-role"
 import { useHistory } from "~/create-store/hooks/use-history"
 import { newStoreDef } from "~/create-store/store"
-import { useCallback, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { useBootstrapError } from "~/create-store/hooks/use-bootstrap-error"
 import { ErrorPage } from "~/components/error-page"
 import { fetchPermissions } from "~/pages/change-role/fn/get-permissions"
 import { Devtools } from "~/devtools/devtools"
 import { cn } from "~/lib/cn"
 import { TextChart } from "~/components/text-chart"
+import { toastWithSonner } from "~/sonner-error-handler"
+import { toast } from "sonner"
+import { fromErrorToMessage } from "~/fromErrorToMessage"
+import { CodeBlock } from "../before-dispatch/page"
+import { CodeEditor } from "~/components/code-editor"
+import { removeCurrentToastsAndRegisterNewToasts } from "./fn/isjdf"
+import { toastWithResult } from "./fn/toast-with-result"
 
 type SelectedRole = "user" | "admin"
 
@@ -32,9 +39,9 @@ const newAuthStore = newStoreDef<
   AuthStoreState,
   AuthStoreState,
   AuthStoreActions,
-  { vitor: [name: "markis"] }
+  { [K: string]: any[] }
 >({
-  reducer({ prevState, state, action, diff, set, async }) {
+  reducer({ prevState, state, action, diff, set, async, events }) {
     if (action?.type === "change-role") {
       async
         .promise(({ signal }) =>
@@ -44,6 +51,7 @@ const newAuthStore = newStoreDef<
           })
         )
         .onSuccess((role, actor) => {
+          events.emit("got-role", role)
           actor.set({ role })
         })
     }
@@ -57,6 +65,7 @@ const newAuthStore = newStoreDef<
           })
         )
         .onSuccess((permissions, actor) => {
+          events.emit("got-permissions", permissions)
           actor.set({ $permissions: permissions })
         })
     }
@@ -91,6 +100,8 @@ export function ChangeRolePage() {
   const [authStore] = authStoreState
   const isBootstraping = Auth.useTransition(["bootstrap"], authStore)
   const [error, tryAgain] = useBootstrapError(authStoreState, instantiateStore)
+
+  // Auth.useErrorHandlers(toastWithSonner, authStore)
 
   if (error != null) {
     return (
@@ -128,78 +139,126 @@ function ChangeRolePageContent() {
   useHistory(authStore)
 
   return (
-    <div className="flex flex-col gap-4 h-full">
-      <div className="flex items-center gap-2">
-        <input
-          type="text"
-          value={state.username}
-          placeholder="Your username..."
-          onChange={e => {
-            const value = e.target.value
-            authStore.setState({
-              username: value,
-            })
-          }}
-        />
-        <select
-          name=""
-          id=""
-          value={state.role}
-          // disabled={isChangingRole}
-          className={cn(
-            "disabled:opacity-30 disabled:cursor-not-allowed",
-            isChangingRole && "opacity-30"
-          )}
-          onChange={e => {
-            const selectedRole = e.target.value as "user" | "admin"
-            authStore.dispatch({
-              type: "change-role",
-              role: selectedRole,
-              transition: ["auth", "role"],
-              beforeDispatch: ({ action, meta }) => {
-                const now = Date.now()
-                meta.timestamps ??= []
-                meta.timestamps = meta.timestamps.filter(
-                  (ts: number) => now - ts < 1000
-                )
-                if (meta.timestamps.length >= 2) return
-                meta.timestamps.push(now)
-                return action
-              },
-            })
-          }}
-        >
-          <option value="user">User</option>
-          <option value="admin">Admin</option>
-        </select>
-        {isChangingRole ? <Spinner size={16} /> : null}
-      </div>
-
-      {/* <pre className={cn("disabled:opacity-30 disabled:cursor-not-allowed")}>
-        {JSON.stringify(state, null, 2)}
-      </pre> */}
-      <Devtools
-        store={authStore}
-        allExpanded
-      />
-      <TextChart.Wrapper>
-        <TextChart.Title>Explanation:</TextChart.Title>
+    <div
+      className={cn(`
+      gap-4 h-full
+      grid grid-cols-1 grid-rows-[auto,auto,auto] 
+      @xl:grid-cols-[1fr,1fr] @xl:grid-rows-[auto,1fr]
+    `)}
+    >
+      <TextChart.Wrapper className="h-fit min-w-0">
+        <TextChart.Title>What is a transition?</TextChart.Title>
         <TextChart.Text>
-          Changing role works as a transaction. It fetches the role, and based
-          on the role info, fetch the permissions. If one of the requests fails,
-          all the changes made by the transition{" "}
-          <TextChart.Strong>are discarded</TextChart.Strong> and{" "}
-          <TextChart.Strong>no changes are made</TextChart.Strong>.
+          When dispatching an action, it might trigger asynchronous operations.
+          Passing a <TextChart.Italic>'transition'</TextChart.Italic> property
+          to your action makes{" "}
+          <TextChart.Strong>
+            all async operations initiated by this action get grouped under the
+            same transition label
+          </TextChart.Strong>
+          .
           <br />
           <br />
-          It is made this way to prevent your store state to end up in a invalid
-          state <i>
-            (e.g: user role, but admin permissions, or vice versa).
-          </i>{" "}
-          Firing a transition is changing your app from the current, valid
-          state, to another valid state.
+          This allow you to{" "}
+          <TextChart.Strong>
+            derive loadings states effortlessly
+          </TextChart.Strong>{" "}
+          by simply subscribing to the transitions you want using hooks!
+          <CodeEditor
+            wrapperClassName="my-2 block"
+            value='const isLoading = useTransition(["auth", "role"])'
+          />
+          For callbacks you have access to{" "}
+          <TextChart.Italic>'transitionStore'</TextChart.Italic> where you can
+          interact with the transitions, check if a transition is running,
+          append callbacks for when a transition is done, and much more!
+          <br />
+          <br />
         </TextChart.Text>
       </TextChart.Wrapper>
+      <TextChart.Wrapper className="h-fit">
+        <TextChart.Title>Page example:</TextChart.Title>
+        <TextChart.Text>
+          Here is an example, changing roles works like a transaction. It
+          fetches the role, and based on the role info, fetches the permissions.
+          If one of the requests fails, all changes made by the async operation{" "}
+          <TextChart.Strong>are discarded</TextChart.Strong> and{" "}
+          <TextChart.Strong>no changes are applied</TextChart.Strong>.
+          <br />
+          <br />
+          It's designed this way to prevent your store state from ending up in
+          an invalid state{" "}
+          <TextChart.Italic>
+            (e.g: a user role with admin permissions, or vice versa).
+          </TextChart.Italic>{" "}
+          <TextChart.Important>
+            Firing a transition means changing your app from one valid state to
+            another valid state.
+          </TextChart.Important>
+        </TextChart.Text>
+      </TextChart.Wrapper>
+      {/* <div className="flex gap-8 h-full"> */}
+      <div className="h-full pt-4 pl-4 grid grid-rows-[auto,1fr] gap-4">
+        <div className="gap-6 h-fit grid grid-cols-[auto,1fr]">
+          <label className="grid grid-cols-subgrid col-span-2 relative gap-2">
+            <div className="top-0 left-0 right-0 absolute h-[1px] bg-white/10 -translate-y-3"></div>
+            <strong className="text-right">Username</strong>
+            <input
+              type="text"
+              value={state.username}
+              placeholder="Your username..."
+              onChange={e => {
+                const value = e.target.value
+                authStore.setState({
+                  username: value,
+                })
+              }}
+            />
+          </label>
+          <label className="grid grid-cols-subgrid col-span-2 relative gap-2">
+            <div className="top-0 left-0 right-0 absolute h-[1px] bg-white/10 -translate-y-3"></div>
+            <strong className="text-right">Role</strong>
+
+            <select
+              name=""
+              id=""
+              value={state.role}
+              className={cn(
+                "disabled:opacity-30 disabled:cursor-not-allowed",
+                isChangingRole && "opacity-30"
+              )}
+              onChange={e => {
+                const selectedRole = e.target.value as "user" | "admin"
+                authStore.dispatch({
+                  type: "change-role",
+                  role: selectedRole,
+                  transition: ["auth", "role"],
+                  beforeDispatch: removeCurrentToastsAndRegisterNewToasts,
+                  onTransitionEnd: toastWithResult,
+                })
+              }}
+            >
+              <option value="user">User</option>
+              <option value="admin">Admin</option>
+            </select>
+          </label>
+        </div>
+        {isChangingRole ? (
+          <div className="grid place-items-center w-full h-full">
+            <div className="flex items-center gap-4">
+              <span className="tracking-wide text-xl">Transiting...</span>
+              <Spinner size={24} />
+            </div>
+          </div>
+        ) : null}
+      </div>
+      <div className="h-full min-w-0">
+        <Devtools
+          store={authStore}
+          allExpanded
+        />
+      </div>
+      {/* </div> */}
     </div>
   )
 }

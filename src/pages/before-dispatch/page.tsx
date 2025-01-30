@@ -14,7 +14,6 @@ import { Spinner } from "@blueprintjs/core"
 import { useSuspenseQuery } from "@tanstack/react-query"
 import { noop } from "lodash"
 import { CSSProperties, ReactNode, Suspense, useState } from "react"
-import Editor from "react-simple-code-editor"
 import invariant from "tiny-invariant"
 import { createStoreUtils } from "~/create-store/createStoreUtils"
 import { newStoreDef } from "~/create-store/store"
@@ -28,7 +27,7 @@ import {
 import { cn } from "~/lib/cn"
 import { formatScript } from "~/lib/prettify-code"
 import { Theme } from "~/theme"
-import st from "./page.module.css"
+import { CodeEditor } from "~/components/code-editor"
 
 type TransitionsStoreState = {
   count: number
@@ -432,45 +431,7 @@ export function CodeBlock({ example }: CodeBlockProps) {
 
   const { script: code, longestLineLength } = data
 
-  return (
-    <div
-      className={cn(
-        "grow shrink-0 basis-0 min-h-0 flex flex-col min-w-0 flex-1 h-full",
-        st.fixStyles,
-        theme === "light" && st.color_light_mode
-      )}
-    >
-      <div className="flex grow rounded-sm overflow-y-auto dark:border-gray-800 border-gray-200 border focus-within:ring-1 focus-within:ring-blue-100 focus-within:border-blue-600 h-fit">
-        {/* <pre>{longestLineLength}</pre> */}
-        <div
-          className="min-w-[--code-width] w-full outline-amber-500 ring-amber-500 border-amber-600"
-          style={
-            {
-              "--code-width": `calc(${longestLineLength}px * 8.4)`,
-            } as CSSProperties
-          }
-        >
-          {code && (
-            <Editor
-              onValueChange={noop}
-              name="on_dispatch"
-              value={code}
-              highlight={code => highlight(code, languages.javascript)}
-              padding={12}
-              preClassName="outline-amber-500 ring-amber-500 border-amber-600"
-              className="font-mono text-[10px] min-w-[--code-width] w-full h-full min-h-min py-2 px-4 dark:bg-gray-900 rounded-sm outline-none border-none outline-amber-500 ring-amber-500 border-amber-600"
-              textareaClassName="focus-visible:border-none focus-visible:outline-none outline-amber-500 ring-amber-500 border-amber-600"
-              style={{
-                fontFamily:
-                  '"JetBrains Mono" "Fira code", "Fira Mono", monospace',
-                fontSize: 12,
-              }}
-            />
-          )}
-        </div>
-      </div>
-    </div>
-  )
+  return <CodeEditor value={code} />
 }
 
 function processFunctionString(funcString: string) {
