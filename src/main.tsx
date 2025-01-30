@@ -11,6 +11,7 @@ import { Providers } from "./providers.tsx"
 import { VideoPage } from "~/pages/VideoPage.tsx"
 import { PostHogProvider, usePostHog } from "posthog-js/react"
 import { Theme, themeStore } from "~/theme.tsx"
+import { matches } from "lodash"
 
 function onThemeChange(event: any, theme: string) {
   if (event.matches) {
@@ -32,6 +33,7 @@ function ensureThemeChangeOnSystemChange(theme: string) {
 
 ensureThemeChangeOnSystemChange("light")
 ensureThemeChangeOnSystemChange("dark")
+onThemeChange({ matches: true }, "dark")
 
 export const routesManifest = [
   {
