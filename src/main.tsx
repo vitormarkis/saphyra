@@ -1,17 +1,16 @@
 import "@blueprintjs/core/lib/css/blueprint.css"
 import "@blueprintjs/icons/lib/css/blueprint-icons.css"
 import "normalize.css"
+import "./index.css"
 import { createRoot } from "react-dom/client"
 import { createBrowserRouter, Outlet, RouterProvider } from "react-router-dom"
 import App from "./App.tsx"
 import { RootLayoutWrapper } from "./Navigation.tsx"
-import "./index.css"
 import { myRoutesManifest } from "./my-routes-manifest.tsx"
 import { Providers } from "./providers.tsx"
 import { VideoPage } from "~/pages/VideoPage.tsx"
-import { PostHogProvider, usePostHog } from "posthog-js/react"
-import { Theme, themeStore } from "~/theme.tsx"
-import { matches } from "lodash"
+import { PostHogProvider } from "posthog-js/react"
+import { themeStore } from "~/theme.tsx"
 
 function onThemeChange(event: any, theme: string) {
   if (event.matches) {

@@ -1,13 +1,10 @@
+import { Icon } from "@blueprintjs/core"
 import { PropsWithChildren, useEffect, useState } from "react"
-import { capitalize } from "./lib/utils"
 import { cn } from "./lib/cn"
-import { myRoutesManifest } from "./my-routes-manifest"
-import { NavLink } from "react-router-dom"
-import { TextChart } from "./components/text-chart"
+import { NavigationContent } from "./NavigationContent"
+import { MobileNavigation } from "./MobileNavigation"
 
 type RootLayoutWrapperProps = {} & PropsWithChildren
-
-const routes = ["/", ...myRoutesManifest.map(route => route.path)]
 
 export function RootLayoutWrapper({ children }: RootLayoutWrapperProps) {
   const [isSidebarVisible, setIsSidebarVisible] = useState(
@@ -21,46 +18,32 @@ export function RootLayoutWrapper({ children }: RootLayoutWrapperProps) {
   }, [])
 
   return (
-    <div className="container-1 flex gap-4 h-screen p-4 ">
-      <div
-        className={cn(
-          "flex flex-col text-sm basis-[250px]",
-          !isSidebarVisible && "hidden"
-        )}
-      >
-        <div className="border border-dashed container-2 h-full flex flex-col px-4 py-6 text-sm rounded-md ">
-          <h3 className="font-bold text-normal leading-7">Examples:</h3>
-          <TextChart.Wrapper className="px-2 py-1">
-            <TextChart.Text className="text-xs">
-              Explore <TextChart.Strong>Saphyra</TextChart.Strong> and how it
-              helps solve many common challenges you face when building a
-              feature.
-            </TextChart.Text>
-          </TextChart.Wrapper>
-          <nav className="flex flex-col py-6 gap-1">
-            {routes.map(route => (
-              <NavLink
-                to={route}
-                key={route}
-                className={({ isActive }) =>
-                  cn(
-                    "hover:bg-gray-100 dark:hover:bg-gray-900 dark:hover:text-white w-full py-1 px-2 rounded-sm",
-                    isActive &&
-                      "bg-blue-500 text-white hover:bg-blue-500 hover:text-white"
-                  )
-                }
-              >
-                {route === "/"
-                  ? "Home"
-                  : capitalize(route?.replace("/", "").replaceAll("-", " "))}
-              </NavLink>
-            ))}
-          </nav>
+    <div className="h-screen grid grid-rows-[auto,1fr] sm:grid-rows-1">
+      <header className="flex sm:hidden container-1 border-b border-gray-800 h-12 w-full px-2">
+        <MobileNavigation>
+          <div
+            role="button"
+            className="h-full aspect-square hover:bg-gray-800 grid place-items-center"
+          >
+            <Icon icon="menu" />
+          </div>
+        </MobileNavigation>
+      </header>
+      <div className="container-1 flex gap-4 h-full p-4 overflow-y-hidden">
+        <div
+          className={cn(
+            "flex-col text-sm basis-[250px] hidden sm:flex",
+            !isSidebarVisible && "hidden"
+          )}
+        >
+          <div className="border border-dashed container-2 h-full flex flex-col px-4 py-6 text-sm rounded-md ">
+            <NavigationContent />
+          </div>
         </div>
-      </div>
-      <div className="flex-1 flex flex-col text-sm min-w-[250px]">
-        <div className="border border-dashed container-2 h-full flex flex-col px-4 py-6 text-sm rounded-md @container overflow-y-auto">
-          {children}
+        <div className="flex-1 flex flex-col text-sm min-w-[250px]">
+          <div className="border border-dashed container-2 h-full flex flex-col px-4 py-6 text-sm rounded-md @container overflow-y-auto">
+            {children}
+          </div>
         </div>
       </div>
     </div>
