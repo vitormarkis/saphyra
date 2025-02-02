@@ -27,7 +27,8 @@ export type EventsFormat = EventsTuple | Record<KeyAbort, []>
 
 export type GenericStoreValues<
   TState,
-  TEvents extends EventsTuple = EventsTuple,
+  TEvents extends EventsTuple,
+  TUncontrolledState extends Record<string, any>,
 > = {
   errors: ErrorsStore
   events: EventEmitter<TEvents>
@@ -35,13 +36,14 @@ export type GenericStoreValues<
   errorHandlers: Set<StoreErrorHandler>
   settersRegistry: SettersRegistry<TState>
 } & TransitionsExtension &
-  HistoryExtension<TState>
+  HistoryExtension<TState> &
+  UncontrolledState<TUncontrolledState>
 
 export type GenericStoreMethods<
   TState,
   TActions extends BaseAction<TState>,
   TEvents extends EventsTuple,
-  TUncontrolledState,
+  TUncontrolledState extends Record<string, any>,
 > = {
   getState(): TState
   dispatch: Dispatch<TState, TActions>
@@ -65,7 +67,9 @@ export type GenericStoreMethods<
   ): void
 }
 
-type UncontrolledState<TUncontrolledState> = {
+type UncontrolledState<
+  TUncontrolledState extends Record<string, any> = Record<string, any>,
+> = {
   uncontrolledState: TUncontrolledState
 }
 
@@ -73,11 +77,10 @@ export type SomeStore<
   TState,
   TActions extends BaseAction<TState>,
   TEvents extends EventsTuple,
-  TUncontrolledState,
-> = GenericStoreValues<TState, TEvents> &
+  TUncontrolledState extends Record<string, any>,
+> = GenericStoreValues<TState, TEvents, TUncontrolledState> &
   GenericStoreMethods<TState, TActions, TEvents, TUncontrolledState> &
-  SubjectType &
-  UncontrolledState<TUncontrolledState>
+  SubjectType
 
 export type TransitionFunctionOptions = {
   transition: any[] | null | undefined
@@ -243,7 +246,7 @@ export type StoreInstantiator<
   TState,
   TActions extends BaseAction<TState>,
   TEvents extends EventsTuple,
-  TUncontrolledState,
+  TUncontrolledState extends Record<string, any>,
 > = (
   initialProps: RemoveDollarSignProps<TInitialProps>,
   config?: StoreConstructorConfig

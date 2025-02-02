@@ -51,7 +51,7 @@ type OnConstructProps<
   TState,
   TActions extends BaseAction<TState>,
   TEvents extends EventsTuple,
-  TUncontrolledState,
+  TUncontrolledState extends Record<string, any> = Record<string, any>,
 > = {
   initialProps: TInitialProps
   store: SomeStore<TState, TActions, TEvents, TUncontrolledState>
@@ -63,7 +63,7 @@ type OnConstruct<
   TState,
   TActions extends BaseAction<TState>,
   TEvents extends EventsTuple,
-  TUncontrolledState,
+  TUncontrolledState extends Record<string, any> = Record<string, any>,
 > = (
   props: OnConstructProps<
     TInitialProps,
@@ -80,7 +80,7 @@ function defaultOnConstruct<
   TState,
   TActions extends BaseAction<TState>,
   TEvents extends EventsTuple,
-  TUncontrolledState,
+  TUncontrolledState extends Record<string, any> = Record<string, any>,
 >(
   props: OnConstructProps<
     TInitialProps,
@@ -104,7 +104,7 @@ type ReducerProps<
   TState,
   TActions extends BaseAction<TState> & DefaultActions,
   TEvents extends EventsTuple,
-  TUncontrolledState,
+  TUncontrolledState extends Record<string, any>,
 > = {
   prevState: TState
   state: TState
@@ -121,7 +121,7 @@ export type Reducer<
   TState,
   TActions extends BaseAction<TState>,
   TEvents extends EventsTuple,
-  TUncontrolledState,
+  TUncontrolledState extends Record<string, any> = Record<string, any>,
 > = (
   props: ReducerProps<TState, TActions, TEvents, TUncontrolledState>
 ) => TState
@@ -130,7 +130,7 @@ function defaultReducer<
   TState,
   TActions extends BaseAction<TState>,
   TEvents extends EventsTuple,
-  TUncontrolledState,
+  TUncontrolledState extends Record<string, any> = Record<string, any>,
 >(props: ReducerProps<TState, TActions, TEvents, TUncontrolledState>) {
   return props.state
 }
@@ -147,7 +147,7 @@ type CreateStoreOptions<
   TState,
   TActions extends BaseAction<TState>,
   TEvents extends EventsTuple,
-  TUncontrolledState,
+  TUncontrolledState extends Record<string, any> = Record<string, any>,
 > = {
   onConstruct?: OnConstruct<
     TInitialProps,
@@ -170,7 +170,7 @@ export function newStoreDef<
   TState extends BaseState = TInitialProps & BaseState,
   TActions extends BaseAction<TState> = DefaultActions & BaseAction<TState>,
   TEvents extends EventsTuple = EventsTuple,
-  TUncontrolledState = any,
+  TUncontrolledState extends Record<string, any> = Record<string, any>,
 >(
   {
     onConstruct = defaultOnConstruct<
@@ -209,16 +209,18 @@ export function newStoreDef<
     const subject = createSubject()
     const errorsStore = new ErrorsStore()
 
-    const storeValues: GenericStoreValues<TState, TEvents> = {
-      errors: errorsStore,
-      transitions: new TransitionsStore(),
-      events: new EventEmitter(),
-      history: [],
-      historyRedo: [],
-      errorHandlers: new Set(),
-      settersRegistry: {},
-      state: {} as TState,
-    }
+    const storeValues: GenericStoreValues<TState, TEvents, TUncontrolledState> =
+      {
+        errors: errorsStore,
+        transitions: new TransitionsStore(),
+        events: new EventEmitter(),
+        history: [],
+        historyRedo: [],
+        errorHandlers: new Set(),
+        settersRegistry: {},
+        state: {} as TState,
+        uncontrolledState: {} as TUncontrolledState,
+      }
     let store = createDebugableShallowCopy(
       storeValues as unknown as SomeStore<
         TState,

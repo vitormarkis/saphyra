@@ -39,7 +39,8 @@ const newAuthStore = newStoreDef<
   AuthStoreState,
   AuthStoreState,
   AuthStoreActions,
-  { [K: string]: any[] }
+  { [K: string]: any[] },
+  { vitor: "markis" }
 >({
   reducer({ prevState, state, action, diff, set, async, events }) {
     if (action?.type === "change-role") {
@@ -132,6 +133,7 @@ export function ChangeRolePage() {
 
 function ChangeRolePageContent() {
   const [authStore] = Auth.useUseState()
+  authStore.uncontrolledState.vitor
   const state = Auth.useStore()
 
   const isChangingRole = Auth.useTransition(["auth", "role"])

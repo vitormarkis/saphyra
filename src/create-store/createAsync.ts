@@ -26,7 +26,7 @@ function createTransitionDispatch<
   TState,
   TActions extends BaseAction<TState>,
   TEvents extends EventsTuple,
-  TUncontrolledState,
+  TUncontrolledState extends Record<string, any> = Record<string, any>,
 >(
   store: SomeStore<TState, TActions, TEvents, TUncontrolledState>,
   transition: any[] | null | undefined
@@ -43,7 +43,7 @@ export function createAsync<
   TState = BaseState,
   TActions extends BaseAction<TState> = DefaultActions & BaseAction<TState>,
   TEvents extends EventsTuple = EventsTuple,
-  TUncontrolledState = any,
+  TUncontrolledState extends Record<string, any> = Record<string, any>,
 >(
   store: SomeStore<TState, TActions, TEvents, TUncontrolledState>,
   state: TState,

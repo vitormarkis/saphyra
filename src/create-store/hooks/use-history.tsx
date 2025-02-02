@@ -19,7 +19,7 @@ export function useHistory<
   TState = BaseState,
   TActions extends BaseAction<TState> = DefaultActions & BaseAction<TState>,
   TEvents extends EventsTuple = EventsTuple,
-  TUncontrolledState = any,
+  TUncontrolledState extends Record<string, any> = Record<string, any>,
 >(
   store: SomeStore<TState, TActions, TEvents, TUncontrolledState>,
   el: Eventable = document
