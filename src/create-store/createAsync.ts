@@ -25,9 +25,10 @@ export const errorNoTransition = () =>
 function createTransitionDispatch<
   TState,
   TActions extends BaseAction<TState>,
-  TEvents extends EventsTuple
+  TEvents extends EventsTuple,
+  TUncontrolledState,
 >(
-  store: SomeStore<TState, TActions, TEvents>,
+  store: SomeStore<TState, TActions, TEvents, TUncontrolledState>,
   transition: any[] | null | undefined
 ): Dispatch<TState, TActions> {
   return function dispatch(action: TActions) {
@@ -41,9 +42,10 @@ function createTransitionDispatch<
 export function createAsync<
   TState = BaseState,
   TActions extends BaseAction<TState> = DefaultActions & BaseAction<TState>,
-  TEvents extends EventsTuple = EventsTuple
+  TEvents extends EventsTuple = EventsTuple,
+  TUncontrolledState = any,
 >(
-  store: SomeStore<TState, TActions, TEvents>,
+  store: SomeStore<TState, TActions, TEvents, TUncontrolledState>,
   state: TState,
   transition: any[] | null | undefined,
   signal: AbortSignal

@@ -51,9 +51,10 @@ type OnConstructProps<
   TState,
   TActions extends BaseAction<TState>,
   TEvents extends EventsTuple,
+  TUncontrolledState,
 > = {
   initialProps: TInitialProps
-  store: SomeStore<TState, TActions, TEvents>
+  store: SomeStore<TState, TActions, TEvents, TUncontrolledState>
   signal: AbortSignal
 }
 
@@ -62,8 +63,15 @@ type OnConstruct<
   TState,
   TActions extends BaseAction<TState>,
   TEvents extends EventsTuple,
+  TUncontrolledState,
 > = (
-  props: OnConstructProps<TInitialProps, TState, TActions, TEvents>,
+  props: OnConstructProps<
+    TInitialProps,
+    TState,
+    TActions,
+    TEvents,
+    TUncontrolledState
+  >,
   config?: StoreConstructorConfig
 ) => RemoveDollarSignProps<TState> | Promise<RemoveDollarSignProps<TState>>
 
@@ -72,8 +80,15 @@ function defaultOnConstruct<
   TState,
   TActions extends BaseAction<TState>,
   TEvents extends EventsTuple,
+  TUncontrolledState,
 >(
-  props: OnConstructProps<TInitialProps, TState, TActions, TEvents>,
+  props: OnConstructProps<
+    TInitialProps,
+    TState,
+    TActions,
+    TEvents,
+    TUncontrolledState
+  >,
   _config?: StoreConstructorConfig
 ) {
   const state = props.initialProps as unknown as TState
@@ -89,12 +104,13 @@ type ReducerProps<
   TState,
   TActions extends BaseAction<TState> & DefaultActions,
   TEvents extends EventsTuple,
+  TUncontrolledState,
 > = {
   prevState: TState
   state: TState
   action: TActions
   async: Async<TState, TActions>
-  store: SomeStore<TState, TActions, TEvents>
+  store: SomeStore<TState, TActions, TEvents, TUncontrolledState>
   events: EventEmitter<TEvents>
   set: ReducerSet<TState>
   diff: Diff<TState>
@@ -105,13 +121,17 @@ export type Reducer<
   TState,
   TActions extends BaseAction<TState>,
   TEvents extends EventsTuple,
-> = (props: ReducerProps<TState, TActions, TEvents>) => TState
+  TUncontrolledState,
+> = (
+  props: ReducerProps<TState, TActions, TEvents, TUncontrolledState>
+) => TState
 
 function defaultReducer<
   TState,
   TActions extends BaseAction<TState>,
   TEvents extends EventsTuple,
->(props: ReducerProps<TState, TActions, TEvents>) {
+  TUncontrolledState,
+>(props: ReducerProps<TState, TActions, TEvents, TUncontrolledState>) {
   return props.state
 }
 
@@ -127,9 +147,16 @@ type CreateStoreOptions<
   TState,
   TActions extends BaseAction<TState>,
   TEvents extends EventsTuple,
+  TUncontrolledState,
 > = {
-  onConstruct?: OnConstruct<TInitialProps, TState, TActions, TEvents>
-  reducer?: Reducer<TState, TActions, TEvents>
+  onConstruct?: OnConstruct<
+    TInitialProps,
+    TState,
+    TActions,
+    TEvents,
+    TUncontrolledState
+  >
+  reducer?: Reducer<TState, TActions, TEvents, TUncontrolledState>
 }
 
 export type StoreConstructorConfig = {
@@ -143,18 +170,42 @@ export function newStoreDef<
   TState extends BaseState = TInitialProps & BaseState,
   TActions extends BaseAction<TState> = DefaultActions & BaseAction<TState>,
   TEvents extends EventsTuple = EventsTuple,
+  TUncontrolledState = any,
 >(
   {
-    onConstruct = defaultOnConstruct<TInitialProps, TState, TActions, TEvents>,
-    reducer: userReducer = defaultReducer<TState, TActions, TEvents>,
-  }: CreateStoreOptions<TInitialProps, TState, TActions, TEvents> = {} as any
-): StoreInstantiator<TInitialProps, TState, TActions, TEvents> {
-  type Met = GenericStoreMethods<TState, TActions, TEvents>
+    onConstruct = defaultOnConstruct<
+      TInitialProps,
+      TState,
+      TActions,
+      TEvents,
+      TUncontrolledState
+    >,
+    reducer: userReducer = defaultReducer<
+      TState,
+      TActions,
+      TEvents,
+      TUncontrolledState
+    >,
+  }: CreateStoreOptions<
+    TInitialProps,
+    TState,
+    TActions,
+    TEvents,
+    TUncontrolledState
+  > = {} as any
+): StoreInstantiator<
+  TInitialProps,
+  TState,
+  TActions,
+  TEvents,
+  TUncontrolledState
+> {
+  type Met = GenericStoreMethods<TState, TActions, TEvents, TUncontrolledState>
 
   function createStore(
     initialProps: RemoveDollarSignProps<TInitialProps>,
     config: StoreConstructorConfig = {} as StoreConstructorConfig
-  ): SomeStore<TState, TActions, TEvents> {
+  ): SomeStore<TState, TActions, TEvents, TUncontrolledState> {
     const subject = createSubject()
     const errorsStore = new ErrorsStore()
 
@@ -169,7 +220,12 @@ export function newStoreDef<
       state: {} as TState,
     }
     let store = createDebugableShallowCopy(
-      storeValues as unknown as SomeStore<TState, TActions, TEvents>,
+      storeValues as unknown as SomeStore<
+        TState,
+        TActions,
+        TEvents,
+        TUncontrolledState
+      >,
       "state"
     )
 
@@ -303,7 +359,7 @@ export function newStoreDef<
     const handleRegisterTransition = (
       newState: TState & BaseState,
       action: TActions,
-      store: SomeStore<TState, TActions, TEvents>,
+      store: SomeStore<TState, TActions, TEvents, TUncontrolledState>,
       rollback: Rollback
     ) => {
       const currentTransitionName = store.state.currentTransition?.join(":")
@@ -424,7 +480,12 @@ export function newStoreDef<
         )
 
         const futurePrevState = { ...newState }
-        const context: ReducerProps<TState, TActions, TEvents> = {
+        const context: ReducerProps<
+          TState,
+          TActions,
+          TEvents,
+          TUncontrolledState
+        > = {
           prevState: prevState,
           state: newState,
           action,
@@ -446,8 +507,13 @@ export function newStoreDef<
             })
           },
         }
-        const reducer: Reducer<TState, TActions, TEvents> = (
-          props: ReducerProps<TState, TActions, TEvents>
+        const reducer: Reducer<
+          TState,
+          TActions,
+          TEvents,
+          TUncontrolledState
+        > = (
+          props: ReducerProps<TState, TActions, TEvents, TUncontrolledState>
         ) => {
           if (props.action.type === "$$lazy-value") {
             props.async

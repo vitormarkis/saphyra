@@ -17,7 +17,7 @@ type CounterActions =
       type: "increment-async-error"
     }
 
-export type TestCounterStore = SomeStore<CounterState, CounterActions, {}>
+export type TestCounterStore = SomeStore<CounterState, CounterActions, {}, any>
 
 export const newStore = newStoreDef<CounterState, CounterState, CounterActions>(
   {
@@ -124,7 +124,7 @@ export function prepareInfo(
 export function captureValueHistory<
   T extends Record<string, any>,
   TKey extends keyof T,
-  TValue extends T[TKey]
+  TValue extends T[TKey],
 >(
   source: T,
   key: TKey,
@@ -154,7 +154,7 @@ export function captureValueHistory<
 export function captureCallbackHistory<
   T extends Record<string, any>,
   TKey extends keyof T,
-  TValue extends T[TKey]
+  TValue extends T[TKey],
 >(
   source: T,
   key: TKey,

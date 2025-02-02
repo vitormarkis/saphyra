@@ -41,6 +41,7 @@ export type GenericStoreMethods<
   TState,
   TActions extends BaseAction<TState>,
   TEvents extends EventsTuple,
+  TUncontrolledState,
 > = {
   getState(): TState
   dispatch: Dispatch<TState, TActions>
@@ -56,7 +57,7 @@ export type GenericStoreMethods<
   handleError: StoreErrorHandler
   undo(): void
   redo(): void
-  rebuild(): () => SomeStore<TState, TActions, TEvents>
+  rebuild(): () => SomeStore<TState, TActions, TEvents, TUncontrolledState>
   completeTransition(action: GenericAction, transition: any[]): void
   commitTransition(
     transition: any[] | null | undefined,
@@ -64,13 +65,19 @@ export type GenericStoreMethods<
   ): void
 }
 
+type UncontrolledState<TUncontrolledState> = {
+  uncontrolledState: TUncontrolledState
+}
+
 export type SomeStore<
   TState,
   TActions extends BaseAction<TState>,
   TEvents extends EventsTuple,
+  TUncontrolledState,
 > = GenericStoreValues<TState, TEvents> &
-  GenericStoreMethods<TState, TActions, TEvents> &
-  SubjectType
+  GenericStoreMethods<TState, TActions, TEvents, TUncontrolledState> &
+  SubjectType &
+  UncontrolledState<TUncontrolledState>
 
 export type TransitionFunctionOptions = {
   transition: any[] | null | undefined
@@ -229,24 +236,33 @@ export type StoreErrorHandler = (
   transition: any[] | undefined
 ) => void
 
-export type SomeStoreGeneric = SomeStore<any, any, any>
+export type SomeStoreGeneric = SomeStore<any, any, any, any>
 
 export type StoreInstantiator<
   TInitialProps,
   TState,
   TActions extends BaseAction<TState>,
   TEvents extends EventsTuple,
+  TUncontrolledState,
 > = (
   initialProps: RemoveDollarSignProps<TInitialProps>,
   config?: StoreConstructorConfig
-) => SomeStore<TState, TActions, TEvents>
+) => SomeStore<TState, TActions, TEvents, TUncontrolledState>
 
-export type StoreInstantiatorGeneric = StoreInstantiator<any, any, any, any>
+export type StoreInstantiatorGeneric = StoreInstantiator<
+  any,
+  any,
+  any,
+  any,
+  any
+>
 
 export type ExtractEvents<T> =
-  T extends SomeStore<any, any, infer E> ? E : never
+  T extends SomeStore<any, any, infer E, any> ? E : never
 export type ExtractActions<T> =
-  T extends SomeStore<any, infer A, any> ? A : never
+  T extends SomeStore<any, infer A, any, any> ? A : never
+export type ExtractUncontrolledState<T> =
+  T extends SomeStore<any, any, any, infer US> ? US : never
 
 type OnFinishTransitionProps = {
   transitionName: string
