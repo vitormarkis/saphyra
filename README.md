@@ -1,3 +1,4 @@
+# Introdução
 Se você está curioso por que eu decidi criar uma biblioteca de gerenciamento de estado mesmo sabendo que já existe uma infinidade no mercado, é porque essa biblioteca se baseia em alguns bons princípios, os quais eu recomendo fortemente [a leitura aqui]().
 
 ### Qual a promessa de Saphyra?
