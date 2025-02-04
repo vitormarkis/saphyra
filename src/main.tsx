@@ -32,7 +32,6 @@ function ensureThemeChangeOnSystemChange(theme: string) {
 
 ensureThemeChangeOnSystemChange("light")
 ensureThemeChangeOnSystemChange("dark")
-onThemeChange({ matches: true }, "dark")
 
 export const routesManifest = [
   {

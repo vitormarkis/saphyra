@@ -6,6 +6,7 @@ import { BaseState } from "./create-store/types"
 import { createStoreUtils } from "./create-store/createStoreUtils"
 import { sleep } from "./sleep"
 import { Devtools } from "~/devtools/devtools"
+import { Waterfall } from "./devtools/waterfall"
 
 type CounterState = BaseState & {
   count: number
@@ -77,16 +78,17 @@ export default function App() {
   useHistory(countStore)
 
   useEffect(() => {
-    Object.assign(window, {
-      todosStore: countStore,
-    })
+    Object.assign(window, { countStore })
   }, [])
 
   return (
     <Todos.Provider value={countStoreState}>
-      <Content />
-      <div className="mt-4">
-        <Devtools store={countStore} />
+      <div className="grid grid-rows-[auto 1fr] gap-4">
+        <Content />
+        <div className="grid grid-cols-2 gap-4">
+          <Devtools store={countStore} />
+          <Waterfall store={countStore} />
+        </div>
       </div>
     </Todos.Provider>
   )
