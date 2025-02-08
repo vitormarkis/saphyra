@@ -1,10 +1,18 @@
-import { useEffect, useReducer, useState } from "react"
-import { newWaterfallStore, WF } from "./store"
-import { BarType } from "./types"
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useMemo,
+  useReducer,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react"
+import { newWaterfallStore, WaterfallState, WaterfallStore, WF } from "./store"
 import { cn } from "~/lib/cn"
 import { SomeStoreGeneric } from "~/create-store"
 import { BarFilters } from "./filters"
-import { ChevronDown, ChevronUp } from "lucide-react"
+import { ChevronUp } from "lucide-react"
 import React from "react"
 
 type WaterfallProps = {
@@ -20,7 +28,6 @@ export function Waterfall({ store }: WaterfallProps) {
     })
   )
   const [waterfallStore] = waterfallState
-  const state = WF.useStore(undefined, waterfallStore)
 
   useEffect(() =>
     store.internal.events.on("new-transition", ({ transitionName, id }) => {
@@ -150,51 +157,33 @@ export function WaterfallController({}: WaterfallControllerProps) {
 
 function WaterfallContent() {
   const [waterfallStore] = WF.useUseState()
-  const bars = WF.useStore(s => s.bars)
-  const displayingBars = WF.useStore(s => s.$displayingBars)
-  const config = WF.useStore(s => s.$config)
-  const distance = WF.useStore(s => s.distance)
+  const displayingBarsIdList = WF.useStore(s => s.$displayingBarsIdList)
 
   useEffect(() => {
     Object.assign(window, { waterfallStore })
   }, [])
 
-  const linesAmount = Math.ceil((config.max - config.min) / distance)
-  const lines = Array.from({ length: linesAmount }).map((_, idx) => ({
-    idx,
-    distance,
-  }))
-
-  const COLUMNS = ["transition name", "timing"]
-
-  const newColumns = displayingBars.reduce((acc, bar) => {
-    COLUMNS.forEach((columnName, idx) => {
-      acc[idx] ??= { columnName, rows: [] }
-      acc[idx].rows.push(bar)
-    })
-
-    return acc
-  }, [] as any[])
-
-  const updateConfig = (bars: BarType[]) => {
+  const updateConfig = useCallback(() => {
+    console.log("refreshing")
     waterfallStore.dispatch({
       type: "refresh",
     })
 
     if (waterfallStore.state.$isSomeRunning) {
-      waterfallStore.uncontrolledState.animationFrame = requestAnimationFrame(
-        () => updateConfig(bars)
-      )
+      waterfallStore.uncontrolledState.animationFrame =
+        requestAnimationFrame(updateConfig)
     }
-  }
+  }, [waterfallStore])
 
-  const rowsAmount = newColumns[0] != null ? newColumns[0].rows.length + 2 : 0
+  const lines = WF.useStore(s => s.$lines)
+
+  const rowsAmount =
+    displayingBarsIdList.length > 0 ? displayingBarsIdList.length + 2 : 0
 
   useEffect(() => {
-    if (rowsAmount === 0) return
-    waterfallStore.uncontrolledState.animationFrame = requestAnimationFrame(
-      () => updateConfig(bars)
-    )
+    if (displayingBarsIdList.length === 0) return
+    waterfallStore.uncontrolledState.animationFrame =
+      requestAnimationFrame(updateConfig)
 
     return () => {
       const { animationFrame } = waterfallStore.uncontrolledState
@@ -202,7 +191,7 @@ function WaterfallContent() {
         cancelAnimationFrame(animationFrame)
       }
     }
-  }, [updateConfig, rowsAmount, bars])
+  }, [updateConfig, displayingBarsIdList.length])
 
   return (
     <div className="border border-gray-200 dark:border-gray-800/70 p-0.5 bg-gray-100 dark:bg-gray-900 overflow-y-auto overflow-x-hidden">
@@ -212,64 +201,41 @@ function WaterfallContent() {
           <FilterHeader property="startedAt">timing</FilterHeader>
         </div>
         <div className="contents">
-          {newColumns.map(column => {
-            if (column.columnName === "timing") {
-              return (
-                <div
-                  key={column.columnName}
-                  className="grid relative grid-cols-subgrid grid-rows-subgrid row-start-2 border  border-gray-200 dark:border-gray-800/70 bg-white dark:bg-black "
-                  style={{ gridRowEnd: rowsAmount }}
-                >
-                  <LineView
-                    hidden={false}
-                    duration={config.max - config.min}
-                    style={{
-                      right: 0,
-                      width: 0,
-                    }}
-                    textOverlay
-                    textPosition="left"
-                  />
-                  {lines.map((line, idx) => (
-                    <Line
-                      key={line.idx}
-                      line={line}
-                      config={config}
-                      idx={idx}
-                    />
-                  ))}
-                  {displayingBars.map((bar, idx) => (
-                    <div
-                      key={bar.id}
-                      className="w-full flex p-0.5 overflow-hidden  border-gray-200 dark:border-gray-800/70"
-                    >
-                      <Bar
-                        key={idx}
-                        bar={bar}
-                        config={config}
-                      />
-                    </div>
-                  ))}
-                </div>
-              )
-            }
-            return (
-              <div
-                key={column.columnName}
-                className="grid grid-cols-subgrid grid-rows-subgrid row-start-2 "
-                style={{ gridRowEnd: rowsAmount }}
+          <div
+            className="grid grid-cols-subgrid grid-rows-subgrid row-start-2 "
+            style={{ gridRowEnd: rowsAmount }}
+          >
+            {displayingBarsIdList.map(barId => (
+              <span
+                key={barId}
+                className="px-3 text-gray-400 p-1 text-sm  border  border-gray-200 dark:border-gray-800/70 bg-white dark:bg-black"
               >
-                {column.rows.map((row: any) => (
-                  <span
-                    key={row.id}
-                    className="px-3 text-gray-400 p-1 text-sm  border  border-gray-200 dark:border-gray-800/70 bg-white dark:bg-black"
-                  >
-                    {row.transitionName}
-                  </span>
-                ))}
-              </div>
-            )
-          })}
+                <TransitionName barId={barId} />
+              </span>
+            ))}
+          </div>
+          <div
+            className="grid relative grid-cols-subgrid grid-rows-subgrid row-start-2 border  border-gray-200 dark:border-gray-800/70 bg-white dark:bg-black "
+            style={{ gridRowEnd: rowsAmount }}
+          >
+            <LineView
+              createStyle={lastLineStyleFn}
+              textOverlay
+              textPosition="left"
+            />
+            {lines.map(line => (
+              <Line
+                key={line.idx}
+                idx={line.idx}
+              />
+            ))}
+            {displayingBarsIdList.map(barId => (
+              <Bar
+                key={barId}
+                barId={barId}
+              />
+            ))}
+          </div>
         </div>
       </div>
     </div>
@@ -277,112 +243,160 @@ function WaterfallContent() {
 }
 
 type BarProps = {
-  bar: BarType
-  config: Record<string, number>
+  barId: string
 }
 
-export function Bar({ bar, config }: BarProps) {
-  const started_diff = bar.startedAt.getTime() - config.min
-  const started_pct = started_diff / config.traveled
-  const started_pctString = started_pct * 100 + "%"
-  const ended_diff =
-    typeof bar.endedAt === "string"
-      ? "running"
-      : bar.endedAt.getTime() - config.min
-  let ended_pct =
-    typeof ended_diff === "string" ? 1 : ended_diff / config.traveled
-  ended_pct = ended_pct > 1 ? 1 : ended_pct
-  const ended_pctString = 100 - ended_pct * 100 + "%"
+export const Bar = memo(function Bar({ barId }: BarProps) {
+  const [waterfallStore] = WF.useUseState()
+  const barRef = useRef<HTMLDivElement>(null)
+  useSyncExternalStore(
+    cb => waterfallStore.subscribe(cb),
+    () => {
+      if (!barRef.current) return
+      const state = waterfallStore.getState()
+      const config = state.$config
+      const bar = state.$barsByBarId[barId]
+      const started_diff = bar.startedAt.getTime() - config.min
+      const started_pct = started_diff / config.traveled
+      const started_pctString = started_pct * 100 + "%"
+      const ended_diff =
+        typeof bar.endedAt === "string"
+          ? "running"
+          : bar.endedAt.getTime() - config.min
+      let ended_pct =
+        typeof ended_diff === "string" ? 1 : ended_diff / config.traveled
+      ended_pct = ended_pct > 1 ? 1 : ended_pct
+      const ended_pctString = 100 - ended_pct * 100 + "%"
 
-  const style = {
-    left: started_pctString,
-    right: ended_pctString,
-    top: 0,
-    bottom: 0,
-  }
+      const style = {
+        left: started_pctString,
+        right: ended_pctString,
+        top: 0,
+        bottom: 0,
+      }
+
+      const el = barRef.current as Record<string, any>
+      for (const prop in style) {
+        el.style[prop] = style[prop as keyof typeof style]
+      }
+      el.setAttribute("data-status", bar.status)
+    }
+  )
 
   return (
-    <div className="relative w-full h-full">
-      <div
-        ref={node => {
-          node?.style
-        }}
-        className={cn("absolute ", {
-          "bg-sky-500": bar.status === "running",
-          "bg-red-500": bar.status === "fail",
-          "bg-green-500": bar.status === "success",
-          "bg-amber-500": bar.status === "cancelled",
-        })}
-        style={style}
-      />
+    <div className="w-full flex p-0.5 overflow-hidden  border-gray-200 dark:border-gray-800/70">
+      <div className="relative w-full h-full">
+        <div
+          ref={barRef}
+          className="absolute data-[status=running]:bg-sky-500 data-[status=fail]:bg-red-500 data-[status=success]:bg-green-500 data-[status=cancelled]:bg-amber-500"
+        />
+      </div>
     </div>
   )
-}
-
-type LineType = {
-  idx: number
-  distance: number
-}
+})
 
 type LineProps = {
-  line: LineType
-  config: Record<string, number>
   idx: number
 }
 
-export function Line({ config, line, idx }: LineProps) {
-  const duration = line.distance * idx
-  const left = duration / config.traveled
+export function Line({ idx }: LineProps) {
+  const lineStyleFn = useMemo(() => createLineStyleFn(idx), [idx])
 
   return (
     <LineView
       textOverlay={false}
-      duration={duration}
-      hidden={left > 1}
-      style={{ left: left * 100 + "%", width: duration === 0 ? 0 : 1 }}
+      createStyle={lineStyleFn}
       textPosition="right"
+      idx={idx}
     />
   )
 }
 type LineViewProps = {
-  duration: number
-  hidden: boolean
-  style: React.CSSProperties
+  createStyle(state: WaterfallState): React.CSSProperties
   textPosition: "left" | "right"
   textOverlay: boolean
+  idx?: number
 }
 
-export function LineView({
-  duration,
-  hidden,
-  style,
+type Handle = {
+  waterfallStore: WaterfallStore
+  lineViewContentRef: React.RefObject<HTMLSpanElement>
+  lineViewRef: React.RefObject<HTMLDivElement>
+  createStyle(state: WaterfallState): React.CSSProperties
+  idx?: number
+}
+
+const handle = ({
+  lineViewContentRef,
+  waterfallStore,
+  lineViewRef,
+  createStyle,
+  idx,
+}: Handle) => {
+  const state = waterfallStore.getState()
+  const duration = state.$config.max - state.$config.min
+
+  if (lineViewContentRef.current) {
+    if (state.$config.max === undefined) return
+    const displayingValue = getDisplayingValue(
+      idx != null ? idx * state.distance : duration
+    )
+    // TODO: check if it's necessary to update the text
+    if (lineViewContentRef.current.innerText !== displayingValue) {
+      lineViewContentRef.current.innerText = displayingValue
+    }
+  }
+
+  if (lineViewRef.current) {
+    const style = createStyle(state)
+    for (const prop in style) {
+      // if(prop === "left" && style[prop] && style[prop] > 1) {
+      // }
+
+      const el = lineViewRef.current as Record<string, any>
+      el.style[prop] = style[prop as keyof typeof style]
+    }
+  }
+}
+
+const LineView = memo(function LineView({
+  createStyle,
   textPosition,
   textOverlay,
+  idx,
 }: LineViewProps) {
-  if (hidden) return null
-
-  const displayingValue = getDisplayingValue(duration)
+  const lineViewRef = useRef<HTMLDivElement>(null)
+  const lineViewContentRef = useRef<HTMLSpanElement>(null)
+  const [waterfallStore] = WF.useUseState()
+  useSyncExternalStore(
+    cb => waterfallStore.subscribe(cb),
+    () =>
+      handle({
+        createStyle,
+        lineViewContentRef,
+        lineViewRef,
+        waterfallStore,
+        idx,
+      })
+  )
 
   return (
     <div
+      ref={lineViewRef}
       className="absolute w-[1px] bottom-0 top-0 bg-gray-100 dark:bg-gray-900"
-      style={{
-        ...style,
-      }}
     >
       <span
         className={cn(
           "absolute bottom-full text-[10px] text-gray-400",
           textPosition === "left" ? "-translate-x-full" : "",
           textOverlay &&
-            "bg-gray-100 dark:bg-gray-900 leading-[10px] mb-[5px] z-10"
+            "bg-gray-100 dark:bg-gray-900 leading-[10px] mb-[5px] z-10 pl-4"
         )}
-      >
-        {displayingValue}
-      </span>
+        ref={lineViewContentRef}
+      />
     </div>
   )
-}
+})
 
 /**
  * Formats the duration value to a string with appropriate units.
@@ -478,3 +492,28 @@ export const ChevronCornerWrapper = React.forwardRef<
     />
   )
 })
+
+type TransitionNameProps = {
+  barId: string
+}
+
+export function TransitionName({ barId }: TransitionNameProps) {
+  const transitionName = WF.useStore(
+    s => s.$displayingBars.find(bar => bar.id === barId)?.transitionName
+  )
+  return transitionName
+}
+
+const createLineStyleFn = (idx: number) => (state: WaterfallState) => {
+  const duration = state.distance * idx
+  const left = duration / state.$config.traveled
+
+  return { left: left * 100 + "%", width: duration === 0 ? 0 : 1 }
+}
+
+const lastLineStyleFn = () => {
+  return {
+    right: 0,
+    width: 0,
+  }
+}

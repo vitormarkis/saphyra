@@ -13,8 +13,13 @@ type WaterfallInitialProps = {
 
 type BarFilterableProperties = keyof BarFilters
 
-type WaterfallState = {
+type LineType = {
+  idx: number
+}
+
+export type WaterfallState = {
   bars: BarType[]
+  $barsByBarId: Record<string, BarType>
   now: number
   distance: number
   clearTimeout: number
@@ -27,10 +32,13 @@ type WaterfallState = {
       filter: BarFilter | null
     }
   >
+  $displayingBarsIdList: string[]
   $filtersFnList: BarFilter[]
   $config: Record<string, number>
   $displayingBars: BarType[]
   $isSomeRunning: boolean
+  $lines: LineType[]
+  $linesAmount: number
 }
 
 type WaterfallAction =
@@ -183,8 +191,37 @@ export const newWaterfallStore = newStoreDef<
       })
     }
 
+    if (diff(["$displayingBars"])) {
+      state.$displayingBarsIdList = state.$displayingBars.map(bar => bar.id)
+    }
+
+    state.$linesAmount = Math.ceil(
+      (state.$config.max - state.$config.min) / state.distance
+    )
+    if (isNaN(state.$linesAmount)) {
+      debugger
+    }
+
+    if (diff(["$linesAmount"])) {
+      state.$lines = Array.from({ length: state.$linesAmount }).map(
+        (_, idx): LineType => ({ idx })
+      )
+    }
+
+    if (diff(["bars"])) {
+      state.$barsByBarId = state.bars.reduce(
+        (acc, bar) => {
+          acc[bar.id] = bar
+          return acc
+        },
+        {} as Record<string, BarType>
+      )
+    }
+
     return state
   },
 })
 
 export const WF = createStoreUtils<typeof newWaterfallStore>()
+
+export type WaterfallStore = ReturnType<typeof newWaterfallStore>
