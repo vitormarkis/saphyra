@@ -1,3 +1,4 @@
+import { BarFilter, BarFilters } from "./filters"
 import { BarSort, BarSorters } from "./sorters"
 
 export type BarType = {
@@ -9,11 +10,11 @@ export type BarType = {
 }
 
 export type CurrentSorters = Record<
-  BarFilterableProperties,
+  BarSortableProperties,
   {
     name: string
     sorter: BarSort | null
   }
 >
 
-type BarFilterableProperties = keyof BarSorters
+type BarSortableProperties = keyof BarSorters

@@ -1,9 +1,10 @@
-import { BarType, CurrentSorters } from "./types"
+import { BarFiltersState, BarType, CurrentSorters } from "./types"
 import { reduceConfig } from "./fn/reduce-config"
 import { createStoreUtils, newStoreDef } from "~/create-store"
 import { BaseState } from "~/create-store/types"
 import { BarSort, barSorters, BarSorters } from "~/devtools/waterfall/sorters"
 import { nonNullable } from "~/lib/utils"
+import { BarFilter, barFilters, BarFilters } from "./filters"
 
 type WaterfallInitialProps = {
   bars: BarType[]
@@ -26,6 +27,10 @@ export type WaterfallState = {
   barSorters: BarSorters
   $currentSorters: CurrentSorters
   $sortersFnList: BarSort[]
+
+  barFilters: BarFilters
+  query: string
+  $filtersFnList: BarFilter[]
 
   $displayingBarsIdList: string[]
   $config: Record<string, number>
@@ -65,6 +70,12 @@ type WaterfallAction =
         field: keyof BarSorters
       }
     }
+  | {
+      type: "filter"
+      payload: {
+        query: string
+      }
+    }
 
 type WaterfallUncontrolledState = {
   clearTimeout: NodeJS.Timeout
@@ -81,9 +92,11 @@ export const newWaterfallStore = newStoreDef<
   onConstruct({ initialProps }) {
     return {
       ...initialProps,
-      barSorters: barSorters,
       now: Date.now(),
       state: "fresh",
+      barSorters,
+      barFilters,
+      query: "",
     }
   },
   reducer({ prevState, state, action, diff, store, dispatch }) {
@@ -153,6 +166,10 @@ export const newWaterfallStore = newStoreDef<
       }
     }
 
+    if (action.type === "filter") {
+      state.query = action.payload.query
+    }
+
     state.$isSomeRunning = state.bars.some(bar => bar.status === "running")
 
     if (diff(["now", "bars"])) {
@@ -168,14 +185,40 @@ export const newWaterfallStore = newStoreDef<
       ) as any
     }
 
+    if (diff(["barFilters"])) {
+      state.$currentSorters = Object.fromEntries(
+        Object.entries(state.barSorters).map(([properties, filters]) => {
+          const [currentFilter] = filters
+          return [properties, currentFilter]
+        })
+      ) as any
+    }
+
     if (diff(["$currentSorters"])) {
       state.$sortersFnList = Object.values(state.$currentSorters)
         .map(filterType => filterType?.sorter)
         .filter(nonNullable)
     }
 
-    if (diff(["bars", "$sortersFnList"])) {
-      state.$displayingBars = state.bars.toSorted((a, b) => {
+    if (diff(["barFilters"])) {
+      state.$filtersFnList = Object.values(state.barFilters).map(
+        filterType => filterType?.filter
+      )
+    }
+
+    state.$displayingBars = state.bars
+
+    if (diff(["$filtersFnList", "$displayingBars", "query"])) {
+      state.$displayingBars = state.$displayingBars.filter(bar => {
+        return state.$filtersFnList.some(createFilter => {
+          const filter = createFilter(state.query)
+          return filter(bar)
+        })
+      })
+    }
+
+    if (diff(["$sortersFnList", "$displayingBars"])) {
+      state.$displayingBars = state.$displayingBars.toSorted((a, b) => {
         for (const fn of state.$sortersFnList) {
           if (!fn) continue
           const result = fn(a, b)

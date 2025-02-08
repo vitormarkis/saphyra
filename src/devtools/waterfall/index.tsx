@@ -70,7 +70,7 @@ type WaterfallControllerProps = {}
 
 export function WaterfallController({}: WaterfallControllerProps) {
   const distance = WF.useStore(s => s.distance)
-  const [query, setQuery] = useState("")
+  const query = WF.useStore(s => s.query)
   const [localDistance, setLocalDistance] = useReducer(
     (distance: number, newDistance: number) => {
       if (isNaN(newDistance)) return distance
@@ -101,7 +101,12 @@ export function WaterfallController({}: WaterfallControllerProps) {
           type="text"
           value={query}
           onChange={e => {
-            setQuery(e.target.value)
+            waterfallStore.dispatch({
+              type: "filter",
+              payload: {
+                query: e.target.value,
+              },
+            })
           }}
           className="w-full "
           placeholder="Transition name"
