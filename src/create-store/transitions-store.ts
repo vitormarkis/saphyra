@@ -1,4 +1,3 @@
-import { TransitionsStoreEvents } from "~/create-store/event-emitter-transitions"
 import { Subject } from "../Subject"
 import { DoneKeyOptions, OnFinishTransition } from "~/create-store/types"
 import { EventEmitter } from "~/create-store/event-emitter"

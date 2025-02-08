@@ -13,6 +13,7 @@ import { notifyOnChangeList } from "~/notify-on-change"
 import { getCommentsQueryOptions } from "~/pages/external-deps/query-options/get-comments-query-options"
 import { Devtools } from "~/devtools/devtools"
 import { toastWithSonner } from "~/sonner-error-handler"
+import { Waterfall } from "~/devtools/waterfall"
 
 export function ExternalDepsPage() {
   const postsStoreState = useState(() => newPostsStore({}))
@@ -66,7 +67,7 @@ export function ExternalDepsPage() {
 
   return (
     <Posts.Provider value={postsStoreState}>
-      <div className="h-full gap-4 flex flex-col @xl:flex-row">
+      <div className="h-full gap-4 flex flex-col @xl:flex-row overflow-hidden">
         <div
           className={cn(
             "flex-1 flex justify-between min-h-0 min-w-0 h-full overflow-auto",
@@ -83,8 +84,9 @@ export function ExternalDepsPage() {
             </div>
           )}
         </div>
-        <div className="flex-1 min-h-0 min-w-0 h-full">
+        <div className="flex-1 min-h-0 min-w-0 h-full grid grid-rows-2 gap-4">
           <Devtools store={postsStore} />
+          <Waterfall store={postsStore} />
         </div>
       </div>
     </Posts.Provider>
@@ -154,7 +156,7 @@ export function Post({ post }: PostProps) {
   const isLiked = Posts.useStore(s => s.likedPosts.includes(post.id))
   // const isLikingSomePost = false
   const isLikingSomePost = Posts.useTransition(["post"])
-  const isPostPending = Posts.useTransition(["post", post.id])
+  const isPostPending = Posts.useTransition(["post", post.id, "like"])
   const batchLikes = PostsController.useStore(s => s.batchLikes)
 
   return (
@@ -200,13 +202,14 @@ export function Post({ post }: PostProps) {
             posts.dispatch({
               type: "like-post",
               postId: post.id,
+              // transition: ["post", post.id, "like"],
               transition: ["post", post.id, "like"],
-              beforeDispatch({ action, transitionStore, transition }) {
-                if (transitionStore.isHappeningUnique(transition)) {
-                  transitionStore.controllers.get(transition)?.abort()
-                }
-                return action
-              },
+              // beforeDispatch({ action, transitionStore, transition }) {
+              //   if (transitionStore.isHappeningUnique(transition)) {
+              //     transitionStore.controllers.get(transition)?.abort()
+              //   }
+              //   return action
+              // },
             })
           }}
           className={cn(

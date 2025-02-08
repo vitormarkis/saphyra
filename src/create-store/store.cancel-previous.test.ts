@@ -1,5 +1,13 @@
 import invariant from "tiny-invariant"
-import { describe, expect, MockInstance, vi } from "vitest"
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  MockInstance,
+  test,
+  vi,
+} from "vitest"
 import {
   getStoreTransitionInfoShallowCopy,
   newStore,
@@ -28,7 +36,6 @@ const cancelPrevious: BeforeDispatch = ({
 beforeEach(() => {
   store = newStore({
     count: 0,
-    currentTransition: null,
   })
   spy_completeTransition = vi.spyOn(store, "completeTransition")
   spy_emitError = vi.spyOn(store.transitions, "emitError")

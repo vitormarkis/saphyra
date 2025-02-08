@@ -40,7 +40,7 @@ function createTransitionDispatch<
 }
 
 export function createAsync<
-  TState = BaseState,
+  TState extends BaseState = BaseState,
   TActions extends BaseAction<TState> = DefaultActions & BaseAction<TState>,
   TEvents extends EventsTuple = EventsTuple,
   TUncontrolledState extends Record<string, any> = Record<string, any>,
@@ -72,6 +72,7 @@ export function createAsync<
       noop
     if (!transition) throw errorNoTransition()
     store.transitions.addKey(transition)
+    const transitionString = transition.join(":")
 
     async function handlePromise(promise: Promise<T>) {
       if (!transition) throw errorNoTransition()
@@ -81,6 +82,10 @@ export function createAsync<
       let wasAborted = false
       const abortLocally = () => {
         wasAborted = true
+        store.internal.events.emit("transition-completed", {
+          id: `${transitionString}-${state.ctx?.when}`,
+          status: "cancelled",
+        })
       }
       const off = store.events.once(transitionHasAbortedStr).run(abortLocally)
       try {

@@ -23,7 +23,8 @@
     "paths": {
       "~/*": ["./src/*"]
     },
-    "allowSyntheticDefaultImports": true
+    "allowSyntheticDefaultImports": true,
+    "types": ["vitest"]
   },
   "include": ["src"]
 }

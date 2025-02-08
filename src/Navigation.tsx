@@ -33,7 +33,7 @@ export function RootLayoutWrapper({ children }: RootLayoutWrapperProps) {
         <div
           className={cn(
             "flex-col text-sm basis-[250px] hidden sm:flex",
-            !isSidebarVisible && "hidden"
+            !isSidebarVisible && "hidden sm:hidden"
           )}
         >
           <div className="border border-dashed container-2 h-full flex flex-col px-4 py-6 text-sm rounded-md ">
@@ -41,7 +41,7 @@ export function RootLayoutWrapper({ children }: RootLayoutWrapperProps) {
           </div>
         </div>
         <div className="flex-1 flex flex-col text-sm min-w-[250px]">
-          <div className="border border-dashed container-2 h-full flex flex-col px-4 py-6 text-sm rounded-md @container overflow-y-auto">
+          <div className="border border-dashed container-2 h-full grid grid-cols-1 px-4 py-6 text-sm rounded-md @container overflow-y-hidden">
             {children}
           </div>
         </div>

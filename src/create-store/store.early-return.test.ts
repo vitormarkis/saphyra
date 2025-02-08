@@ -1,5 +1,14 @@
 import { noop } from "lodash"
-import { describe, expect, MockInstance, vi } from "vitest"
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  MockInstance,
+  test,
+  vi,
+} from "vitest"
 import { GENERAL_TRANSITION } from "~/create-store/const"
 import {
   captureCallbackHistory,
@@ -23,7 +32,6 @@ const earlyReturn: BeforeDispatch = () => {
 beforeEach(() => {
   store = newStore({
     count: 0,
-    currentTransition: null,
   })
   spy_completeTransition = vi.spyOn(store, "completeTransition")
 })

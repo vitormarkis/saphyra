@@ -1,15 +1,35 @@
 import { BarType } from "./types"
 import { reduceConfig } from "./fn/reduce-config"
 import { createStoreUtils, newStoreDef } from "~/create-store"
+import { BaseState } from "~/create-store/types"
+import { BarFilter, barFilters, BarFilters } from "~/devtools/waterfall/filters"
+import { nonNullable } from "~/lib/utils"
 
 type WaterfallInitialProps = {
   bars: BarType[]
+  distance: number
+  clearTimeout: number
 }
+
+type BarFilterableProperties = keyof BarFilters
 
 type WaterfallState = {
   bars: BarType[]
   now: number
+  distance: number
+  clearTimeout: number
+  state: "stale" | "fresh"
+  barFilters: BarFilters
+  $currentFilters: Record<
+    BarFilterableProperties,
+    {
+      name: string
+      filter: BarFilter | null
+    }
+  >
+  $filtersFnList: BarFilter[]
   $config: Record<string, number>
+  $displayingBars: BarType[]
   $isSomeRunning: boolean
 }
 
@@ -34,23 +54,37 @@ type WaterfallAction =
       type: "end-bar"
       payload: {
         id: string
-        status: "fail" | "success"
+        status: "fail" | "success" | "cancelled"
+      }
+    }
+  | {
+      type: "toggle-filter"
+      payload: {
+        field: keyof BarFilters
       }
     }
 
+type WaterfallUncontrolledState = {
+  clearTimeout: NodeJS.Timeout
+  animationFrame: number
+}
+
 export const newWaterfallStore = newStoreDef<
   WaterfallInitialProps,
-  WaterfallState & { currentTransition: null },
-  WaterfallAction
+  WaterfallState & BaseState,
+  WaterfallAction,
+  {},
+  WaterfallUncontrolledState
 >({
   onConstruct({ initialProps }) {
     return {
-      bars: initialProps.bars,
+      ...initialProps,
+      barFilters,
       now: Date.now(),
-      currentTransition: null,
+      state: "fresh",
     }
   },
-  reducer({ prevState, state, action, diff }) {
+  reducer({ prevState, state, action, diff, store, dispatch }) {
     if (action.type === "refresh") {
       state.now = Date.now()
     }
@@ -58,11 +92,20 @@ export const newWaterfallStore = newStoreDef<
     if (action.type === "reset") {
       state.bars = []
       state.now = Date.now()
+      state.state = "fresh"
     }
 
     if (action.type === "add-bar") {
       const { transitionName, id } = action.payload
       const { onCreate } = action.callbacks ?? {}
+
+      if (state.state === "stale") {
+        // TODO: add dispatch with flush sync mode
+        state.bars = []
+        state.now = Date.now()
+        state.state = "fresh"
+      }
+
       const now = new Date()
       const newBar: BarType = {
         transitionName: transitionName,
@@ -73,6 +116,7 @@ export const newWaterfallStore = newStoreDef<
       }
 
       state.bars = [...state.bars, newBar]
+      clearTimeout(store.uncontrolledState.clearTimeout)
       onCreate?.(newBar)
     }
 
@@ -89,12 +133,54 @@ export const newWaterfallStore = newStoreDef<
 
         return bar
       })
+
+      clearTimeout(store.uncontrolledState.clearTimeout)
+      store.uncontrolledState.clearTimeout = setTimeout(() => {
+        store.setState({
+          state: "stale",
+        })
+      }, state.clearTimeout)
+    }
+
+    if (action.type === "toggle-filter") {
+      const { field } = action.payload
+      const [currentFilter, ...otherFilters] = state.barFilters[field]
+      state.barFilters = {
+        ...state.barFilters,
+        [field]: [...otherFilters, currentFilter],
+      }
     }
 
     state.$isSomeRunning = state.bars.some(bar => bar.status === "running")
 
-    if (diff(["now"])) {
+    if (diff(["now", "bars"])) {
       state.$config = state.bars.reduce(...reduceConfig(state.now))
+    }
+
+    if (diff(["barFilters"])) {
+      state.$currentFilters = Object.fromEntries(
+        Object.entries(state.barFilters).map(([properties, filters]) => {
+          const [currentFilter] = filters
+          return [properties, currentFilter]
+        })
+      ) as any
+    }
+
+    if (diff(["$currentFilters"])) {
+      state.$filtersFnList = Object.values(state.$currentFilters)
+        .map(filterType => filterType?.filter)
+        .filter(nonNullable)
+    }
+
+    if (diff(["bars", "$filtersFnList"])) {
+      state.$displayingBars = state.bars.toSorted((a, b) => {
+        for (const fn of state.$filtersFnList) {
+          if (!fn) continue
+          const result = fn(a, b)
+          if (result !== 0 && result != null) return result
+        }
+        return 0
+      })
     }
 
     return state

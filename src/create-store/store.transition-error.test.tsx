@@ -1,4 +1,12 @@
-import { expect, MockInstance, vi } from "vitest"
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  expect,
+  MockInstance,
+  test,
+  vi,
+} from "vitest"
 import {
   getStoreTransitionInfoSourceShallowCopy,
   newStore,
@@ -14,7 +22,6 @@ let spy_emitError: MockInstance<any>
 beforeEach(() => {
   store = newStore({
     count: 0,
-    currentTransition: null,
   })
   spy_completeTransition = vi.spyOn(store, "completeTransition")
   spy_emitError = vi.spyOn(store.transitions, "emitError")

@@ -1,6 +1,6 @@
-import _, { has } from "lodash"
+import _ from "lodash"
 import { createDiffOnKeyChange } from "../diff"
-import { createSubject, Subject } from "../Subject"
+import { createSubject } from "../Subject"
 import { RemoveDollarSignProps } from "../types"
 import { createAsync, errorNoTransition } from "./createAsync"
 import { defaultErrorHandler } from "../default-error-handler"
@@ -13,12 +13,10 @@ import {
   DefaultActions,
   Diff,
   Dispatch,
-  EventsFormat,
   GenericAction,
   GenericStoreMethods,
   GenericStoreValues,
   isSetter,
-  KeyAbort,
   newSetter,
   ReducerSet,
   Setter,
@@ -26,6 +24,7 @@ import {
   SomeStore,
   StoreErrorHandler,
   StoreInstantiator,
+  StoreInternalEvents,
 } from "./types"
 import { EventEmitter, EventsTuple } from "~/create-store/event-emitter"
 import { createDebugableShallowCopy, isAsyncFunction } from "~/lib/utils"
@@ -166,8 +165,8 @@ export type StoreConstructorConfig = {
 const BOOTSTRAP_TRANSITION = ["bootstrap"]
 
 export function newStoreDef<
-  TInitialProps,
-  TState extends BaseState = TInitialProps & BaseState,
+  TInitialProps extends Record<string, any>,
+  TState extends Record<string, any> = TInitialProps,
   TActions extends BaseAction<TState> = DefaultActions & BaseAction<TState>,
   TEvents extends EventsTuple = EventsTuple,
   TUncontrolledState extends Record<string, any> = Record<string, any>,
@@ -213,7 +212,10 @@ export function newStoreDef<
       {
         errors: errorsStore,
         transitions: new TransitionsStore(),
-        events: new EventEmitter(),
+        events: new EventEmitter<TEvents>(),
+        internal: {
+          events: new EventEmitter<StoreInternalEvents>(),
+        },
         history: [],
         historyRedo: [],
         errorHandlers: new Set(),
@@ -364,7 +366,11 @@ export function newStoreDef<
       store: SomeStore<TState, TActions, TEvents, TUncontrolledState>,
       rollback: Rollback
     ) => {
-      const currentTransitionName = store.state.currentTransition?.join(":")
+      store.state.ctx ??= {
+        currentTransition: null,
+        when: Date.now(),
+      }
+      const currentTransitionName = store.state.ctx.currentTransition?.join(":")
       const actionTransitionName = action.transition?.join(":")!
       const isNewTransition = currentTransitionName !== actionTransitionName
 
@@ -392,7 +398,10 @@ export function newStoreDef<
           })
         }
 
-        newState.currentTransition = action.transition
+        newState.ctx = {
+          currentTransition: action.transition,
+          when: Date.now(),
+        }
         store.transitions.setController(action.transition, action.controller)
 
         /**
@@ -407,13 +416,27 @@ export function newStoreDef<
           const transition = action.transition
           const transitionString = transition.join(":")
 
+          const internalTransitionId = `${transitionString}-${newState.ctx?.when}`
+          store.internal.events.emit("new-transition", {
+            transitionName: transitionString,
+            id: internalTransitionId,
+          } as { transitionName: string; id: string })
+
           store.transitions.callbacks.done.set(transitionString, () => {
             store.completeTransition(action, transition)
+            store.internal.events.emit("transition-completed", {
+              id: internalTransitionId,
+              status: "success",
+            })
           })
 
           store.transitions.callbacks.error.set(transitionString, error => {
             invariant(action.transition, "NSTH: a transition")
             cleanUpTransition(action.transition, error)
+            store.internal.events.emit("transition-completed", {
+              id: internalTransitionId,
+              status: "fail",
+            })
             action.onTransitionEnd?.({
               error,
               events: store.events,

@@ -25,6 +25,17 @@ export type KeyAbort = `abort::${string}`
 
 export type EventsFormat = EventsTuple | Record<KeyAbort, []>
 
+export type StoreInternalEvents = {
+  "transition-completed": [
+    { id: string; status: "fail" | "success" | "cancelled" },
+  ]
+  "new-transition": [{ transitionName: string; id: string }]
+}
+
+type StoreInternals = {
+  events: EventEmitter<StoreInternalEvents>
+}
+
 export type GenericStoreValues<
   TState,
   TEvents extends EventsTuple,
@@ -32,6 +43,7 @@ export type GenericStoreValues<
 > = {
   errors: ErrorsStore
   events: EventEmitter<TEvents>
+  internal: StoreInternals
   state: TState & BaseState
   errorHandlers: Set<StoreErrorHandler>
   settersRegistry: SettersRegistry<TState>
@@ -219,7 +231,10 @@ export type TransitionsExtension = {
 }
 
 export type BaseState = {
-  currentTransition: any[] | null
+  ctx?: {
+    currentTransition: any[] | null
+    when: number
+  }
 }
 
 export type Setter<TState> = (state: TState) => Partial<TState>

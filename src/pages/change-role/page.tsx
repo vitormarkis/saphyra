@@ -10,13 +10,10 @@ import { fetchPermissions } from "~/pages/change-role/fn/get-permissions"
 import { Devtools } from "~/devtools/devtools"
 import { cn } from "~/lib/cn"
 import { TextChart } from "~/components/text-chart"
-import { toastWithSonner } from "~/sonner-error-handler"
-import { toast } from "sonner"
-import { fromErrorToMessage } from "~/fromErrorToMessage"
-import { CodeBlock } from "../before-dispatch/page"
 import { CodeEditor } from "~/components/code-editor"
 import { removeCurrentToastsAndRegisterNewToasts } from "./fn/isjdf"
 import { toastWithResult } from "./fn/toast-with-result"
+import { Waterfall } from "~/devtools/waterfall"
 
 type SelectedRole = "user" | "admin"
 
@@ -254,11 +251,12 @@ function ChangeRolePageContent() {
           </div>
         ) : null}
       </div>
-      <div className="h-full min-w-0">
+      <div className="h-full grid grid-cols-2 gap-2 min-w-0">
         <Devtools
           store={authStore}
           allExpanded
         />
+        <Waterfall store={authStore} />
       </div>
       {/* </div> */}
     </div>

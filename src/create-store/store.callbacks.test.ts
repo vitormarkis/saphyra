@@ -1,4 +1,4 @@
-import { expect, vi } from "vitest"
+import { beforeEach, expect, test, vi } from "vitest"
 import { newStore, TestCounterStore } from "~/create-store/test.utils"
 
 let store: TestCounterStore
@@ -6,7 +6,10 @@ let store: TestCounterStore
 beforeEach(() => {
   store = newStore({
     count: 0,
-    currentTransition: null,
+    ctx: {
+      currentTransition: null,
+      when: Date.now(),
+    },
   })
 })
 

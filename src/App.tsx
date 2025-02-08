@@ -1,5 +1,5 @@
 import { Spinner } from "@blueprintjs/core"
-import { Fragment, useEffect, useState } from "react"
+import { useEffect, useState } from "react"
 import { useHistory } from "~/create-store/hooks/use-history"
 import { newStoreDef } from "./create-store/store"
 import { BaseState } from "./create-store/types"
@@ -70,7 +70,6 @@ export default function App() {
   const countStoreState = useState(() =>
     newCount({
       count: 0,
-      currentTransition: null,
     })
   )
   const [countStore] = countStoreState
@@ -83,10 +82,12 @@ export default function App() {
 
   return (
     <Todos.Provider value={countStoreState}>
-      <div className="grid grid-rows-[auto 1fr] gap-4">
+      <div className="grid grid-rows-[auto_auto_1fr] gap-4 overflow-y-hidden">
         <Content />
-        <div className="grid grid-cols-2 gap-4">
+        <div className="min-h-[160px]">
           <Devtools store={countStore} />
+        </div>
+        <div className="overflow-hidden">
           <Waterfall store={countStore} />
         </div>
       </div>
@@ -99,7 +100,7 @@ export function Content() {
   const isTransitioning = Todos.useTransition(["increment"])
 
   return (
-    <Fragment>
+    <div className="flex flex-col">
       <span className="bg-lime-50 dark:bg-lime-950 text-lime-800/80 border dark:border-lime-800 dark:text-lime-50 border-lime-300 rounded-sm px-2 py-1 text-xs/none h-fit mb-2 w-fit">
         Mess around and press CTRL Z and CTRL Y to undo and redo
       </span>
@@ -129,6 +130,15 @@ export function Content() {
               todosStore.dispatch({
                 type: "increment-ten",
                 transition: ["increment", "ten"],
+                beforeDispatch({ action, transitionStore, transition }) {
+                  if (transitionStore.isHappeningUnique(transition)) {
+                    const controller =
+                      transitionStore.controllers.get(transition)
+                    controller?.abort()
+                  }
+
+                  return action
+                },
               })
             }}
           >
@@ -147,6 +157,6 @@ export function Content() {
         </div>
         <div className="flex">{isTransitioning && <Spinner size={14} />}</div>
       </div>
-    </Fragment>
+    </div>
   )
 }

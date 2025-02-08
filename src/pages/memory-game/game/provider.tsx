@@ -18,7 +18,7 @@ type CardsContent = readonly [
   string,
   string,
   string,
-  string
+  string,
 ]
 
 export type MemoryGameInitialProps = {
@@ -27,7 +27,6 @@ export type MemoryGameInitialProps = {
 
 type MemoryGameState = {
   cards: MemoryCard[]
-  currentTransition: null
   $cardIdList: string[]
   $cardById: Record<string, MemoryCard>
   $visibleCardsIdList: string[]

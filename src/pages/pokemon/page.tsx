@@ -10,6 +10,7 @@ import { getPokemon } from "~/pages/zustand-like/fn/get-pokemon"
 import { Devtools } from "~/devtools/devtools"
 import invariant from "tiny-invariant"
 import { TextChart } from "~/components/text-chart"
+import { Waterfall } from "~/devtools/waterfall"
 
 type PokemonState = {
   currentPokemonId: number
@@ -196,8 +197,9 @@ export function PokemonPageContent({}: PokemonPageContentProps) {
           Next
         </button>
       </div>
-      <div className="h-full">
+      <div className="h-full grid grid-cols-2 gap-4">
         <Devtools store={store} />
+        <Waterfall store={store} />
       </div>
       {/* <pre>{JSON.stringify({ state }, null, 2)}</pre> */}
     </div>

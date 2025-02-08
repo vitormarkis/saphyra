@@ -3,5 +3,5 @@ export type BarType = {
   transitionName: string
   startedAt: Date
   endedAt: Date | "running"
-  status: "running" | "fail" | "success"
+  status: "running" | "fail" | "success" | "cancelled"
 }
