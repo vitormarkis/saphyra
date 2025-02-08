@@ -87,7 +87,7 @@ export default function App() {
         <div className="min-h-[160px]">
           <Devtools store={countStore} />
         </div>
-        <div className="overflow-hidden">
+        <div className="">
           <Waterfall store={countStore} />
         </div>
       </div>

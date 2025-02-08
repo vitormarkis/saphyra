@@ -1,8 +1,8 @@
-import { BarType } from "./types"
+import { BarType, CurrentSorters } from "./types"
 import { reduceConfig } from "./fn/reduce-config"
 import { createStoreUtils, newStoreDef } from "~/create-store"
 import { BaseState } from "~/create-store/types"
-import { BarFilter, barFilters, BarFilters } from "~/devtools/waterfall/filters"
+import { BarSort, barSorters, BarSorters } from "~/devtools/waterfall/sorters"
 import { nonNullable } from "~/lib/utils"
 
 type WaterfallInitialProps = {
@@ -10,8 +10,6 @@ type WaterfallInitialProps = {
   distance: number
   clearTimeout: number
 }
-
-type BarFilterableProperties = keyof BarFilters
 
 type LineType = {
   idx: number
@@ -24,16 +22,12 @@ export type WaterfallState = {
   distance: number
   clearTimeout: number
   state: "stale" | "fresh"
-  barFilters: BarFilters
-  $currentFilters: Record<
-    BarFilterableProperties,
-    {
-      name: string
-      filter: BarFilter | null
-    }
-  >
+
+  barSorters: BarSorters
+  $currentSorters: CurrentSorters
+  $sortersFnList: BarSort[]
+
   $displayingBarsIdList: string[]
-  $filtersFnList: BarFilter[]
   $config: Record<string, number>
   $displayingBars: BarType[]
   $isSomeRunning: boolean
@@ -66,9 +60,9 @@ type WaterfallAction =
       }
     }
   | {
-      type: "toggle-filter"
+      type: "toggle-sorter"
       payload: {
-        field: keyof BarFilters
+        field: keyof BarSorters
       }
     }
 
@@ -87,7 +81,7 @@ export const newWaterfallStore = newStoreDef<
   onConstruct({ initialProps }) {
     return {
       ...initialProps,
-      barFilters,
+      barSorters: barSorters,
       now: Date.now(),
       state: "fresh",
     }
@@ -150,11 +144,11 @@ export const newWaterfallStore = newStoreDef<
       }, state.clearTimeout)
     }
 
-    if (action.type === "toggle-filter") {
+    if (action.type === "toggle-sorter") {
       const { field } = action.payload
-      const [currentFilter, ...otherFilters] = state.barFilters[field]
-      state.barFilters = {
-        ...state.barFilters,
+      const [currentFilter, ...otherFilters] = state.barSorters[field]
+      state.barSorters = {
+        ...state.barSorters,
         [field]: [...otherFilters, currentFilter],
       }
     }
@@ -165,27 +159,27 @@ export const newWaterfallStore = newStoreDef<
       state.$config = state.bars.reduce(...reduceConfig(state.now))
     }
 
-    if (diff(["barFilters"])) {
-      state.$currentFilters = Object.fromEntries(
-        Object.entries(state.barFilters).map(([properties, filters]) => {
+    if (diff(["barSorters"])) {
+      state.$currentSorters = Object.fromEntries(
+        Object.entries(state.barSorters).map(([properties, filters]) => {
           const [currentFilter] = filters
           return [properties, currentFilter]
         })
       ) as any
     }
 
-    if (diff(["$currentFilters"])) {
-      state.$filtersFnList = Object.values(state.$currentFilters)
-        .map(filterType => filterType?.filter)
+    if (diff(["$currentSorters"])) {
+      state.$sortersFnList = Object.values(state.$currentSorters)
+        .map(filterType => filterType?.sorter)
         .filter(nonNullable)
     }
 
-    if (diff(["bars", "$filtersFnList"])) {
+    if (diff(["bars", "$sortersFnList"])) {
       state.$displayingBars = state.bars.toSorted((a, b) => {
-        for (const fn of state.$filtersFnList) {
+        for (const fn of state.$sortersFnList) {
           if (!fn) continue
           const result = fn(a, b)
-          if (result !== 0 && result != null) return result
+          if (result != null) return result
         }
         return 0
       })

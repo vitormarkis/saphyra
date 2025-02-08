@@ -11,7 +11,7 @@ import {
 import { newWaterfallStore, WaterfallState, WaterfallStore, WF } from "./store"
 import { cn } from "~/lib/cn"
 import { SomeStoreGeneric } from "~/create-store"
-import { BarFilters } from "./filters"
+import { BarSorters } from "./sorters"
 import { ChevronUp } from "lucide-react"
 import React from "react"
 
@@ -70,6 +70,7 @@ type WaterfallControllerProps = {}
 
 export function WaterfallController({}: WaterfallControllerProps) {
   const distance = WF.useStore(s => s.distance)
+  const [query, setQuery] = useState("")
   const [localDistance, setLocalDistance] = useReducer(
     (distance: number, newDistance: number) => {
       if (isNaN(newDistance)) return distance
@@ -94,8 +95,18 @@ export function WaterfallController({}: WaterfallControllerProps) {
   const [waterfallStore] = WF.useUseState()
 
   return (
-    <div className="flex justify-between">
-      <span />
+    <div className="flex justify-between gap-2">
+      <div className="flex gap-2 flex-1 pl-1">
+        <input
+          type="text"
+          value={query}
+          onChange={e => {
+            setQuery(e.target.value)
+          }}
+          className="w-full "
+          placeholder="Transition name"
+        />
+      </div>
 
       <div className="flex gap-2">
         <input
@@ -197,8 +208,8 @@ function WaterfallContent() {
     <div className="border border-gray-200 dark:border-gray-800/70 p-0.5 bg-gray-100 dark:bg-gray-900 overflow-y-auto overflow-x-hidden">
       <div className="grid grid-cols-[auto_1fr] gap-0.5">
         <div className="grid grid-cols-subgrid col-span-2 row-span-1 gap-0.5">
-          <FilterHeader property="transitionName">name</FilterHeader>
-          <FilterHeader property="startedAt">timing</FilterHeader>
+          <SorterHeader property="transitionName">name</SorterHeader>
+          <SorterHeader property="startedAt">timing</SorterHeader>
         </div>
         <div className="contents">
           <div
@@ -431,22 +442,22 @@ function getDisplayingValue(duration: number): string {
   return valueStr + suffix
 }
 
-type FilterHeaderProps = {
+type SorterHeaderProps = {
   children?: React.ReactNode
-  property: keyof BarFilters
+  property: keyof BarSorters
 }
 
-export function FilterHeader({ children, property }: FilterHeaderProps) {
+export function SorterHeader({ children, property }: SorterHeaderProps) {
   const [waterfallStore] = WF.useUseState()
 
-  const currentFilter = WF.useStore(s => s.$currentFilters[property])
+  const currentSorter = WF.useStore(s => s.$currentSorters[property])
 
   return (
     <div
       role="button"
       onClick={() => {
         waterfallStore.dispatch({
-          type: "toggle-filter",
+          type: "toggle-sorter",
           payload: {
             field: property,
           },
@@ -458,7 +469,7 @@ export function FilterHeader({ children, property }: FilterHeaderProps) {
       <span className="shrink-0">{children}</span>
       <div className="min-w-[30px] shrink-0 max-w-[30px] w-full" />
       <ChevronCornerWrapper>
-        <ChevronSort state={currentFilter.name} />
+        <ChevronSort state={currentSorter.name} />
       </ChevronCornerWrapper>
     </div>
   )
