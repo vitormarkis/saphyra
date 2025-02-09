@@ -47,15 +47,6 @@ export function Waterfall({ store }: WaterfallProps) {
     })
   )
 
-  // useEffect(() =>
-  //   store.internal.events.on("transition-completed", ({ id, status }) => {
-  //     waterfallStore.dispatch({
-  //       type: "reset",
-  //       payload: { id, status },
-  //     })
-  //   })
-  // )
-
   return (
     <WF.Provider value={waterfallState}>
       <div className="grid grid-rows-[auto_1fr] gap-1 h-full">
@@ -222,12 +213,7 @@ function WaterfallContent() {
             style={{ gridRowEnd: rowsAmount }}
           >
             {displayingBarsIdList.map(barId => (
-              <span
-                key={barId}
-                className="px-3 text-gray-400 p-1 text-sm  border  border-gray-200 dark:border-gray-800/70 bg-white dark:bg-black"
-              >
-                <TransitionName barId={barId} />
-              </span>
+              <TransitionNameWrapper barId={barId} />
             ))}
           </div>
           <div
@@ -265,6 +251,8 @@ type BarProps = {
 export const Bar = memo(function Bar({ barId }: BarProps) {
   const [waterfallStore] = WF.useUseState()
   const barRef = useRef<HTMLDivElement>(null)
+  const transitionName = WF.useStore(s => s.$barsByBarId[barId].transitionName)
+
   useSyncExternalStore(
     cb => waterfallStore.subscribe(cb),
     () => {
@@ -272,6 +260,11 @@ export const Bar = memo(function Bar({ barId }: BarProps) {
       const state = waterfallStore.getState()
       const config = state.$config
       const bar = state.$barsByBarId[barId]
+      const isHighlighting = state.highlightingTransition !== null
+      const dataHighlight =
+        state.highlightingTransition === bar.transitionName
+          ? "highlight"
+          : "mute"
       const started_diff = bar.startedAt.getTime() - config.min
       const started_pct = started_diff / config.traveled
       const started_pctString = started_pct * 100 + "%"
@@ -296,6 +289,7 @@ export const Bar = memo(function Bar({ barId }: BarProps) {
         el.style[prop] = style[prop as keyof typeof style]
       }
       el.setAttribute("data-status", bar.status)
+      el.setAttribute("data-highlight", isHighlighting ? dataHighlight : null)
     }
   )
 
@@ -304,7 +298,32 @@ export const Bar = memo(function Bar({ barId }: BarProps) {
       <div className="relative w-full h-full">
         <div
           ref={barRef}
-          className="absolute data-[status=running]:bg-sky-500 data-[status=fail]:bg-red-500 data-[status=success]:bg-green-500 data-[status=cancelled]:bg-amber-500"
+          onMouseEnter={() => {
+            waterfallStore.dispatch({
+              type: "hover-transition-name",
+              payload: {
+                transitionName,
+              },
+            })
+          }}
+          onMouseLeave={() => {
+            waterfallStore.dispatch({
+              type: "hover-out-transition-name",
+              payload: {
+                transitionName,
+              },
+            })
+          }}
+          className={cn(`
+            absolute
+            hover:cursor-pointer
+            data-[status=running]:bg-sky-500
+            data-[status=fail]:bg-red-500
+            data-[status=success]:bg-green-500
+            data-[status=cancelled]:bg-amber-500
+
+            data-[highlight=mute]:opacity-30
+            `)}
         />
       </div>
     </div>
@@ -532,4 +551,38 @@ const lastLineStyleFn = () => {
     right: 0,
     width: 0,
   }
+}
+
+type TransitionNameWrapperProps = {
+  barId: string
+}
+
+export function TransitionNameWrapper({ barId }: TransitionNameWrapperProps) {
+  const [waterfallStore] = WF.useUseState()
+  const transitionName = WF.useStore(s => s.$barsByBarId[barId].transitionName)
+
+  return (
+    <span
+      key={barId}
+      onMouseEnter={() => {
+        waterfallStore.dispatch({
+          type: "hover-transition-name",
+          payload: {
+            transitionName,
+          },
+        })
+      }}
+      onMouseLeave={() => {
+        waterfallStore.dispatch({
+          type: "hover-out-transition-name",
+          payload: {
+            transitionName,
+          },
+        })
+      }}
+      className="hover:cursor-pointer px-3 text-gray-400 p-1 text-sm  border  border-gray-200 dark:border-gray-800/70 bg-white dark:bg-black"
+    >
+      <TransitionName barId={barId} />
+    </span>
+  )
 }

@@ -42,12 +42,7 @@ const newAuthStore = newStoreDef<
   reducer({ prevState, state, action, diff, set, async, events }) {
     if (action?.type === "change-role") {
       async
-        .promise(({ signal }) =>
-          fetchRole({
-            roleName: action.role,
-            signal,
-          })
-        )
+        .promise(({ signal }) => fetchRole({ roleName: action.role, signal }))
         .onSuccess((role, actor) => {
           events.emit("got-role", role)
           actor.set({ role })
@@ -56,12 +51,7 @@ const newAuthStore = newStoreDef<
 
     if (prevState.role !== state.role) {
       async
-        .promise(({ signal }) =>
-          fetchPermissions({
-            role: state.role,
-            signal,
-          })
-        )
+        .promise(({ signal }) => fetchPermissions({ role: state.role, signal }))
         .onSuccess((permissions, actor) => {
           events.emit("got-permissions", permissions)
           actor.set({ $permissions: permissions })
@@ -130,7 +120,6 @@ export function ChangeRolePage() {
 
 function ChangeRolePageContent() {
   const [authStore] = Auth.useUseState()
-  authStore.uncontrolledState.vitor
   const state = Auth.useStore()
 
   const isChangingRole = Auth.useTransition(["auth", "role"])

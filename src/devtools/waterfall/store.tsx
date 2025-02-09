@@ -23,6 +23,7 @@ export type WaterfallState = {
   distance: number
   clearTimeout: number
   state: "stale" | "fresh"
+  highlightingTransition: string | null
 
   barSorters: BarSorters
   $currentSorters: CurrentSorters
@@ -76,6 +77,18 @@ type WaterfallAction =
         query: string
       }
     }
+  | {
+      type: "hover-transition-name"
+      payload: {
+        transitionName: string
+      }
+    }
+  | {
+      type: "hover-out-transition-name"
+      payload: {
+        transitionName: string
+      }
+    }
 
 type WaterfallUncontrolledState = {
   clearTimeout: NodeJS.Timeout
@@ -97,6 +110,7 @@ export const newWaterfallStore = newStoreDef<
       barSorters,
       barFilters,
       query: "",
+      highlightingTransition: null,
     }
   },
   reducer({ prevState, state, action, diff, store, dispatch }) {
@@ -168,6 +182,14 @@ export const newWaterfallStore = newStoreDef<
 
     if (action.type === "filter") {
       state.query = action.payload.query
+    }
+
+    if (action.type === "hover-transition-name") {
+      state.highlightingTransition = action.payload.transitionName
+    }
+
+    if (action.type === "hover-out-transition-name") {
+      state.highlightingTransition = null
     }
 
     state.$isSomeRunning = state.bars.some(bar => bar.status === "running")
