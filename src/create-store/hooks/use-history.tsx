@@ -2,7 +2,7 @@ import { useEffect } from "react"
 import { EventsTuple } from "~/create-store/event-emitter"
 import {
   BaseAction,
-  BaseState,
+  StateContext,
   DefaultActions,
   SomeStore,
 } from "~/create-store/types"
@@ -16,7 +16,7 @@ type Eventable = {
 }
 
 export function useHistory<
-  TState = BaseState,
+  TState = StateContext,
   TActions extends BaseAction<TState> = DefaultActions & BaseAction<TState>,
   TEvents extends EventsTuple = EventsTuple,
   TUncontrolledState extends Record<string, any> = Record<string, any>,

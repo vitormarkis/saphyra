@@ -4,7 +4,7 @@ import {
   AsyncActor,
   AsyncPromiseProps,
   BaseAction,
-  BaseState,
+  StateContext,
   DefaultActions,
   Dispatch,
   PromiseResult,
@@ -40,13 +40,14 @@ function createTransitionDispatch<
 }
 
 export function createAsync<
-  TState extends BaseState = BaseState,
+  TState extends Record<string, any> = Record<string, any>,
   TActions extends BaseAction<TState> = DefaultActions & BaseAction<TState>,
   TEvents extends EventsTuple = EventsTuple,
   TUncontrolledState extends Record<string, any> = Record<string, any>,
 >(
   store: SomeStore<TState, TActions, TEvents, TUncontrolledState>,
   state: TState,
+  stateContext: StateContext,
   transition: any[] | null | undefined,
   signal: AbortSignal
 ): Async<TState, TActions> {
@@ -57,7 +58,7 @@ export function createAsync<
     transition
   )
   const set: AsyncActorInner["set"] = setter => {
-    store.registerSet(setter, state, transition, "reducer")
+    store.registerSet(setter, state, store.stateContext, transition, "reducer")
   }
   type PromiseResult<T, TState, TActions extends BaseAction<TState>> = {
     onSuccess: (
@@ -76,14 +77,14 @@ export function createAsync<
 
     async function handlePromise(promise: Promise<T>) {
       if (!transition) throw errorNoTransition()
-      const async = createAsync(store, state, transition, signal)
+      const async = createAsync(store, state, stateContext, transition, signal)
       const transitionHasAbortedStr = `abort::${JSON.stringify(transition)}`
 
       let wasAborted = false
       const abortLocally = () => {
         wasAborted = true
         store.internal.events.emit("transition-completed", {
-          id: `${transitionString}-${state.ctx?.when}`,
+          id: `${transitionString}-${stateContext.when}`,
           status: "cancelled",
         })
       }
@@ -123,7 +124,7 @@ export function createAsync<
     time = 0
   ) => {
     if (!transition) throw errorNoTransition()
-    const async = createAsync(store, state, transition, signal)
+    const async = createAsync(store, state, stateContext, transition, signal)
     store.transitions.addKey(transition)
     setTimeout(() => {
       try {

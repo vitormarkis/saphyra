@@ -1,7 +1,6 @@
-import { BarFiltersState, BarType, CurrentSorters } from "./types"
+import { BarType, CurrentSorters } from "./types"
 import { reduceConfig } from "./fn/reduce-config"
 import { createStoreUtils, newStoreDef } from "~/create-store"
-import { BaseState } from "~/create-store/types"
 import { BarSort, barSorters, BarSorters } from "~/devtools/waterfall/sorters"
 import { nonNullable } from "~/lib/utils"
 import { BarFilter, barFilters, BarFilters } from "./filters"
@@ -97,7 +96,7 @@ type WaterfallUncontrolledState = {
 
 export const newWaterfallStore = newStoreDef<
   WaterfallInitialProps,
-  WaterfallState & BaseState,
+  WaterfallState,
   WaterfallAction,
   {},
   WaterfallUncontrolledState

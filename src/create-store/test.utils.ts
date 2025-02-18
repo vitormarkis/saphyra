@@ -1,8 +1,8 @@
 import { newStoreDef } from "~/create-store/store"
-import { BaseState, SomeStore, SomeStoreGeneric } from "~/create-store/types"
+import { SomeStore, SomeStoreGeneric } from "~/create-store/types"
 import { sleep } from "~/sleep"
 
-type CounterState = BaseState & {
+type CounterState = {
   count: number
 }
 

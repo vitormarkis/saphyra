@@ -213,7 +213,10 @@ function WaterfallContent() {
             style={{ gridRowEnd: rowsAmount }}
           >
             {displayingBarsIdList.map(barId => (
-              <TransitionNameWrapper barId={barId} />
+              <TransitionNameWrapper
+                key={barId}
+                barId={barId}
+              />
             ))}
           </div>
           <div
@@ -563,7 +566,6 @@ export function TransitionNameWrapper({ barId }: TransitionNameWrapperProps) {
 
   return (
     <span
-      key={barId}
       onMouseEnter={() => {
         waterfallStore.dispatch({
           type: "hover-transition-name",

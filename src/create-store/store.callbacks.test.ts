@@ -6,10 +6,6 @@ let store: TestCounterStore
 beforeEach(() => {
   store = newStore({
     count: 0,
-    ctx: {
-      currentTransition: null,
-      when: Date.now(),
-    },
   })
 })
 

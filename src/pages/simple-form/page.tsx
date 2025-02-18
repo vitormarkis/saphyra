@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react"
 import { newStoreDef } from "~/create-store/store"
-import { BaseState } from "~/create-store/types"
 import { createStoreUtils } from "~/create-store/createStoreUtils"
 import { createSession } from "~/pages/zustand-like/fn/create-session"
 
@@ -16,7 +15,7 @@ type SimpleFormInitialProps = {
   fullName: string
 }
 
-type SimpleFormState = BaseState & {
+type SimpleFormState = {
   name: string
   surname: string
   email: string

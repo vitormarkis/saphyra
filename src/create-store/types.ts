@@ -44,7 +44,8 @@ export type GenericStoreValues<
   errors: ErrorsStore
   events: EventEmitter<TEvents>
   internal: StoreInternals
-  state: TState & BaseState
+  state: TState
+  stateContext: StateContext
   errorHandlers: Set<StoreErrorHandler>
   settersRegistry: SettersRegistry<TState>
 } & TransitionsExtension &
@@ -63,6 +64,7 @@ export type GenericStoreMethods<
   registerSet: InnerReducerSet<TState>
   createSetScheduler(
     newState: TState & Partial<TState>,
+    newStateContext: StateContext,
     mergeType: "reducer" | "set",
     transition: any[] | null | undefined
   ): ReducerSet<TState>
@@ -230,11 +232,9 @@ export type TransitionsExtension = {
   transitions: TransitionsStore
 }
 
-export type BaseState = {
-  ctx?: {
-    currentTransition: any[] | null
-    when: number
-  }
+export type StateContext = {
+  currentTransition: any[] | null
+  when: number
 }
 
 export type Setter<TState> = (state: TState) => Partial<TState>
@@ -245,6 +245,7 @@ export type ReducerSet<TState> = (
 export type InnerReducerSet<TState> = (
   setterOrPartialStateList: SetterOrPartialState<TState>,
   state: TState,
+  stateContext: StateContext,
   transition: any[] | null | undefined,
   mergeType: "reducer" | "set"
 ) => void

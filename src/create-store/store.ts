@@ -9,7 +9,7 @@ import {
   Async,
   AsyncPromiseProps,
   BaseAction,
-  BaseState,
+  StateContext,
   DefaultActions,
   Diff,
   Dispatch,
@@ -207,6 +207,7 @@ export function newStoreDef<
   ): SomeStore<TState, TActions, TEvents, TUncontrolledState> {
     const subject = createSubject()
     const errorsStore = new ErrorsStore()
+    const now = Date.now()
 
     const storeValues: GenericStoreValues<TState, TEvents, TUncontrolledState> =
       {
@@ -221,6 +222,10 @@ export function newStoreDef<
         errorHandlers: new Set(),
         settersRegistry: {},
         state: {} as TState,
+        stateContext: {
+          currentTransition: null,
+          when: now,
+        },
         uncontrolledState: {} as TUncontrolledState,
       }
     let store = createDebugableShallowCopy(
@@ -240,14 +245,22 @@ export function newStoreDef<
 
     const createSetScheduler: Met["createSetScheduler"] = (
       newState,
+      newStateContext,
       mergeType = "set",
       transition = null
     ): ReducerSet<TState> => {
       return setterOrPartialState =>
-        store.registerSet(setterOrPartialState, newState, transition, mergeType)
+        store.registerSet(
+          setterOrPartialState,
+          newState,
+          newStateContext,
+          transition,
+          mergeType
+        )
     }
 
     const getState: Met["getState"] = () => store.state
+
     const defineState = (newState: TState) => {
       store.state = newState
     }
@@ -361,20 +374,24 @@ export function newStoreDef<
     }
 
     const handleRegisterTransition = (
-      newState: TState & BaseState,
+      newState: TState,
       action: TActions,
       store: SomeStore<TState, TActions, TEvents, TUncontrolledState>,
+      stateContext: StateContext,
       rollback: Rollback
     ) => {
-      store.state.ctx ??= {
-        currentTransition: null,
-        when: Date.now(),
-      }
-      const currentTransitionName = store.state.ctx.currentTransition?.join(":")
+      // stateContext ??= {
+      //   currentTransition: null,
+      //   when: Date.now(),
+      // }
+      const currentTransitionName = stateContext.currentTransition?.join(":")
       const actionTransitionName = action.transition?.join(":")!
       const isNewTransition = currentTransitionName !== actionTransitionName
 
       if (action.transition != null && isNewTransition) {
+        stateContext.when = Date.now()
+        stateContext.currentTransition = action.transition
+
         const initialAbort = getAbortController(action)
         rollback.add(initialAbort.rollback)
         const controller = ensureAbortController({
@@ -398,10 +415,8 @@ export function newStoreDef<
           })
         }
 
-        newState.ctx = {
-          currentTransition: action.transition,
-          when: Date.now(),
-        }
+        stateContext.currentTransition = action.transition
+        stateContext.when = Date.now()
         store.transitions.setController(action.transition, action.controller)
 
         /**
@@ -416,7 +431,7 @@ export function newStoreDef<
           const transition = action.transition
           const transitionString = transition.join(":")
 
-          const internalTransitionId = `${transitionString}-${newState.ctx?.when}`
+          const internalTransitionId = `${transitionString}-${stateContext.when}`
           store.internal.events.emit("new-transition", {
             transitionName: transitionString,
             id: internalTransitionId,
@@ -466,6 +481,7 @@ export function newStoreDef<
 
     const dispatchImpl = (initialAction: TActions, rollback: Rollback) => {
       let newState = { ...store.state }
+      let stateContext = { ...store.stateContext }
 
       const { beforeDispatch = createDefaultBeforeDispatch() } = initialAction
 
@@ -479,7 +495,13 @@ export function newStoreDef<
 
       if (action == null) throw rollback
 
-      handleRegisterTransition(newState, action as TActions, store, rollback)
+      handleRegisterTransition(
+        newState,
+        action as TActions,
+        store,
+        stateContext,
+        rollback
+      )
 
       /**
        * Sobreescrevendo controller, quando na verdade cada action
@@ -500,6 +522,7 @@ export function newStoreDef<
       for (const action of actionsQueue) {
         const scheduleSetter = createSetScheduler(
           newState,
+          stateContext,
           "set",
           action.transition
         )
@@ -519,6 +542,7 @@ export function newStoreDef<
           async: createAsync(
             store,
             newState,
+            stateContext,
             action.transition,
             controller.signal
           ),
@@ -607,8 +631,19 @@ export function newStoreDef<
         action: { type: "noop" } as TActions,
         diff: createDiff(store.state, store.state),
         state: store.state,
-        async: createAsync(store, store.state, null, signal),
-        set: store.createSetScheduler(store.state, "set", null),
+        async: createAsync(
+          store,
+          store.state,
+          store.stateContext,
+          null,
+          signal
+        ),
+        set: store.createSetScheduler(
+          store.state,
+          store.stateContext,
+          "set",
+          null
+        ),
         prevState: store.state,
         events: store.events,
         store,
@@ -623,6 +658,7 @@ export function newStoreDef<
     const registerSet: Met["registerSet"] = (
       setterOrPartialStateList,
       currentState,
+      currentStateContext,
       transition,
       mergeType
     ) => {
@@ -660,8 +696,19 @@ export function newStoreDef<
           action: { type: "noop" } as TActions,
           state: newState,
           diff: createDiff(currentState, newState),
-          set: createSetScheduler(newState, "set", transition),
-          async: createAsync(store, newState, transition, signal),
+          set: createSetScheduler(
+            newState,
+            currentStateContext,
+            "set",
+            transition
+          ),
+          async: createAsync(
+            store,
+            newState,
+            currentStateContext,
+            transition,
+            signal
+          ),
           prevState: currentState,
           events: store.events,
           dispatch: action => {
@@ -698,8 +745,13 @@ export function newStoreDef<
         diff: createDiff(store.state, newState),
         state: newState,
         prevState: { ...store.state },
-        async: createAsync(store, newState, null, signal), // um set state pode ocasionar em chamadas assíncronas, e como isso é cancelado?
-        set: store.createSetScheduler(newState, "set", null),
+        async: createAsync(store, newState, store.stateContext, null, signal), // um set state pode ocasionar em chamadas assíncronas, e como isso é cancelado?
+        set: store.createSetScheduler(
+          newState,
+          store.stateContext,
+          "set",
+          null
+        ),
         events: store.events,
         store,
         dispatch: (action: TActions) => {
@@ -750,6 +802,7 @@ export function newStoreDef<
         : new Set([defaultErrorHandler])
 
       const prevState = {} as TState
+      const prevStateContext = {} as StateContext
       // prevState.role ??= "user"
       defineState(prevState)
       const isAsync = isAsyncFunction(onConstruct)
@@ -758,7 +811,13 @@ export function newStoreDef<
         type: "bootstrap",
         transition: BOOTSTRAP_TRANSITION,
       } as TActions
-      handleRegisterTransition(prevState, bootstrapAction, store, rollback)
+      handleRegisterTransition(
+        prevState,
+        bootstrapAction,
+        store,
+        prevStateContext,
+        rollback
+      )
 
       if (isAsync) {
         async function handleConstruction(ctx: AsyncPromiseProps) {
@@ -777,6 +836,7 @@ export function newStoreDef<
         const async = createAsync(
           store,
           prevState,
+          prevStateContext,
           BOOTSTRAP_TRANSITION,
           signal
         )
@@ -795,10 +855,16 @@ export function newStoreDef<
               async: createAsync(
                 store,
                 initialState,
+                prevStateContext,
                 BOOTSTRAP_TRANSITION,
                 signal
               ),
-              set: createSetScheduler(initialState, "set", null),
+              set: createSetScheduler(
+                initialState,
+                prevStateContext,
+                "set",
+                null
+              ),
               prevState,
               events: store.events,
               store,
@@ -831,10 +897,16 @@ export function newStoreDef<
             async: createAsync(
               store,
               initialState,
+              prevStateContext,
               BOOTSTRAP_TRANSITION,
               signal
             ),
-            set: createSetScheduler(initialState, "set", null),
+            set: createSetScheduler(
+              initialState,
+              prevStateContext,
+              "set",
+              null
+            ),
             prevState,
             events: store.events,
             store,
