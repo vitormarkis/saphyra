@@ -1,12 +1,19 @@
-import { useContext } from "react"
+import { memo } from "react"
 import { ChildNode } from "../fn/types"
 import { TreeContext } from "./Tree.context"
+import { useContextSelector } from "use-context-selector"
 
-type TreeProps = ChildNode
+type TreeProps = {
+  node: ChildNode
+}
 
-export function Tree(childNode: TreeProps) {
-  const { expandedNodes, allExpanded } = useContext(TreeContext)
-  const isExpanded = allExpanded ?? expandedNodes.has(childNode.id)
+export const Tree = memo(function MemoTree({ node: childNode }: TreeProps) {
+  const isExpanded = useContextSelector(
+    TreeContext,
+    ({ expandedNodes, allExpanded }) => {
+      return allExpanded != null ? allExpanded : expandedNodes.has(childNode.id)
+    }
+  )
 
   return (
     <div className="flex flex-col text-xs gap-1 cursor-default">
@@ -19,9 +26,11 @@ export function Tree(childNode: TreeProps) {
             key={childNode.id}
             className="flex flex-col gap-1 ml-6"
           >
-            <Tree {...childNode} />
+            <Tree node={childNode} />
           </ul>
         ))}
     </div>
   )
-}
+})
+
+Tree.displayName = "Tree"

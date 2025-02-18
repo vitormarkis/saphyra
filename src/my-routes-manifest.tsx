@@ -19,10 +19,10 @@ export const myRoutesManifest = [
     path: "/zustand-like",
     element: <ZustandLikePage />,
   },
-  // {
-  //   path: "/memory-game",
-  //   element: <MemoryGamePage />,
-  // },
+  {
+    path: "/memory-game",
+    element: <MemoryGamePage />,
+  },
   {
     path: "/external-deps",
     element: <ExternalDepsPage />,

@@ -1,16 +1,19 @@
-import React, { useContext } from "react"
+import React, { memo, useContext } from "react"
 import { RendererContext } from "../../fn/types"
 import { LabelObjectLike } from "./object-like"
 import { LabelPrimitiveLike } from "./primitive-like"
 import { cn } from "~/lib/cn"
 import { TreeContext } from "~/generic-structure-displayer/components/Tree.context"
 import { IconCaret } from "~/generic-structure-displayer/components/IconCaret"
+import { useContextSelector } from "use-context-selector"
 
 type LabelGeneralProps = {
   ctx: RendererContext
 }
 
-export function LabelGeneral({ ctx }: LabelGeneralProps) {
+export const LabelGeneral = memo(function LabelGeneralMemo({
+  ctx,
+}: LabelGeneralProps) {
   const { type } = ctx
   const isObject = type === "object" || type === "array"
 
@@ -27,7 +30,7 @@ export function LabelGeneral({ ctx }: LabelGeneralProps) {
       <LabelPrimitiveLike ctx={ctx} />
     </Wrapper>
   )
-}
+})
 
 export type WrapperProps = React.ComponentPropsWithoutRef<"div"> & {
   ctx: RendererContext
@@ -35,10 +38,17 @@ export type WrapperProps = React.ComponentPropsWithoutRef<"div"> & {
 
 export const Wrapper = React.forwardRef<React.ElementRef<"div">, WrapperProps>(
   function WrapperComponent({ className, ctx, children, ...props }, ref) {
-    const { expandNode, expandedNodes } = useContext(TreeContext)
-    const hasChildNodes = ctx.node.childNodes != null
     const childNode = ctx.node
-    const isExpanded = expandedNodes.has(childNode.id)
+    const expandNode = useContextSelector(TreeContext, s => s.expandNode)
+    const isExpanded = useContextSelector(
+      TreeContext,
+      ({ expandedNodes, allExpanded }) => {
+        return allExpanded != null
+          ? allExpanded
+          : expandedNodes.has(childNode.id)
+      }
+    )
+    const hasChildNodes = ctx.node.childNodes != null
 
     const isObject = ctx.type === "object" || ctx.type === "array"
 

@@ -1,9 +1,11 @@
-import { createContext } from "react"
+import { createContext } from "use-context-selector"
 
-type ITreeContext = {
+type TreeContextState = {
   expandedNodes: Set<string>
   expandNode: (id: string) => void
   allExpanded?: boolean
 }
 
-export const TreeContext = createContext<ITreeContext>({} as ITreeContext)
+export const TreeContext = createContext<TreeContextState>(
+  {} as TreeContextState
+)

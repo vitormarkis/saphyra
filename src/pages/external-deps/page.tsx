@@ -84,9 +84,9 @@ export function ExternalDepsPage() {
             </div>
           )}
         </div>
-        <div className="flex-1 min-h-0 min-w-0 h-full grid grid-rows-2 gap-4">
+        <div className="flex-1 min-h-0 min-w-0 h-full grid gap-4">
           <Devtools store={postsStore} />
-          <Waterfall store={postsStore} />
+          {/* <Waterfall store={postsStore} /> */}
         </div>
       </div>
     </Posts.Provider>

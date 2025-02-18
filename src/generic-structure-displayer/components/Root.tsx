@@ -1,6 +1,6 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { createJsonToNode } from "../fn/json-to-node"
-import { Renderer } from "../fn/types"
+import { ChildNode, Renderer } from "../fn/types"
 import { Tree } from "./Tree"
 import { TreeContext } from "./Tree.context"
 import { LabelGeneral } from "./renderer/label-general"
@@ -15,7 +15,18 @@ export type GenericStructureDisplayerProps<T> = {
   allExpanded?: boolean
 }
 
+let STORE = new Map<string, ChildNode>()
+let STOREVALUES = new Map<string, any>()
+
+Object.assign(window, { STORE, STOREVALUES })
+
 const renderer: Renderer = ctx => {
+  const currValue = ctx.value
+  const memoValue = STOREVALUES.get(ctx.path ?? "root")
+  const isSameValue = Object.is(currValue, memoValue)
+  const memoedNode = STORE.get(ctx.path ?? "root")
+  if (isSameValue && memoedNode) return memoedNode
+
   let { node } = ctx
 
   node = {
@@ -23,6 +34,8 @@ const renderer: Renderer = ctx => {
     label: <LabelGeneral ctx={ctx} />,
   }
 
+  STOREVALUES.set(ctx.path ?? "root", currValue)
+  STORE.set(ctx.path ?? "root", node)
   return node
 }
 
@@ -42,7 +55,7 @@ export const GenericStructureDisplayer = memo(
     const allNodes = allNodesProp ?? allNodesInner
     const prevAllNodes = useRef(allNodes)
     const nodes = useMemo(() => {
-      return createJsonToNode({
+      const jsonToNode = createJsonToNode({
         renderer: ctx => {
           setAllNodes(allNodes => {
             const newAllNodes = new Set(allNodes)
@@ -55,7 +68,8 @@ export const GenericStructureDisplayer = memo(
           if (item == null) return false
           return typeof item === "object"
         },
-      })(source)
+      })
+      return jsonToNode(source)
     }, [source])
 
     useEffect(() => {
@@ -89,16 +103,19 @@ export const GenericStructureDisplayer = memo(
 
     return (
       <TreeContext.Provider
-        value={{
-          expandedNodes: expandedNodesProp ?? expandedNodesInner,
-          expandNode,
-          allExpanded,
-        }}
+        value={useMemo(
+          () => ({
+            expandedNodes: expandedNodesProp ?? expandedNodesInner,
+            expandNode,
+            allExpanded,
+          }),
+          [expandedNodesInner, expandNode, allExpanded]
+        )}
       >
         <ul className="flex gap-1 flex-col overflow-auto h-full">
           {nodes.map(node => (
             <li key={node.id}>
-              <Tree {...node} />
+              <Tree node={node} />
             </li>
           ))}
         </ul>

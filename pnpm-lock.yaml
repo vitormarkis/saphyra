@@ -14,9 +14,15 @@ importers:
       react:
         specifier: ^18.3.1
         version: 18.3.1
+      scheduler:
+        specifier: ^0.25.0
+        version: 0.25.0
       tiny-invariant:
         specifier: ^1.3.3
         version: 1.3.3
+      use-context-selector:
+        specifier: ^2.0.0
+        version: 2.0.0(react@18.3.1)(scheduler@0.25.0)
     devDependencies:
       '@blueprintjs/core':
         specifier: ^5.14.2
@@ -2263,6 +2269,9 @@ packages:
   scheduler@0.23.2:
     resolution: {integrity: sha512-UOShsPwz7NrMUqhR6t0hWjFduvOzbtv7toDH1/hIrfRNIDBnnBWd0CwJTGvTpngVlmwGCdP9/Zl/tVrDqcuYzQ==}
 
+  scheduler@0.25.0:
+    resolution: {integrity: sha512-xFVuu11jh+xcO7JOAGJNOXld8/TcEHK/4CituBUeUb5hqxJLj9YuemAEuvm9gQ/+pgXYfbQuqAkiYu+u7YEsNA==}
+
   semver@6.3.1:
     resolution: {integrity: sha512-BR7VvDCVHO+q2xBEWskxS6DJE1qRnb7DxzUrogb71CWoSficBxYsiAGd+Kl0mmq/MprG9yArRkyrQxTO6XjMzA==}
     hasBin: true
@@ -2523,6 +2532,12 @@ packages:
     peerDependenciesMeta:
       '@types/react':
         optional: true
+
+  use-context-selector@2.0.0:
+    resolution: {integrity: sha512-owfuSmUNd3eNp3J9CdDl0kMgfidV+MkDvHPpvthN5ThqM+ibMccNE0k+Iq7TWC6JPFvGZqanqiGCuQx6DyV24g==}
+    peerDependencies:
+      react: '>=18.0.0'
+      scheduler: '>=0.19.0'
 
   use-sidecar@1.1.3:
     resolution: {integrity: sha512-Fedw0aZvkhynoPYlA5WXrMCAMm+nSWdZt6lzJQ7Ok8S6Q+VsHmHpRWndVRJ8Be0ZbkfPc5LRYH+5XrzXcEeLRQ==}
@@ -4655,6 +4670,8 @@ snapshots:
     dependencies:
       loose-envify: 1.4.0
 
+  scheduler@0.25.0: {}
+
   semver@6.3.1: {}
 
   semver@7.6.3: {}
@@ -4911,6 +4928,11 @@ snapshots:
       tslib: 2.6.3
     optionalDependencies:
       '@types/react': 18.3.7
+
+  use-context-selector@2.0.0(react@18.3.1)(scheduler@0.25.0):
+    dependencies:
+      react: 18.3.1
+      scheduler: 0.25.0
 
   use-sidecar@1.1.3(@types/react@18.3.7)(react@18.3.1):
     dependencies:
