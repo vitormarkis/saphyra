@@ -1,14 +1,16 @@
 import { newStoreDef } from "~/create-store/store"
 import { createStoreUtils } from "~/create-store/createStoreUtils"
-import { fetchPosts } from "./fn/fetch-posts"
-import { likePost } from "./fn/like-post"
 import { reduceGroupById } from "./fn/reduce-group-by-user-id"
 import { CommentType, PostType } from "./types"
-import { fetchLikedPosts } from "~/pages/external-deps/fn/fetch-liked-posts"
-import { placeComment } from "~/pages/external-deps/fn/fetch-place-commment"
 import { randomString } from "~/lib/utils"
 import { queryClient } from "~/query-client"
 import { getCommentsQueryOptions } from "~/pages/external-deps/query-options/get-comments-query-options"
+import { IExternalDepsDependencies } from "./IStore"
+
+import { fetchLikedPosts } from "./fn/fetch-liked-posts"
+import { fetchPosts } from "./fn/fetch-posts"
+import { placeComment } from "./fn/fetch-place-commment"
+import { likePost } from "./fn/like-post"
 
 type PostsState = {
   currentTransition: null
@@ -46,14 +48,22 @@ type PostsActions =
 export const newPostsStore = newStoreDef<
   PostsInitialProps,
   PostsState,
-  PostsActions
+  PostsActions,
+  {},
+  {},
+  IExternalDepsDependencies
 >({
-  async onConstruct({ signal }) {
+  deps: {
+    fetchLikedPosts,
+    fetchPosts,
+    placeComment,
+    likePost,
+  },
+  async onConstruct({ signal, deps }) {
     const [posts, likedPosts] = await Promise.all([
-      fetchPosts(signal),
-      fetchLikedPosts(signal),
+      deps.fetchPosts(signal),
+      deps.fetchLikedPosts(signal),
     ])
-
     return {
       likedPosts,
       posts,
@@ -62,7 +72,7 @@ export const newPostsStore = newStoreDef<
       commentsByPostId: {},
     }
   },
-  reducer({ prevState, state, action, set, diff, async, store }) {
+  reducer({ prevState, state, action, set, diff, async, deps }) {
     if (action.type === "place-comment") {
       const newComment: CommentType = {
         id: randomString(),
@@ -71,7 +81,9 @@ export const newPostsStore = newStoreDef<
         postId: action.postId,
       }
       async
-        .promise(ctx => placeComment(newComment, action.postId, ctx.signal))
+        .promise(ctx =>
+          deps.placeComment(newComment, action.postId, ctx.signal)
+        )
         .onSuccess((_, actor) => {
           /** [external-deps.react-query]
            * Refetches the post comments after
@@ -98,7 +110,9 @@ export const newPostsStore = newStoreDef<
 
     if (action.type === "like-post") {
       async
-        .promise(ctx => likePost(state.likedPosts, action.postId, ctx.signal))
+        .promise(ctx =>
+          deps.likePost(state.likedPosts, action.postId, ctx.signal)
+        )
         .onSuccess((likedPosts, actor) => {
           actor.set(() => ({ likedPosts }))
         })

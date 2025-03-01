@@ -40,7 +40,9 @@ export type GenericStoreValues<
   TState,
   TEvents extends EventsTuple,
   TUncontrolledState extends Record<string, any>,
+  TDeps = undefined,
 > = {
+  deps: TDeps
   errors: ErrorsStore
   events: EventEmitter<TEvents>
   internal: StoreInternals
@@ -57,6 +59,7 @@ export type GenericStoreMethods<
   TActions extends BaseAction<TState>,
   TEvents extends EventsTuple,
   TUncontrolledState extends Record<string, any>,
+  TDeps,
 > = {
   getState(): TState
   dispatch: Dispatch<TState, TActions>
@@ -73,7 +76,13 @@ export type GenericStoreMethods<
   handleError: StoreErrorHandler
   undo(): void
   redo(): void
-  rebuild(): () => SomeStore<TState, TActions, TEvents, TUncontrolledState>
+  rebuild(): () => SomeStore<
+    TState,
+    TActions,
+    TEvents,
+    TUncontrolledState,
+    TDeps
+  >
   completeTransition(action: GenericAction, transition: any[]): void
   commitTransition(
     transition: any[] | null | undefined,
@@ -92,8 +101,9 @@ export type SomeStore<
   TActions extends BaseAction<TState>,
   TEvents extends EventsTuple,
   TUncontrolledState extends Record<string, any>,
-> = GenericStoreValues<TState, TEvents, TUncontrolledState> &
-  GenericStoreMethods<TState, TActions, TEvents, TUncontrolledState> &
+  TDeps,
+> = GenericStoreValues<TState, TEvents, TUncontrolledState, TDeps> &
+  GenericStoreMethods<TState, TActions, TEvents, TUncontrolledState, TDeps> &
   SubjectType
 
 export type TransitionFunctionOptions = {
@@ -255,7 +265,7 @@ export type StoreErrorHandler = (
   transition: any[] | undefined
 ) => void
 
-export type SomeStoreGeneric = SomeStore<any, any, any, any>
+export type SomeStoreGeneric = SomeStore<any, any, any, any, any>
 
 export type StoreInstantiator<
   TInitialProps,
@@ -263,12 +273,14 @@ export type StoreInstantiator<
   TActions extends BaseAction<TState>,
   TEvents extends EventsTuple,
   TUncontrolledState extends Record<string, any>,
+  TDeps,
 > = (
   initialProps: RemoveDollarSignProps<TInitialProps>,
   config?: StoreConstructorConfig
-) => SomeStore<TState, TActions, TEvents, TUncontrolledState>
+) => SomeStore<TState, TActions, TEvents, TUncontrolledState, TDeps>
 
 export type StoreInstantiatorGeneric = StoreInstantiator<
+  any,
   any,
   any,
   any,
@@ -277,11 +289,11 @@ export type StoreInstantiatorGeneric = StoreInstantiator<
 >
 
 export type ExtractEvents<T> =
-  T extends SomeStore<any, any, infer E, any> ? E : never
+  T extends SomeStore<any, any, infer E, any, any> ? E : never
 export type ExtractActions<T> =
-  T extends SomeStore<any, infer A, any, any> ? A : never
+  T extends SomeStore<any, infer A, any, any, any> ? A : never
 export type ExtractUncontrolledState<T> =
-  T extends SomeStore<any, any, any, infer US> ? US : never
+  T extends SomeStore<any, any, any, infer US, any> ? US : never
 
 type OnFinishTransitionProps = {
   transitionName: string

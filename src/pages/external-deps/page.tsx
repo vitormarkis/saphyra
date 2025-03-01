@@ -13,7 +13,6 @@ import { notifyOnChangeList } from "~/notify-on-change"
 import { getCommentsQueryOptions } from "~/pages/external-deps/query-options/get-comments-query-options"
 import { Devtools } from "~/devtools/devtools"
 import { toastWithSonner } from "~/sonner-error-handler"
-import { Waterfall } from "~/devtools/waterfall"
 
 export function ExternalDepsPage() {
   const postsStoreState = useState(() => newPostsStore({}))
@@ -79,7 +78,7 @@ export function ExternalDepsPage() {
               <Spinner size={96} />
             </div>
           ) : (
-            <div className="mr-4 relative">
+            <div className="mr-4 relative w-full">
               <PostList />
             </div>
           )}
