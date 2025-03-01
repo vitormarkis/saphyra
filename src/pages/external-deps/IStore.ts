@@ -7,10 +7,10 @@ export type IExternalDepsDependencies = {
     comment: CommentType,
     postId: number,
     signal: AbortSignal
-  ) => Promise<any>
+  ) => Promise<void>
   likePost: (
     likedPosts: number[],
     postId: number,
     signal: AbortSignal
-  ) => Promise<any>
+  ) => Promise<number[]>
 }

@@ -40,7 +40,7 @@ export type GenericStoreValues<
   TState,
   TEvents extends EventsTuple,
   TUncontrolledState extends Record<string, any>,
-  TDeps = undefined,
+  TDeps,
 > = {
   deps: TDeps
   errors: ErrorsStore
@@ -276,7 +276,7 @@ export type StoreInstantiator<
   TDeps,
 > = (
   initialProps: RemoveDollarSignProps<TInitialProps>,
-  config?: StoreConstructorConfig
+  config?: StoreConstructorConfig<TDeps>
 ) => SomeStore<TState, TActions, TEvents, TUncontrolledState, TDeps>
 
 export type StoreInstantiatorGeneric = StoreInstantiator<

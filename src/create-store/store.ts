@@ -76,7 +76,7 @@ type OnConstruct<
     TUncontrolledState,
     TDeps
   >,
-  config?: StoreConstructorConfig
+  config?: StoreConstructorConfig<TDeps>
 ) => RemoveDollarSignProps<TState> | Promise<RemoveDollarSignProps<TState>>
 
 function defaultOnConstruct<
@@ -95,7 +95,7 @@ function defaultOnConstruct<
     TUncontrolledState,
     TDeps
   >,
-  _config?: StoreConstructorConfig
+  _config?: StoreConstructorConfig<TDeps>
 ) {
   const state = props.initialProps as unknown as TState
   return cloneObj(state)
@@ -158,7 +158,7 @@ type CreateStoreOptions<
   TActions extends BaseAction<TState>,
   TEvents extends EventsTuple,
   TUncontrolledState extends Record<string, any>,
-  TDeps = undefined,
+  TDeps,
 > = {
   onConstruct?: OnConstruct<
     TInitialProps,
@@ -169,14 +169,11 @@ type CreateStoreOptions<
     TDeps
   >
   reducer?: Reducer<TState, TActions, TEvents, TUncontrolledState, TDeps>
-} & (TDeps extends undefined
-  ? {
-      deps?: undefined
-    }
-  : { deps: TDeps })
+}
 
-export type StoreConstructorConfig = {
+export type StoreConstructorConfig<TDeps> = {
   errorHandlers?: StoreErrorHandler[]
+  deps: TDeps
 }
 
 const BOOTSTRAP_TRANSITION = ["bootstrap"]
@@ -190,7 +187,6 @@ export function newStoreDef<
   TDeps = undefined,
 >(
   {
-    deps = {} as TDeps,
     onConstruct = defaultOnConstruct<
       TInitialProps,
       TState,
@@ -232,11 +228,12 @@ export function newStoreDef<
 
   function createStore(
     initialProps: RemoveDollarSignProps<TInitialProps>,
-    config: StoreConstructorConfig = {} as StoreConstructorConfig
+    config: StoreConstructorConfig<TDeps> = {} as StoreConstructorConfig<TDeps>
   ): SomeStore<TState, TActions, TEvents, TUncontrolledState, TDeps> {
     const subject = createSubject()
     const errorsStore = new ErrorsStore()
     const now = Date.now()
+    const deps = config.deps ?? ({} as TDeps)
 
     const storeValues: GenericStoreValues<
       TState,
@@ -826,7 +823,7 @@ export function newStoreDef<
 
     function construct(
       initialProps: TInitialProps,
-      config: StoreConstructorConfig
+      config: StoreConstructorConfig<TDeps>
     ) {
       const rollback = new Rollback()
       Object.assign(window, { _store: store })

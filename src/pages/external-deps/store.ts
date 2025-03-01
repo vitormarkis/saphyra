@@ -7,11 +7,6 @@ import { queryClient } from "~/query-client"
 import { getCommentsQueryOptions } from "~/pages/external-deps/query-options/get-comments-query-options"
 import { IExternalDepsDependencies } from "./IStore"
 
-import { fetchLikedPosts } from "./fn/fetch-liked-posts"
-import { fetchPosts } from "./fn/fetch-posts"
-import { placeComment } from "./fn/fetch-place-commment"
-import { likePost } from "./fn/like-post"
-
 type PostsState = {
   currentTransition: null
   $postsByUserId: Record<string, PostType[]>
@@ -53,12 +48,6 @@ export const newPostsStore = newStoreDef<
   {},
   IExternalDepsDependencies
 >({
-  deps: {
-    fetchLikedPosts,
-    fetchPosts,
-    placeComment,
-    likePost,
-  },
   async onConstruct({ signal, deps }) {
     const [posts, likedPosts] = await Promise.all([
       deps.fetchPosts(signal),

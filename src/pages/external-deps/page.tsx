@@ -14,8 +14,25 @@ import { getCommentsQueryOptions } from "~/pages/external-deps/query-options/get
 import { Devtools } from "~/devtools/devtools"
 import { toastWithSonner } from "~/sonner-error-handler"
 
+import { fetchLikedPosts } from "./fn/fetch-liked-posts"
+import { fetchPosts } from "./fn/fetch-posts"
+import { placeComment } from "./fn/fetch-place-commment"
+import { likePost } from "./fn/like-post"
+
 export function ExternalDepsPage() {
-  const postsStoreState = useState(() => newPostsStore({}))
+  const postsStoreState = useState(() =>
+    newPostsStore(
+      {},
+      {
+        deps: {
+          fetchLikedPosts,
+          fetchPosts,
+          placeComment,
+          likePost,
+        },
+      }
+    )
+  )
   const [postsStore] = postsStoreState
 
   const isBootstraping = Posts.useTransition(["bootstrap"], postsStore)
