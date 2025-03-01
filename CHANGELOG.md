@@ -35,7 +35,7 @@ export const newSocialMedia = newStoreDef({
 })
 
 function App() {
-  const [socialMedia] = useStore(() => newSocialMedia({
+  const [socialMedia] = useState(() => newSocialMedia({
     posts: []
   }, {
     deps: {
