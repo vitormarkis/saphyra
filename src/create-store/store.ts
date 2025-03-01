@@ -39,6 +39,7 @@ import { Rollback } from "~/create-store/helpers/rollback"
 import { mockActor } from "~/create-store/helpers/mock-actor"
 import invariant from "tiny-invariant"
 import { GENERAL_TRANSITION } from "~/create-store/const"
+import { assignObjValues, cloneObj, mergeObj } from "./helpers/obj-descriptors"
 
 export type ExternalProps = Record<string, any> | null
 
@@ -91,7 +92,7 @@ function defaultOnConstruct<
   _config?: StoreConstructorConfig
 ) {
   const state = props.initialProps as unknown as TState
-  return { ...state }
+  return cloneObj(state)
 }
 
 //
@@ -285,14 +286,11 @@ export function newStoreDef<
         ...store.settersRegistry,
         [transitionKey]: [],
       }
-      const newState = setters.reduce(
-        (acc: TState, setter) => {
-          setter = mergeSetterWithState(ensureSetter(setter))
-          const newState = setter(acc)
-          return { ...acc, ...newState }
-        },
-        { ...store.state }
-      )
+      const newState = setters.reduce((acc: TState, setter) => {
+        setter = mergeSetterWithState(ensureSetter(setter))
+        const newState = setter(acc)
+        return mergeObj(acc, newState) as TState
+      }, cloneObj(store.state))
       defineState(newState)
       store.history.push(newState)
       store.historyRedo = []
@@ -480,8 +478,8 @@ export function newStoreDef<
     }
 
     const dispatchImpl = (initialAction: TActions, rollback: Rollback) => {
-      let newState = { ...store.state }
-      let stateContext = { ...store.stateContext }
+      let newState = cloneObj(store.state)
+      let stateContext = cloneObj(store.stateContext)
 
       const { beforeDispatch = createDefaultBeforeDispatch() } = initialAction
 
@@ -527,7 +525,7 @@ export function newStoreDef<
           action.transition
         )
 
-        const futurePrevState = { ...newState }
+        const futurePrevState = cloneObj(newState)
         const context: ReducerProps<
           TState,
           TActions,
@@ -613,7 +611,7 @@ export function newStoreDef<
       store.historyRedo = [...store.historyRedo, store.history.pop()!]
       const previousState = store.history.at(-1)!
       if (!previousState) debugger
-      defineState({ ...previousState })
+      defineState(cloneObj(previousState))
       subject.notify()
     }
 
@@ -621,7 +619,7 @@ export function newStoreDef<
       if (store.historyRedo.length <= 0) return
       store.history = [...store.history, store.historyRedo.pop()!]
       const nextState = store.history.at(-1)!
-      defineState({ ...nextState })
+      defineState(cloneObj(nextState))
       subject.notify()
     }
 
@@ -717,24 +715,14 @@ export function newStoreDef<
           store,
         })
 
-        newState = {
-          ...newState,
-          ...processedState,
-        }
+        newState = mergeObj(newState, processedState)
       }
 
-      for (const key in newState) {
-        Object.assign(currentState as any, {
-          [key]: newState[key],
-        })
-      }
+      assignObjValues(currentState, newState)
     }
 
     const setState: Met["setState"] = (newPartialState: Partial<TState>) => {
-      const newState = {
-        ...store.state,
-        ...newPartialState,
-      }
+      const newState = mergeObj(store.state, newPartialState)
       const action = { type: "noop" } as TActions
       const { signal } = ensureAbortController({
         transition: action.transition ?? [GENERAL_TRANSITION],
@@ -744,7 +732,7 @@ export function newStoreDef<
         action,
         diff: createDiff(store.state, newState),
         state: newState,
-        prevState: { ...store.state },
+        prevState: cloneObj(store.state),
         async: createAsync(store, newState, store.stateContext, null, signal), // um set state pode ocasionar em chamadas assíncronas, e como isso é cancelado?
         set: store.createSetScheduler(
           newState,
@@ -941,7 +929,7 @@ export function newStoreDef<
 export function mergeSetterWithState<TState>(setter: Setter<TState>) {
   return (currentState: TState) => {
     const newState = isSetter(setter) ? setter(currentState) : setter
-    return { ...currentState, ...newState }
+    return mergeObj(currentState, newState)
   }
 }
 
