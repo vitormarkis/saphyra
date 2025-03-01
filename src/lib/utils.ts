@@ -1,3 +1,5 @@
+import { cloneObj } from "~/create-store/helpers/obj-descriptors"
+
 export function capitalize(str?: string) {
   if (!str) return ""
   const words = str.split(" ")
@@ -62,7 +64,7 @@ export function createDebugableShallowCopy<T>(
   intendedState: T,
   debugProp?: keyof T
 ): T {
-  const state = { ...intendedState }
+  const state = cloneObj(intendedState)
 
   if (debugProp) {
     let memory = state[debugProp]

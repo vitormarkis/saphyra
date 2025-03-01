@@ -1,9 +1,11 @@
 import { newStoreDef } from "~/create-store/store"
 import { SomeStore, SomeStoreGeneric } from "~/create-store/types"
 import { sleep } from "~/sleep"
+import { cloneObj } from "./helpers/obj-descriptors"
 
 type CounterState = {
   count: number
+  $stepsArr: number[]
 }
 
 type CounterActions =
@@ -16,12 +18,15 @@ type CounterActions =
   | {
       type: "increment-async-error"
     }
+  | {
+      type: "derive-steps-list"
+    }
 
 export type TestCounterStore = SomeStore<CounterState, CounterActions, {}, any>
 
 export const newStore = newStoreDef<CounterState, CounterState, CounterActions>(
   {
-    reducer({ state, action, set, async }) {
+    reducer({ state, action, set, async, diff, store }) {
       if (action.type === "increment") {
         set(s => ({ count: s.count + 1 }))
       }
@@ -45,6 +50,17 @@ export const newStore = newStoreDef<CounterState, CounterState, CounterActions>(
           })
       }
 
+      if (action.type === "derive-steps-list") {
+        set({
+          get $stepsArr() {
+            debugger
+            store.uncontrolledState.stepsCalculationTimes ??= 0
+            store.uncontrolledState.stepsCalculationTimes++
+            return Array.from({ length: state.count }, (_, i) => i)
+          },
+        })
+      }
+
       return state
     },
   }
@@ -66,8 +82,8 @@ export function getStoreTransitionInfoShallowCopy(
     setters: setters ? [...setters] : setters,
     doneCallback: typeof doneCallback === "function" ? doneCallback : null,
     errorCallback: typeof errorCallback === "function" ? errorCallback : null,
-    transitions: transitions ? { ...transitions } : transitions,
-    state: state ? { ...state } : state,
+    transitions: transitions ? cloneObj(transitions) : transitions,
+    state: state ? cloneObj(state) : state,
   }
 }
 
@@ -79,7 +95,7 @@ export function getStoreTransitionInfoSourceShallowCopy(
   const doneCallbackList = new Map(store.transitions.callbacks.done)
   const errorCallbackList = new Map(store.transitions.callbacks.error)
   const transitions = { ...store.transitions.state.transitions }
-  const state = { ...store.getState() }
+  const state = cloneObj(store.getState())
 
   return {
     controllers,
