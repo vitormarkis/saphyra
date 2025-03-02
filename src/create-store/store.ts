@@ -149,6 +149,19 @@ export type ExternalPropsFn<TExternalProps> =
   | (() => Promise<TExternalProps>)
   | null
 
+type OnPushToHistoryProps<TState> = {
+  history: TState[]
+  state: TState
+  transition: any[] | null | undefined
+  from: "dispatch" | "set" | "bootstrap"
+}
+
+type OnPushToHistory<TState> = (props: OnPushToHistoryProps<TState>) => TState[]
+
+type CreateStoreOptionsConfig<TState> = {
+  onPushToHistory?: OnPushToHistory<TState>
+}
+
 /**
  * Create store options
  */
@@ -169,6 +182,7 @@ type CreateStoreOptions<
     TDeps
   >
   reducer?: Reducer<TState, TActions, TEvents, TUncontrolledState, TDeps>
+  config?: CreateStoreOptionsConfig<TState>
 }
 
 export type StoreConstructorConfig<TDeps> = {
@@ -177,6 +191,13 @@ export type StoreConstructorConfig<TDeps> = {
 }
 
 const BOOTSTRAP_TRANSITION = ["bootstrap"]
+const defaultOnPushToHistory = <TState>({
+  history,
+  state,
+  ...props
+}: OnPushToHistoryProps<TState>) => {
+  return [...history, state]
+}
 
 export function newStoreDef<
   TInitialProps extends Record<string, any>,
@@ -202,6 +223,7 @@ export function newStoreDef<
       TUncontrolledState,
       TDeps
     >,
+    config: globalConfig,
   } = {} as CreateStoreOptions<
     TInitialProps,
     TState,
@@ -225,6 +247,7 @@ export function newStoreDef<
     TUncontrolledState,
     TDeps
   >
+  const { onPushToHistory = defaultOnPushToHistory } = globalConfig ?? {}
 
   function createStore(
     initialProps: RemoveDollarSignProps<TInitialProps>,
@@ -323,7 +346,12 @@ export function newStoreDef<
         return mergeObj(acc, newState) as TState
       }, cloneObj(store.state))
       defineState(newState)
-      store.history.push(newState)
+      store.history = onPushToHistory({
+        history: store.history,
+        state: newState,
+        transition,
+        from: "dispatch",
+      })
       store.historyRedo = []
       onTransitionEnd?.({
         events: store.events,
@@ -629,6 +657,12 @@ export function newStoreDef<
         // when the transition is done
       } else {
         defineState(newState)
+        store.history = onPushToHistory({
+          history: store.history,
+          state: newState,
+          transition: null,
+          from: "dispatch",
+        })
         subject.notify()
       }
     }
@@ -791,6 +825,12 @@ export function newStoreDef<
       })
 
       defineState(result)
+      store.history = onPushToHistory({
+        history: store.history,
+        state: newState,
+        transition: null,
+        from: "set",
+      })
 
       subject.notify()
     }
@@ -961,7 +1001,12 @@ export function newStoreDef<
         onFinishTransition: runSuccessCallback,
       })
 
-      store.history = [store.state]
+      store.history = onPushToHistory({
+        history: [],
+        state: store.state,
+        transition: BOOTSTRAP_TRANSITION,
+        from: "bootstrap",
+      })
       store.historyRedo = []
     }
 
