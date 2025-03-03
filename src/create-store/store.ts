@@ -153,7 +153,7 @@ type OnPushToHistoryProps<TState> = {
   history: TState[]
   state: TState
   transition: any[] | null | undefined
-  from: "dispatch" | "set" | "bootstrap"
+  from: "dispatch" | "set"
 }
 
 type OnPushToHistory<TState> = (props: OnPushToHistoryProps<TState>) => TState[]
@@ -186,8 +186,9 @@ type CreateStoreOptions<
 }
 
 export type StoreConstructorConfig<TDeps> = {
+  name?: string
   errorHandlers?: StoreErrorHandler[]
-  deps: TDeps
+  deps?: TDeps
 }
 
 const BOOTSTRAP_TRANSITION = ["bootstrap"]
@@ -290,7 +291,7 @@ export function newStoreDef<
         TUncontrolledState,
         TDeps
       >,
-      "state"
+      "history"
     )
 
     const createDiff = (oldState: TState, newState: TState) => {
@@ -855,11 +856,7 @@ export function newStoreDef<
       commitTransition,
     }
 
-    store = {
-      ...subject,
-      ...store,
-      ...methods,
-    }
+    store = mergeObj(subject, store, methods)
 
     function construct(
       initialProps: TInitialProps,
@@ -1001,12 +998,7 @@ export function newStoreDef<
         onFinishTransition: runSuccessCallback,
       })
 
-      store.history = onPushToHistory({
-        history: [],
-        state: store.state,
-        transition: BOOTSTRAP_TRANSITION,
-        from: "bootstrap",
-      })
+      store.history = [store.state]
       store.historyRedo = []
     }
 

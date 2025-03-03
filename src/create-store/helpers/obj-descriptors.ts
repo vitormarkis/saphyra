@@ -5,10 +5,16 @@ export function cloneObj<T>(obj: T): T {
   )
 }
 
-export function mergeObj<T, S = T, R = T>(target: T, source: S): R {
+export function mergeObj<T, R = T>(target: T, ...sources: any[]): R {
   return Object.defineProperties(Object.create(Object.getPrototypeOf(target)), {
     ...Object.getOwnPropertyDescriptors(target),
-    ...Object.getOwnPropertyDescriptors(source),
+    ...sources.reduce(
+      (acc, source) => ({
+        ...acc,
+        ...Object.getOwnPropertyDescriptors(source),
+      }),
+      {}
+    ),
   })
 }
 

@@ -72,6 +72,7 @@ export function createDebugableShallowCopy<T>(
     Object.defineProperty(state, debugProp, {
       get: () => memory,
       set: newValue => {
+        state
         memory = newValue
       },
       enumerable: true,

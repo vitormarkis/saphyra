@@ -39,6 +39,12 @@ const newAuthStore = newStoreDef<
   { [K: string]: any[] },
   { vitor: "markis" }
 >({
+  config: {
+    onPushToHistory({ history, state, transition }) {
+      if (!!transition) return []
+      return [...history, state]
+    },
+  },
   reducer({ prevState, state, action, diff, set, async, events }) {
     if (action?.type === "change-role") {
       async
@@ -77,11 +83,16 @@ export const Auth = createStoreUtils<typeof newAuthStore>()
 export function ChangeRolePage() {
   const instantiateStore = useCallback(
     () =>
-      newAuthStore({
-        role: "user",
-        currentTransition: null,
-        username: "",
-      }),
+      newAuthStore(
+        {
+          role: "user",
+          currentTransition: null,
+          username: "",
+        },
+        {
+          name: "AuthStore",
+        }
+      ),
     []
   )
   const authStoreState = useState(instantiateStore)
@@ -90,6 +101,12 @@ export function ChangeRolePage() {
   const [error, tryAgain] = useBootstrapError(authStoreState, instantiateStore)
 
   // Auth.useErrorHandlers(toastWithSonner, authStore)
+
+  useHistory(authStore)
+
+  useEffect(() => {
+    Object.assign(window, { authStore })
+  }, [authStore])
 
   if (error != null) {
     return (
