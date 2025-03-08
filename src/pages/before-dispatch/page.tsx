@@ -99,17 +99,11 @@ export function BeforeDispatchPage() {
 
   return (
     <TransitionsStore.Provider value={transitionsStoreState}>
-      <div className="flex flex-col gap-4 h-full">
+      <div className="flex flex-col gap-4 h-full overflow-auto">
         <BeforeDispatchView />
       </div>
     </TransitionsStore.Provider>
   )
-}
-
-type BeforeDispatchViewProps = {}
-
-type Events = {
-  tick: []
 }
 
 type ExampleFactory = (store: SomeStoreGeneric) => {
@@ -122,6 +116,7 @@ type ExampleFactory = (store: SomeStoreGeneric) => {
   actionSupport?: GenericAction & {
     beforeDispatch?: BeforeDispatch<BaseAction<{}>>
   }
+  script: string
 }
 
 const EXAMPLES_FACTORY: ExampleFactory[] = [
@@ -136,6 +131,11 @@ const EXAMPLES_FACTORY: ExampleFactory[] = [
         return options.action
       },
     },
+    script: `
+      beforeDispatch(options) {
+        return options.action
+      }
+    `,
   }),
   store => ({
     title: "Cancellation",
@@ -153,6 +153,15 @@ const EXAMPLES_FACTORY: ExampleFactory[] = [
         return action
       },
     },
+    script: `
+      beforeDispatch({ action, transitionStore, transition }) {
+        if (transitionStore.isHappeningUnique(transition)) {
+          const controller = transitionStore.controllers.get(transition)
+          controller?.abort()
+        }
+        return action
+      }
+    `,
   }),
   store => ({
     title: "One at time",
@@ -169,6 +178,14 @@ const EXAMPLES_FACTORY: ExampleFactory[] = [
         return action
       },
     },
+    script: `
+      beforeDispatch({ action, transitionStore, transition }) {
+        if (transitionStore.isHappeningUnique(transition)) {
+          return
+        }
+        return action
+      }
+    `,
   }),
   store => ({
     title: "Throttle",
@@ -188,6 +205,18 @@ const EXAMPLES_FACTORY: ExampleFactory[] = [
         return action
       },
     },
+    script: `
+      beforeDispatch({ action, meta }) {
+        const now = Date.now()
+        meta.timestamps ??= []
+        meta.timestamps = meta.timestamps.filter(
+          ts => now - ts < 1000 // 1 second
+        )
+        if (meta.timestamps.length >= 1) return // 1 action
+        meta.timestamps.push(now)
+        return action
+      }
+    `,
   }),
   store => ({
     title: "Rate limit",
@@ -207,6 +236,18 @@ const EXAMPLES_FACTORY: ExampleFactory[] = [
         return action
       },
     },
+    script: `
+      beforeDispatch({ action, meta }) {
+        const now = Date.now()
+        meta.timestamps ??= []
+        meta.timestamps = meta.timestamps.filter(
+          ts => now - ts < 5000 // 5 seconds
+        )
+        if (meta.timestamps.length >= 2) return // 2 actions
+        meta.timestamps.push(now)
+        return action
+      }
+    `,
   }),
   store => ({
     title: "Timeout",
@@ -230,6 +271,21 @@ const EXAMPLES_FACTORY: ExampleFactory[] = [
         }
       },
     },
+    script: `
+      beforeDispatch({ action, transitionStore, transition }) {
+        const timeoutId = setTimeout(() => {
+          const controller = transitionStore.controllers.get(transition)
+          controller?.abort()
+        }, 1000) // 1 second
+        return {
+          ...action,
+          onTransitionEnd(props) {
+            clearTimeout(timeoutId)
+            return action.onTransitionEnd?.(props)
+          },
+        }
+      }
+    `,
   }),
   store => ({
     title: "Wait for other",
@@ -259,6 +315,17 @@ const EXAMPLES_FACTORY: ExampleFactory[] = [
         return action
       },
     },
+    script: `
+      beforeDispatch({ action, transitionStore }) {
+        const fetchingTodos = transitionStore.isHappeningUnique(["todos"])
+        if (!fetchingTodos) return action
+        transitionStore.events.done.once(["todos"].join(":")).run(() => {
+          setTimeout(() => {
+            store.dispatch(action)
+          })
+        })
+      }
+    `,
   }),
   store => ({
     title: "Wait for other (loading)",
@@ -292,6 +359,21 @@ const EXAMPLES_FACTORY: ExampleFactory[] = [
         return action
       },
     },
+    script: `
+      beforeDispatch({ action, transitionStore, transition }) {
+        const fetchingTodos = transitionStore.isHappeningUnique(["todos"])
+        if (!fetchingTodos) return action
+        transitionStore.addKey(transition)
+        transitionStore.events.done.once(["todos"].join(":")).run(() => {
+          setTimeout(() => {
+            store.dispatch(action)
+            transitionStore.doneKey(transition, {
+              onFinishTransition: runSuccessCallback,
+            })
+          })
+        })
+      }
+    `,
   }),
 ]
 
@@ -430,14 +512,14 @@ type CodeBlockProps = {
 export function CodeBlock({ example }: CodeBlockProps) {
   const theme = Theme.useStore(s => s.theme)
   const { data } = useSuspenseQuery({
-    queryKey: ["code", String(example.action.beforeDispatch), example.slug],
+    queryKey: ["code", example.script, example.slug],
     queryFn: async () => {
       if (!example.action.beforeDispatch)
         return {
           longestLineLength: 8,
           script: "() => {}",
         }
-      let _code = `function ${String(example.action.beforeDispatch)}`
+      let _code = `function ${example.script}`
       _code = processFunctionString(_code)
       _code = await formatScript({ script: _code })
       // _code = removeExtraLine(_code)
