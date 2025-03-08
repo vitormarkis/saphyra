@@ -1,4 +1,5 @@
-import { BeforeDispatch, GenericAction } from "~/create-store/types"
+import { BaseAction, BeforeDispatch, GenericAction } from "~/create-store/types"
+import { EventsTuple } from "./event-emitter"
 
 export function isNewActionError(error: unknown) {
   if (typeof error !== "object") return false
@@ -10,10 +11,11 @@ export function isNewActionError(error: unknown) {
   return false
 }
 
-export const createDefaultBeforeDispatch: <
-  TBaseAction extends GenericAction = GenericAction
->() => BeforeDispatch<TBaseAction> = () => {
-  return options => {
+export const createDefaultBeforeDispatch =
+  <TActions extends BaseAction<any> = GenericAction>(): BeforeDispatch<
+    TActions,
+    EventsTuple
+  > =>
+  options => {
     return options.action
   }
-}

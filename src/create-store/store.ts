@@ -25,6 +25,7 @@ import {
   StoreErrorHandler,
   StoreInstantiator,
   StoreInternalEvents,
+  BeforeDispatch,
 } from "./types"
 import { EventEmitter, EventsTuple } from "~/create-store/event-emitter"
 import { createDebugableShallowCopy, isAsyncFunction } from "~/lib/utils"
@@ -149,6 +150,10 @@ export type ExternalPropsFn<TExternalProps> =
   | (() => Promise<TExternalProps>)
   | null
 
+type CreateStoreOptionsConfig = {
+  defaultBeforeDispatch?: BeforeDispatch<GenericAction>
+}
+
 /**
  * Create store options
  */
@@ -169,6 +174,7 @@ type CreateStoreOptions<
     TDeps
   >
   reducer?: Reducer<TState, TActions, TEvents, TUncontrolledState, TDeps>
+  config?: CreateStoreOptionsConfig
 }
 
 export type StoreConstructorConfig<TDeps> = {
@@ -202,6 +208,7 @@ export function newStoreDef<
       TUncontrolledState,
       TDeps
     >,
+    config: globalConfig = {} as CreateStoreOptionsConfig,
   } = {} as CreateStoreOptions<
     TInitialProps,
     TState,
@@ -225,6 +232,10 @@ export function newStoreDef<
     TUncontrolledState,
     TDeps
   >
+  const defaultBeforeDispatch = createDefaultBeforeDispatch()
+  const {
+    defaultBeforeDispatch: globalBeforeDispatch = defaultBeforeDispatch,
+  } = globalConfig ?? {}
 
   function createStore(
     initialProps: RemoveDollarSignProps<TInitialProps>,
@@ -512,10 +523,10 @@ export function newStoreDef<
       let newState = cloneObj(store.state)
       let stateContext = cloneObj(store.stateContext)
 
-      const { beforeDispatch = createDefaultBeforeDispatch() } = initialAction
+      const { beforeDispatch = globalBeforeDispatch } = initialAction
 
       const action = beforeDispatch({
-        action: getSnapshotAction(initialAction),
+        action: getSnapshotAction<TState, TActions>(initialAction),
         meta: store.transitions.meta.get(initialAction.transition),
         transitionStore: store.transitions,
         transition: initialAction.transition,

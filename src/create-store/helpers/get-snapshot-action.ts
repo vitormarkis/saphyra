@@ -1,10 +1,9 @@
-import { GenericAction } from "~/create-store/types"
+import { BaseAction, GenericAction } from "~/create-store/types"
 
 export function getSnapshotAction<
-  const T extends {
-    type: string
-  } & Record<string, any>,
->(action: T): GenericAction {
+  TState extends Record<string, any>,
+  TActions extends BaseAction<TState>,
+>(action: TActions): GenericAction {
   const { beforeDispatch: __, ...beforeDispatchAction } = action
-  return beforeDispatchAction as GenericAction
+  return beforeDispatchAction as TActions
 }

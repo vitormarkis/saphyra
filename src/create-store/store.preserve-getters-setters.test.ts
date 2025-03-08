@@ -3,7 +3,7 @@ import { newStoreDef } from "./store"
 import { SomeStore } from "./types"
 import { sleep } from "~/sleep"
 
-let store: SomeStore<{ count: 0; $stepsArr: number[] }, any, any, any>
+let store: SomeStore<{ count: 0; $stepsArr: number[] }, any, any, any, any>
 
 describe("preserve descriptors", () => {
   beforeEach(() => {

@@ -22,7 +22,13 @@ type CounterActions =
       type: "derive-steps-list"
     }
 
-export type TestCounterStore = SomeStore<CounterState, CounterActions, {}, any>
+export type TestCounterStore = SomeStore<
+  CounterState,
+  CounterActions,
+  {},
+  any,
+  any
+>
 
 export const newStore = newStoreDef<CounterState, CounterState, CounterActions>(
   {
