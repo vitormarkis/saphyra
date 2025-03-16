@@ -1,6 +1,20 @@
 ### v0.4.0
 - pass a custom function to determine whether to push a new state to the history stack, clean the stack, prevent pushing altogether, or implement any other custom behavior
 
+How it works:
+```javascript
+const store = newStoreDef({
+  config: {
+    onPushToHistory({ history, state, transition }) {
+      return [...history, state] // <- default behavior
+    }
+  },
+  reducer({ prevState, state, action, diff, set, async, events }) {
+    ...
+  }
+})
+```
+
 Example:
 - reset the history stack after each transition, otherwise, push the new state onto the history stack
 ```javascript
