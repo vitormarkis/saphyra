@@ -21,7 +21,7 @@ Example:
 const store = newStoreDef({
   config: {
     onPushToHistory({ history, state, transition }) {
-      if (!!transition) return []
+      if (!!transition) return [state]
       return [...history, state]
     }
   },
