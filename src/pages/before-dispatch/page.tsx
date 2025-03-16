@@ -393,12 +393,6 @@ export function BeforeDispatchView() {
           src="/3g.png"
           alt=""
         />
-        <TextChart.Wrapper className="h-fit w-72 min-w-0">
-          <TextChart.Italic>
-            Os códigos podem estar bugados devido ao build, vou arrumar isso em
-            breve.
-          </TextChart.Italic>
-        </TextChart.Wrapper>
       </div>
       <ul className="grid grid-rows-[auto,1fr,auto] grid-cols-1 @md:grid-cols-1 @lg:grid-cols-2 @5xl:grid-cols-3 gap-x-3 gap-y-8">
         {EXAMPLES_FACTORY.map((createExample, i) => (
