@@ -73,13 +73,13 @@ export function ExternalDepsPage() {
   }, [isBootstraping, allPosts, postsStore])
 
   useEffect(() => {
-    Object.assign(window, { postsStore })
+    Object.assign(window, { externalDeps: postsStore })
     return () => {
       Object.assign(window, {
         postsStore: undefined,
       })
     }
-  }, [])
+  }, [postsStore])
 
   return (
     <Posts.Provider value={postsStoreState}>

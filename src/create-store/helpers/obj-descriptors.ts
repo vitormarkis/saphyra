@@ -19,12 +19,7 @@ export function mergeObj<T, R = T>(target: T, ...sources: any[]): R {
 }
 
 export function assignObjValues(target: any, source: any) {
-  // Retrieve all property descriptors (including getters and setters)
   const descriptors = Object.getOwnPropertyDescriptors(source)
-
-  // Define those descriptors on the target object
   Object.defineProperties(target, descriptors)
-
-  // Return the mutated target for convenience
   return target
 }

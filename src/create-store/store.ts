@@ -998,7 +998,17 @@ export function newStoreDef<
         onFinishTransition: runSuccessCallback,
       })
 
-      store.history = [store.state]
+      const isOkToPushToHistory = (() => {
+        const isTransitioning =
+          Object.keys(store.transitions.state.transitions).length > 0
+
+        if (isTransitioning) return false
+        return true
+      })()
+
+      if (isOkToPushToHistory) {
+        store.history = [store.state]
+      }
       store.historyRedo = []
     }
 
