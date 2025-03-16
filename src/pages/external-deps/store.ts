@@ -48,6 +48,12 @@ export const newPostsStore = newStoreDef<
   {},
   IExternalDepsDependencies
 >({
+  config: {
+    onPushToHistory({ history, state, transition }) {
+      if (!!transition) return []
+      return [...history, state]
+    },
+  },
   async onConstruct({ signal, deps }) {
     const [posts, likedPosts] = await Promise.all([
       deps.fetchPosts(signal),

@@ -1,5 +1,5 @@
 import { Spinner } from "@blueprintjs/core"
-import { useCallback, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { ErrorPage } from "~/components/error-page"
 import { newStoreDef } from "~/create-store/store"
 import { useBootstrapError } from "~/create-store/hooks/use-bootstrap-error"
@@ -73,6 +73,10 @@ export function PokemonPage() {
     pokemonStoreState,
     instantiateStore
   )
+
+  useEffect(() => {
+    Object.assign(window, { pokemon: pokemonStore })
+  }, [pokemonStore])
 
   if (error != null) {
     return (

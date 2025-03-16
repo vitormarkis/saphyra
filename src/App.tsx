@@ -71,23 +71,23 @@ export default function App() {
       count: 0,
     })
   )
-  const [countStore] = countStoreState
+  const [homeStore] = countStoreState
 
-  useHistory(countStore)
+  useHistory(homeStore)
 
   useEffect(() => {
-    Object.assign(window, { countStore })
-  }, [])
+    Object.assign(window, { homeStore })
+  }, [homeStore])
 
   return (
     <Todos.Provider value={countStoreState}>
       <div className="grid grid-rows-[auto_auto_1fr] gap-4 overflow-y-hidden">
         <Content />
         <div className="min-h-[160px]">
-          <Devtools store={countStore} />
+          <Devtools store={homeStore} />
         </div>
         <div className="">
-          <Waterfall store={countStore} />
+          <Waterfall store={homeStore} />
         </div>
       </div>
     </Todos.Provider>

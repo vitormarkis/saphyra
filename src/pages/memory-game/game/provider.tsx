@@ -49,6 +49,14 @@ const newMemoryGame = newStoreDef<
   MemoryGameState,
   MemoryGameActions
 >({
+  config: {
+    onPushToHistory({ history, state, transition, from }) {
+      if (from === "dispatch" && !!transition) {
+        return []
+      }
+      return [...history, state]
+    },
+  },
   onConstruct({ initialProps }) {
     const cards = initialProps.cards.flatMap(flatMapCreateCards)
     return {

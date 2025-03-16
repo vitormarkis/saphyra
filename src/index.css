@@ -20,6 +20,12 @@ button {
 }
 
 @media (prefers-color-scheme: dark) {
+  #root {
+    background-color: #000;
+    height: 100vh;
+    overflow: hidden;
+  }
+
   .container-1 {
     @apply bg-black text-white;
   }

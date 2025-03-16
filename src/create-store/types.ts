@@ -50,6 +50,7 @@ export type GenericStoreValues<
   stateContext: StateContext
   errorHandlers: Set<StoreErrorHandler>
   settersRegistry: SettersRegistry<TState>
+  name?: string
 } & TransitionsExtension &
   HistoryExtension<TState> &
   UncontrolledState<TUncontrolledState>
