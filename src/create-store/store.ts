@@ -318,6 +318,7 @@ export function newStoreDef<
     const getState: Met["getState"] = () => store.state
 
     const defineState = (newState: TState) => {
+      if (newState === undefined) debugger
       store.state = newState
     }
 
@@ -341,18 +342,25 @@ export function newStoreDef<
         ...store.settersRegistry,
         [transitionKey]: [],
       }
-      const newState = setters.reduce((acc: TState, setter) => {
+      const newStateFromSetters = setters.reduce((acc: TState, setter) => {
         setter = mergeSetterWithState(ensureSetter(setter))
         const newState = setter(acc)
         return mergeObj(acc, newState) as TState
       }, cloneObj(store.state))
-      defineState(newState)
-      store.history = onPushToHistory({
-        history: store.history,
-        state: newState,
-        transition,
-        from: "dispatch",
+
+      const [newState, newHistory] = handleNewStateToHistory({
+        state: newStateFromSetters,
+        getNewHistoryStack: state =>
+          onPushToHistory({
+            history: store.history,
+            state,
+            transition,
+            from: "dispatch",
+          }),
       })
+      store.history = newHistory
+      defineState(newState)
+
       store.historyRedo = []
       onTransitionEnd?.({
         events: store.events,
@@ -657,13 +665,21 @@ export function newStoreDef<
         // the observers will be notified
         // when the transition is done
       } else {
-        defineState(newState)
-        store.history = onPushToHistory({
-          history: store.history,
+        const _previousState = newState
+        const [historyLatestState, newHistory] = handleNewStateToHistory({
           state: newState,
-          transition: null,
-          from: "dispatch",
+          getNewHistoryStack: state =>
+            onPushToHistory({
+              history: store.history,
+              state,
+              transition: null,
+              from: "dispatch",
+            }),
         })
+
+        newState = historyLatestState
+        store.history = newHistory
+        defineState(newState)
         subject.notify()
       }
     }
@@ -805,7 +821,7 @@ export function newStoreDef<
         transition: action.transition ?? [GENERAL_TRANSITION],
         controller: action.controller,
       })
-      const result = userReducer({
+      const stateFromReducer = userReducer({
         action,
         diff: createDiff(store.state, newState),
         state: newState,
@@ -825,13 +841,19 @@ export function newStoreDef<
         deps,
       })
 
-      defineState(result)
-      store.history = onPushToHistory({
-        history: store.history,
-        state: newState,
-        transition: null,
-        from: "set",
+      const [historyLatestState, newHistory] = handleNewStateToHistory({
+        state: stateFromReducer,
+        getNewHistoryStack: state =>
+          onPushToHistory({
+            history: store.history,
+            state,
+            transition: null,
+            from: "set",
+          }),
       })
+
+      store.history = newHistory
+      defineState(historyLatestState)
 
       subject.notify()
     }
@@ -1033,4 +1055,31 @@ export function ensureSetter<TState>(
   return isSetter(setterOrPartialStateList)
     ? setterOrPartialStateList
     : newSetter(setterOrPartialStateList)
+}
+
+type HandleNewStateToHistoryProps<TState> = {
+  state: TState
+  getNewHistoryStack: (state: TState) => TState[]
+}
+
+function handleNewStateToHistory<TState>({
+  state,
+  getNewHistoryStack,
+}: HandleNewStateToHistoryProps<TState>): [
+  newState: TState,
+  newHistory: TState[],
+] {
+  const newHistory = getNewHistoryStack(state)
+  invariant(
+    Array.isArray(newHistory),
+    'You must return an array from "onPushToHistory" callback.'
+  )
+  if (newHistory.length === 0) {
+    console.warn(
+      "You should return some state within your new history stack array. It's likely want to return [state]. Saphyra is doing it under the hood."
+    )
+    newHistory.push(state)
+  }
+  const newState = newHistory.at(-1)!
+  return [newState, newHistory] as const
 }
