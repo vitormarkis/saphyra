@@ -551,19 +551,19 @@ export function newStoreDef<
 
       const { beforeDispatch = createDefaultBeforeDispatch() } = initialAction
 
-      const action = beforeDispatch({
+      const rootAction = beforeDispatch({
         action: getSnapshotAction(initialAction),
         meta: store.transitions.meta.get(initialAction.transition),
         transitionStore: store.transitions,
         transition: initialAction.transition,
         events: store.events,
-      })
+      }) as TActions
 
-      if (action == null) throw rollback
+      if (rootAction == null) throw rollback
 
       handleRegisterTransition(
         newState,
-        action as TActions,
+        rootAction,
         store,
         stateContext,
         rollback
@@ -579,10 +579,10 @@ export function newStoreDef<
        * A primeira promise tem apenas o controller do primeiro dispatch, e não de todos
        */
       const controller = ensureAbortController({
-        transition: initialAction.transition ?? [GENERAL_TRANSITION],
-        controller: initialAction.controller,
+        transition: rootAction.transition ?? [GENERAL_TRANSITION],
+        controller: rootAction.controller,
       })
-      const actionsQueue: TActions[] = [initialAction]
+      const actionsQueue: TActions[] = [rootAction]
 
       let prevState = store.state
       for (const action of actionsQueue) {
@@ -618,8 +618,8 @@ export function newStoreDef<
           dispatch: (action: TActions) => {
             actionsQueue.push({
               ...action,
-              transition: initialAction.transition ?? null, // sobreescrevendo transition, deve agrupar varias TODO
-              onTransitionEnd: initialAction.onTransitionEnd ?? null,
+              transition: rootAction.transition ?? null, // sobreescrevendo transition, deve agrupar varias TODO
+              onTransitionEnd: rootAction.onTransitionEnd ?? null,
             })
           },
           deps,
@@ -658,8 +658,8 @@ export function newStoreDef<
         prevState = futurePrevState
       }
 
-      if (initialAction.transition != null) {
-        store.transitions.doneKey(initialAction.transition, {
+      if (rootAction.transition != null) {
+        store.transitions.doneKey(rootAction.transition, {
           onFinishTransition: runSuccessCallback,
         })
         // the observers will be notified
