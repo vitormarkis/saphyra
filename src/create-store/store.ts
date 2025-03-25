@@ -149,17 +149,50 @@ export type ExternalPropsFn<TExternalProps> =
   | (() => Promise<TExternalProps>)
   | null
 
-type OnPushToHistoryProps<TState> = {
+type OnPushToHistoryProps<
+  TState,
+  TActions extends BaseAction<TState>,
+  TEvents extends EventsTuple,
+  TUncontrolledState extends Record<string, any>,
+  TDeps,
+> = {
   history: TState[]
   state: TState
   transition: any[] | null | undefined
   from: "dispatch" | "set"
+  store: SomeStore<TState, TActions, TEvents, TUncontrolledState, TDeps>
 }
 
-type OnPushToHistory<TState> = (props: OnPushToHistoryProps<TState>) => TState[]
+type OnPushToHistory<
+  TState,
+  TActions extends BaseAction<TState>,
+  TEvents extends EventsTuple,
+  TUncontrolledState extends Record<string, any>,
+  TDeps,
+> = (
+  props: OnPushToHistoryProps<
+    TState,
+    TActions,
+    TEvents,
+    TUncontrolledState,
+    TDeps
+  >
+) => TState[]
 
-type CreateStoreOptionsConfig<TState> = {
-  onPushToHistory?: OnPushToHistory<TState>
+type CreateStoreOptionsConfig<
+  TState,
+  TActions extends BaseAction<TState>,
+  TEvents extends EventsTuple,
+  TUncontrolledState extends Record<string, any>,
+  TDeps,
+> = {
+  onPushToHistory?: OnPushToHistory<
+    TState,
+    TActions,
+    TEvents,
+    TUncontrolledState,
+    TDeps
+  >
 }
 
 /**
@@ -182,7 +215,13 @@ type CreateStoreOptions<
     TDeps
   >
   reducer?: Reducer<TState, TActions, TEvents, TUncontrolledState, TDeps>
-  config?: CreateStoreOptionsConfig<TState>
+  config?: CreateStoreOptionsConfig<
+    TState,
+    TActions,
+    TEvents,
+    TUncontrolledState,
+    TDeps
+  >
 }
 
 export type StoreConstructorConfig<TDeps> = {
@@ -192,11 +231,23 @@ export type StoreConstructorConfig<TDeps> = {
 }
 
 const BOOTSTRAP_TRANSITION = ["bootstrap"]
-const defaultOnPushToHistory = <TState>({
+const defaultOnPushToHistory = <
+  TState,
+  TActions extends BaseAction<TState>,
+  TEvents extends EventsTuple,
+  TUncontrolledState extends Record<string, any>,
+  TDeps,
+>({
   history,
   state,
   ...props
-}: OnPushToHistoryProps<TState>) => {
+}: OnPushToHistoryProps<
+  TState,
+  TActions,
+  TEvents,
+  TUncontrolledState,
+  TDeps
+>) => {
   return [...history, state]
 }
 
@@ -356,6 +407,7 @@ export function newStoreDef<
             state,
             transition,
             from: "dispatch",
+            store,
           }),
       })
       store.history = newHistory
@@ -674,6 +726,7 @@ export function newStoreDef<
               state,
               transition: null,
               from: "dispatch",
+              store,
             }),
         })
 
@@ -849,6 +902,7 @@ export function newStoreDef<
             state,
             transition: null,
             from: "set",
+            store,
           }),
       })
 
