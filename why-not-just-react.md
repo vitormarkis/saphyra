@@ -6,7 +6,7 @@ Resumindo o que são transitions assíncronas/actions, é a habilidade de você 
 
 
 ### Por que não apenas usar React então?
-- Não possui signals para cancelamento de algo assíncrono.
+- Não possui signals para cancelamento de processamentos assíncronos.
 - Conceito de async deles são apenas promises, no Saphyra é tudo que não é síncrono.
   - O primitivo das transitions do Saphyra é super flexível, você pode usar a mesma lógica pra timers, animações, streams, eventos...
 - Se você quer disparar callbacks quando sua feature ta em certo formato, precisa fazer isso com useEffects.
@@ -14,4 +14,4 @@ Resumindo o que são transitions assíncronas/actions, é a habilidade de você 
   - Todo esse processo de useEffects reagindo a mudança de estados por useEffects é considerado síncrono, você não consegue optar por não comitar esses estados intermediários ou derivar um loading state.
   - Com Saphyra, toda mudança na store pode ter sido acionada por alguma transition, e se tiver derivações de estado/efeitos colaterais agendados/disparo de eventos assíncronos, tudo acontece em nome da transition, e você consegue fazer esse batch de estado e comitar apenas 1 estado válido.
 - O corpo de um componente no React + seus estados, seria o que o reducer do Saphyra é, um lugar onde você deriva sua lógica e garante a validade do estado.
-  - O reducer do Saphyra só roda em setStates e em dispatches de actions. A função do componente no React é chamado várias vezes, em re-renders e no processo de reconciliation, o que gera um overhead na hora de declarar sua lógica porque você precisa se preocupar quando a função é chamada, em que 
+  - O reducer do Saphyra só roda em setStates e em dispatches de actions. A função do componente no React é chamado várias vezes, em re-renders e no processo de reconciliation, o que gera um overhead na hora de declarar sua lógica porque você precisa se preocupar quando a função é chamada e em que que contexto pra garantir que seu efeito/sua derivação seja rodado apenas uma vez.
