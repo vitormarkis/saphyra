@@ -1,11 +1,10 @@
 import { Spinner } from "@blueprintjs/core"
 import { useEffect, useState } from "react"
-import { useHistory } from "~/create-store/hooks/use-history"
-import { newStoreDef } from "./create-store/store"
-import { createStoreUtils } from "./create-store/createStoreUtils"
 import { sleep } from "./sleep"
 import { Devtools } from "~/devtools/devtools"
 import { Waterfall } from "./devtools/waterfall"
+import { newStoreDef } from "saphyra"
+import { createStoreUtils, useHistory } from "@saphyra/react"
 
 type CounterState = {
   count: number

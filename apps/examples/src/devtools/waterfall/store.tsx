@@ -1,6 +1,7 @@
 import { BarType, CurrentSorters } from "./types"
 import { reduceConfig } from "./fn/reduce-config"
-import { createStoreUtils, newStoreDef } from "~/create-store"
+import { createStoreUtils } from "@saphyra/react"
+import { newStoreDef } from "saphyra"
 import { BarSort, barSorters, BarSorters } from "~/devtools/waterfall/sorters"
 import { nonNullable } from "~/lib/utils"
 import { BarFilter, barFilters, BarFilters } from "./filters"

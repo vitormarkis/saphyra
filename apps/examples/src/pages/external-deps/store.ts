@@ -1,11 +1,11 @@
-import { newStoreDef } from "~/create-store/store"
-import { createStoreUtils } from "~/create-store/createStoreUtils"
+import { newStoreDef } from "saphyra"
 import { reduceGroupById } from "./fn/reduce-group-by-user-id"
 import { CommentType, PostType } from "./types"
 import { randomString } from "~/lib/utils"
 import { queryClient } from "~/query-client"
 import { getCommentsQueryOptions } from "~/pages/external-deps/query-options/get-comments-query-options"
 import { IExternalDepsDependencies } from "./IStore"
+import { createStoreUtils } from "@saphyra/react"
 
 type PostsState = {
   currentTransition: null

@@ -1,5 +1,5 @@
 import { toast } from "sonner"
-import { BeforeDispatchOptions } from "~/create-store/types"
+import { BeforeDispatchOptions } from "saphyra"
 
 export function removeCurrentToastsAndRegisterNewToasts({
   action,

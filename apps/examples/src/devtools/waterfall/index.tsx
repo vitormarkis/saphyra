@@ -10,7 +10,7 @@ import {
 } from "react"
 import { newWaterfallStore, WaterfallState, WaterfallStore, WF } from "./store"
 import { cn } from "~/lib/cn"
-import { SomeStoreGeneric } from "~/create-store"
+import { SomeStoreGeneric } from "saphyra"
 import { BarSorters } from "./sorters"
 import { ChevronUp } from "lucide-react"
 import React from "react"

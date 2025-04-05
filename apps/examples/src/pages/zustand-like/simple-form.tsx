@@ -1,9 +1,9 @@
 import { Spinner } from "@blueprintjs/core"
 import { useEffect, useState } from "react"
-import { newStoreDef } from "~/create-store/store"
-import { createStoreUtils } from "~/create-store/createStoreUtils"
+import { newStoreDef } from "saphyra"
 import { createSession } from "~/pages/zustand-like/fn/create-session"
 import { Devtools } from "~/devtools/devtools"
+import { createStoreUtils } from "@saphyra/react"
 
 type SimpleFormInitialProps = {
   fullName: string

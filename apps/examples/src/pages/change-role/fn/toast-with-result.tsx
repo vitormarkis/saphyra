@@ -1,5 +1,5 @@
 import { toast } from "sonner"
-import { OnTransitionEndProps } from "~/create-store/types"
+import { OnTransitionEndProps } from "saphyra"
 import { fromErrorToMessage } from "~/fromErrorToMessage"
 
 export function toastWithResult({

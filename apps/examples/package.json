@@ -1,6 +1,6 @@
 {
   "name": "examples",
-  "description": "This website store showcases ",
+  "description": "This website showcases a list of common use cases for Saphyra.",
   "version": "1.0.0",
   "type": "module",
   "main": "./dist/index.js",
@@ -38,7 +38,10 @@
     "react": "^18.3.1",
     "scheduler": "^0.25.0",
     "tiny-invariant": "^1.3.3",
-    "use-context-selector": "^2.0.0"
+    "use-context-selector": "^2.0.0",
+    "saphyra": "workspace:*",
+    "@saphyra/react": "workspace:*",
+    "@saphyra/common": "workspace:*"
   },
   "devDependencies": {
     "@blueprintjs/core": "^5.14.2",

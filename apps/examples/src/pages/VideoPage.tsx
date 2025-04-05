@@ -1,6 +1,6 @@
 import { useRef, useState } from "react"
-import { newStoreDef } from "~/create-store/store"
-import { createStoreUtils } from "~/create-store/createStoreUtils"
+import { newStoreDef } from "saphyra"
+import { createStoreUtils } from "@saphyra/react"
 import { sleep } from "~/sleep"
 
 type TransitionsStoreState = {

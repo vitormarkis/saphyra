@@ -1,10 +1,7 @@
 import { Spinner } from "@blueprintjs/core"
-import { createStoreUtils } from "../../create-store/createStoreUtils"
 import { fetchRole } from "./fn/fetch-role"
-import { useHistory } from "~/create-store/hooks/use-history"
-import { newStoreDef } from "~/create-store/store"
+import { newStoreDef } from "saphyra"
 import { useCallback, useEffect, useState } from "react"
-import { useBootstrapError } from "~/create-store/hooks/use-bootstrap-error"
 import { ErrorPage } from "~/components/error-page"
 import { fetchPermissions } from "~/pages/change-role/fn/get-permissions"
 import { Devtools } from "~/devtools/devtools"
@@ -14,8 +11,9 @@ import { CodeEditor } from "~/components/code-editor"
 import { removeCurrentToastsAndRegisterNewToasts } from "./fn/isjdf"
 import { toastWithResult } from "./fn/toast-with-result"
 import { Waterfall } from "~/devtools/waterfall"
+import { createStoreUtils, useBootstrapError, useHistory } from "@saphyra/react"
 
-type SelectedRole = "user" | "admin"
+export type SelectedRole = "user" | "admin"
 
 type AuthStoreState = {
   role: "user" | "admin"

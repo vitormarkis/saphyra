@@ -1,6 +1,6 @@
-import { newStoreDef } from "../../create-store/store"
+import { createStoreUtils } from "@saphyra/react"
+import { newStoreDef } from "saphyra"
 import { GithubProfile } from "./types"
-import { createStoreUtils } from "../../create-store/createStoreUtils"
 import { Devtools } from "~/devtools/devtools"
 
 type UserStoreInitialProps = {

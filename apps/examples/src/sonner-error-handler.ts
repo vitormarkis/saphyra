@@ -1,6 +1,6 @@
 import { toast } from "sonner"
-import { StoreErrorHandler } from "./create-store/types"
 import { fromErrorToMessage } from "./fromErrorToMessage"
+import { StoreErrorHandler } from "saphyra"
 
 export const toastWithSonner: StoreErrorHandler = error => {
   toast.error(fromErrorToMessage(error), {

@@ -1,4 +1,4 @@
-import { cloneObj } from "./create-store/helpers/obj-descriptors"
+import { cloneObj } from "saphyra"
 
 export function createDebugableShallowCopy<T extends Record<string, any>>(
   intendedState: T,

@@ -2,7 +2,6 @@ import { Spinner } from "@blueprintjs/core"
 import { useEffect, useState } from "react"
 import { IconHeartFull } from "~/generic-structure-displayer/components/IconHearFull"
 import { IconHeart } from "~/generic-structure-displayer/components/IconHeart"
-import { useHistory } from "~/create-store/hooks/use-history"
 import { cn } from "~/lib/cn"
 import { newPostsStore, Posts } from "~/pages/external-deps/store"
 import { PostType } from "./types"
@@ -18,6 +17,7 @@ import { fetchLikedPosts } from "./fn/fetch-liked-posts"
 import { fetchPosts } from "./fn/fetch-posts"
 import { placeComment } from "./fn/fetch-place-commment"
 import { likePost } from "./fn/like-post"
+import { useHistory } from "@saphyra/react"
 
 export function ExternalDepsPage() {
   const postsStoreState = useState(() =>

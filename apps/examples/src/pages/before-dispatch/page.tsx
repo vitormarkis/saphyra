@@ -15,15 +15,15 @@ import { useSuspenseQuery } from "@tanstack/react-query"
 import { noop } from "lodash"
 import { CSSProperties, ReactNode, Suspense, useState } from "react"
 import invariant from "tiny-invariant"
-import { createStoreUtils } from "~/create-store/createStoreUtils"
-import { newStoreDef } from "~/create-store/store"
-import { runSuccessCallback } from "~/create-store/transitions-store"
+import { createStoreUtils } from "@saphyra/react"
+import { newStoreDef } from "saphyra"
+import { runSuccessCallback } from "saphyra"
 import {
   BaseAction,
   BeforeDispatch,
   GenericAction,
   SomeStoreGeneric,
-} from "~/create-store/types"
+} from "saphyra"
 import { cn } from "~/lib/cn"
 import { formatScript } from "~/lib/prettify-code"
 import { Theme } from "~/theme"

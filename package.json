@@ -1,48 +1,15 @@
 {
-  "name": "saphyra",
-  "description": "A tool for creating declarative stores and managing state that embraces async behavior.",
-  "version": "0.4.4",
+  "name": "@saphyra/workspace",
+  "description": "Saphyra workspace",
+  "version": "1.0.0",
   "type": "module",
-  "main": "./dist/index.js",
-  "module": "./dist/index.mjs",
-  "types": "./dist/index.d.ts",
-  "keywords": [
-    "react",
-    "state",
-    "management",
-    "redux",
-    "zustand",
-    "declarative",
-    "typescript",
-    "xstate"
-  ],
+  "keywords": [],
   "author": "vitormarkis",
   "license": "MIT",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "require": "./dist/index.js",
-      "import": "./dist/index.mjs"
-    }
-  },
-  "files": [
-    "dist/",
-    "README.md",
-    "LICENSE",
-    "package.json"
-  ],
+  "files": [],
   "packageManager": "pnpm@9.6.0",
-  "scripts": {
-    "dev": "vite",
-    "lint": "eslint .",
-    "check": "tsc --noEmit --project ./tsconfig.app.json",
-    "pr": "prettier --write src",
-    "test": "vitest --config vitest.config.ts --silent",
-    "test:debug": "vitest --config vitest.config.ts --inspect-brk --browser --no-file-parallelism",
-    "build": "tsup",
-    "build-vite": "vite build",
-    "check-types": "tsc --noEmit"
-  },
-  "dependencies": {},
-  "devDependencies": {}
+  "scripts": {},
+  "dependencies": {
+    "typescript": "^5.5.3"
+  }
 }

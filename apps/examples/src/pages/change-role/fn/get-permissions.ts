@@ -1,7 +1,7 @@
 import { createLuck } from "~/lib/create-luck"
 import { sleep } from "../../../sleep"
-import { SelectedRole } from "../../../types"
 import { PERMISSIONS } from "../const"
+import { SelectedRole } from "../page"
 
 type FetchPermissionsProps = {
   role: SelectedRole

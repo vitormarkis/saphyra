@@ -1,4 +1,4 @@
-import { cloneObj } from "~/create-store/helpers/obj-descriptors"
+import { cloneObj } from "saphyra"
 
 export function capitalize(str?: string) {
   if (!str) return ""
@@ -82,3 +82,5 @@ export function createDebugableShallowCopy<T>(
 
   return state
 }
+
+export function noop(...args: any[]) {}

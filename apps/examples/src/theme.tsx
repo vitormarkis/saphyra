@@ -1,4 +1,5 @@
-import { createStoreUtils, newStoreDef } from "./create-store"
+import { createStoreUtils } from "@saphyra/react"
+import { newStoreDef } from "saphyra"
 
 type Theme = {
   theme: "light" | "dark"

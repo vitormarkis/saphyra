@@ -1,5 +1,5 @@
-import { newStoreDef } from "../../create-store/store"
-import { createStoreUtils } from "../../create-store/createStoreUtils"
+import { createStoreUtils } from "@saphyra/react"
+import { newStoreDef } from "saphyra"
 
 type SimpleForm = {
   name: string

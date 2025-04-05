@@ -1,4 +1,4 @@
-import { EventEmitter } from "./create-store/event-emitter"
+import { EventEmitter } from "saphyra"
 
 type Events = {
   navigated_through_navlink: [url: string]

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react"
-import { StoreInstantiatorGeneric } from "../create-store/types"
+import type { StoreInstantiatorGeneric } from "saphyra"
 import {
   GenericStructureDisplayer,
   GenericStructureDisplayerProps,

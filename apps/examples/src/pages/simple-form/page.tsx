@@ -1,6 +1,6 @@
+import { createStoreUtils } from "@saphyra/react"
 import { useEffect, useState } from "react"
-import { newStoreDef } from "~/create-store/store"
-import { createStoreUtils } from "~/create-store/createStoreUtils"
+import { newStoreDef } from "saphyra"
 import { createSession } from "~/pages/zustand-like/fn/create-session"
 
 type SimpleFormEvents = {

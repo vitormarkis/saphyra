@@ -12,11 +12,11 @@ import "prismjs/themes/prism-okaidia.css"
 
 import React, { CSSProperties } from "react"
 import Editor from "react-simple-code-editor"
-import { noop } from "~/create-store/fn/noop"
 import { cn } from "~/lib/cn"
-import { RequireKeys } from "~/types"
 import { Theme } from "~/theme"
 import st from "./code-editor.module.css"
+import { noop } from "~/lib/utils"
+import { type RequireKeys } from "saphyra"
 
 export type CodeEditorProps = RequireKeys<
   Partial<React.ComponentPropsWithoutRef<typeof Editor>>,
