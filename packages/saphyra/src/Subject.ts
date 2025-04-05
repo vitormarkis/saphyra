@@ -1,10 +1,18 @@
 export type AnyFunction = (...args: any[]) => any
 
 export class Subject<T extends AnyFunction = AnyFunction> {
+  scheduled = false
   observers = new Set<T>()
 
   notify() {
-    this.observers.forEach(cb => cb())
+    if (this.scheduled) return
+
+    this.scheduled = true
+    const self = this
+    setTimeout(function notifyFn() {
+      self.scheduled = false
+      self.observers.forEach(cb => cb())
+    })
   }
 
   subscribe(cb: T) {

@@ -10,7 +10,7 @@
     "t": "jest",
     "test:w": "jest --verbose --watchAll",
     "dev": "npm run build -- --watch",
-    "build": "tsup src/index.ts --format cjs,esm --dts",
+    "build": "tsup",
     "build:prod": "tsup src/index.ts --format cjs,esm",
     "format": "npx prettier --write .",
     "check": "tsc --noEmit",

@@ -67,6 +67,46 @@ export type Exact<T> = T extends readonly [...any[]] | Record<string, unknown>
   ? Mutable<T>
   : T
 
-const watchValue = 20
+export function setImmutableFn<T extends Record<string, any>>(
+  target: T,
+  path: string,
+  setter: (value: any) => any
+): T {
+  path = pathToDotPath(path)
+  const keys = path.split(".")
+  const isArray = Array.isArray(target)
+  const newTarget = isArray ? [...target] : { ...target }
+  const lastKey = keys.pop()
+  if (!lastKey) return newTarget as T
+  const finalRef = keys.reduce((acc: any, key) => {
+    const value = acc[key]
+    const isArray = Array.isArray(value)
+    let next
+    if (isArray) {
+      next = value ? [...value] : []
+    } else {
+      next = value ? { ...acc[key] } : {}
+    }
+    acc[key] = next
+    return next
+  }, newTarget)
+  finalRef[lastKey] = setter(finalRef[lastKey])
+  return newTarget as T
+}
 
-const xx = exact([watchValue, false])
+export function pathToDotPath(path: string) {
+  path = path.replaceAll("[", ".")
+  path = path.replaceAll("]", "")
+  if (path.startsWith(".")) {
+    path = path.slice(1)
+  }
+  return path
+}
+
+export function setImmutable<T extends Record<string, any>>(
+  target: T,
+  path: string,
+  value: any
+): T {
+  return setImmutableFn(target, path, () => value)
+}

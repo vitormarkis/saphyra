@@ -1,6 +1,7 @@
 import { DoneKeyOptions, OnFinishTransition } from "./types"
 import { EventEmitter } from "./event-emitter"
 import { Subject } from "./Subject"
+import { setImmutable } from "@saphyra/common"
 
 export type TransitionsStoreState = {
   transitions: Record<string, number>
@@ -100,10 +101,7 @@ export class TransitionsStore extends Subject {
     const key =
       typeof transition === "string" ? transition : transition.join(":")
     // this.controllers.values[key] = value
-    this.controllers = {
-      ...this.controllers,
-      values: { ...this.controllers.values, [key]: value },
-    }
+    this.controllers = setImmutable(this.controllers, `values.${key}`, value)
   }
 
   ensureController(transition: any[] | null | undefined | string) {
@@ -111,10 +109,11 @@ export class TransitionsStore extends Subject {
     const transitionName =
       typeof transition === "string" ? transition : transition.join(":")
     if (!this.controllers.values[transitionName]) {
-      this.controllers = {
-        ...this.controllers,
-        [transitionName]: new AbortController(),
-      }
+      this.controllers = setImmutable(
+        this.controllers,
+        transitionName,
+        new AbortController()
+      )
     }
     return this.controllers.values[transitionName]
   }
