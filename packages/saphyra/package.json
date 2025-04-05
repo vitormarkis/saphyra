@@ -1,0 +1,61 @@
+{
+  "name": "saphyra",
+  "description": "A tool for creating declarative stores and managing state that embraces async behavior.",
+  "version": "0.4.4",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "keywords": [
+    "react",
+    "state",
+    "management",
+    "redux",
+    "zustand",
+    "declarative",
+    "typescript",
+    "xstate"
+  ],
+  "author": "vitormarkis",
+  "license": "MIT",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "require": "./dist/index.js",
+      "import": "./dist/index.mjs"
+    }
+  },
+  "files": [
+    "dist/",
+    "README.md",
+    "LICENSE",
+    "package.json"
+  ],
+  "packageManager": "pnpm@9.6.0",
+  "scripts": {
+    "dev": "npm run build -- --watch",
+    "lint": "eslint .",
+    "check": "./node_modules/typescript/bin/tsc --noEmit --project ./tsconfig.json",
+    "pr": "prettier --write src",
+    "test": "vitest --config vitest.config.ts --silent",
+    "test:debug": "vitest --config vitest.config.ts --inspect-brk --browser --no-file-parallelism",
+    "build": "tsup src/index.ts",
+    "build-vite": "vite build",
+    "check-types": "npm run check"
+  },
+  "dependencies": {
+    "@saphyra/common": "workspace:*",
+    "light-retry": "^0.1.0",
+    "scheduler": "^0.25.0",
+    "tiny-invariant": "^1.3.3",
+    "tsc": "^2.0.4",
+    "typescript": "^5.8.3",
+    "use-context-selector": "^2.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.20",
+    "react": "^18.3.1",
+    "tsup": "^8.4.0",
+    "vitest": "^3.1.1"
+  }
+}
