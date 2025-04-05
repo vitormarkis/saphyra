@@ -15,6 +15,56 @@ export type HistoryExtension<TState> = {
   historyRedo: Array<TState>
 }
 
+export type Registry<TState> = {
+  [key: string]: Array<SetterOrPartialState<TState>>
+}
+
+export class OptimisticRegistry<TState> {
+  private settersOrPartialStateList: Registry<TState> = {}
+  private onMutate: (snapshot: Registry<TState>) => void
+  private onMutate_scheduled = false
+
+  constructor(props: {
+    onMutate: (settersOrPartialStateList: Registry<TState>) => void
+  }) {
+    /**
+     * Call the onMutate only once per tick
+     */
+    this.onMutate = (settersOrPartialStateList: Registry<TState>) => {
+      if (this.onMutate_scheduled) return
+
+      const self = this
+      this.onMutate_scheduled = true
+      setTimeout(function onMutateST() {
+        self.onMutate_scheduled = false
+        props.onMutate(settersOrPartialStateList)
+      })
+    }
+  }
+
+  add(key: string, setterOrPartialState: SetterOrPartialState<TState>) {
+    this.settersOrPartialStateList[key] ??= []
+    this.settersOrPartialStateList[key].push(setterOrPartialState)
+    this.onMutate(this.settersOrPartialStateList)
+  }
+
+  clear(key: string) {
+    this.settersOrPartialStateList[key] = []
+    this.onMutate(this.settersOrPartialStateList)
+  }
+
+  check(transition: any[] | null | undefined) {
+    if (!transition) return false
+    const transitionKey = transition.join(":")
+    if (!(transitionKey in this.settersOrPartialStateList)) return false
+    return this.settersOrPartialStateList[transitionKey].length > 0
+  }
+
+  get() {
+    return this.settersOrPartialStateList
+  }
+}
+
 type SettersRegistry<TState> = Record<
   string,
   Array<SetterOrPartialState<TState>>
@@ -46,9 +96,11 @@ export type GenericStoreValues<
   events: EventEmitter<TEvents>
   internal: StoreInternals
   state: TState
+  optimisticState: TState
   stateContext: StateContext
   errorHandlers: Set<StoreErrorHandler>
   settersRegistry: SettersRegistry<TState>
+  optimisticRegistry: OptimisticRegistry<TState>
   name?: string
 } & TransitionsExtension &
   HistoryExtension<TState> &
@@ -62,13 +114,18 @@ export type GenericStoreMethods<
   TDeps,
 > = {
   getState(): TState
+  getOptimisticState(): TState
   dispatch: Dispatch<TState, TActions>
   setState(newState: Partial<TState>): void
   registerSet: InnerReducerSet<TState>
+  registerOptimistic: InnerReducerOptimistic<TState>
   createSetScheduler(
     newState: TState & Partial<TState>,
     newStateContext: StateContext,
     mergeType: "reducer" | "set",
+    transition: any[] | null | undefined
+  ): ReducerSet<TState>
+  createOptimisticScheduler(
     transition: any[] | null | undefined
   ): ReducerSet<TState>
   registerErrorHandler(handler: StoreErrorHandler): () => void
@@ -237,8 +294,15 @@ export type StateContext = {
 
 export type Setter<TState> = (state: TState) => Partial<TState>
 
+export type ReducerOptimistic<TState> = (
+  setterOrPartialState: SetterOrPartialState<TState>
+) => void
 export type ReducerSet<TState> = (
   setterOrPartialState: SetterOrPartialState<TState>
+) => void
+export type InnerReducerOptimistic<TState> = (
+  setterOrPartialStateList: SetterOrPartialState<TState>,
+  transition: any[] | null | undefined
 ) => void
 export type InnerReducerSet<TState> = (
   setterOrPartialStateList: SetterOrPartialState<TState>,

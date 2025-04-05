@@ -1,6 +1,6 @@
 import { createDiffOnKeyChange } from "./diff"
 import { createSubject } from "./Subject"
-import { RemoveDollarSignProps } from "./types"
+import { OptimisticRegistry, RemoveDollarSignProps } from "./types"
 import { createAsync, errorNoTransition } from "./createAsync"
 import { runSuccessCallback, TransitionsStore } from "./transitions-store"
 import type {
@@ -21,6 +21,8 @@ import type {
   StoreErrorHandler,
   StoreInstantiator,
   StoreInternalEvents,
+  ReducerOptimistic,
+  Registry,
 } from "./types"
 import { EventEmitter, EventsTuple } from "./event-emitter"
 import { noop } from "./fn/noop"
@@ -39,6 +41,7 @@ import {
   newSetter,
 } from "./helpers/utils"
 import { defaultErrorHandler } from "./default-error-handler"
+import { setImmutable, setImmutableFn } from "@saphyra/common"
 
 export type ExternalProps = Record<string, any> | null
 
@@ -119,6 +122,7 @@ type ReducerProps<
   store: SomeStore<TState, TActions, TEvents, TUncontrolledState, TDeps>
   events: EventEmitter<TEvents>
   set: ReducerSet<TState>
+  optimistic: ReducerOptimistic<TState>
   diff: Diff<TState>
   dispatch: Dispatch<TState, TActions>
   deps: TDeps
@@ -326,7 +330,18 @@ export function newStoreDef<
       historyRedo: [],
       errorHandlers: new Set(),
       settersRegistry: {},
+      optimisticRegistry: new OptimisticRegistry({
+        onMutate(registry) {
+          console.log("99: ", registry)
+          store.optimisticState = calculateOptimisticState(
+            registry,
+            store.state
+          )
+          store.notify()
+        },
+      }),
       state: {} as TState,
+      optimisticState: {} as TState,
       stateContext: {
         currentTransition: null,
         when: now,
@@ -349,6 +364,13 @@ export function newStoreDef<
       return diff
     }
 
+    const createOptimisticScheduler: Met["createOptimisticScheduler"] = (
+      transition
+    ): ReducerOptimistic<TState> => {
+      return setterOrPartialState =>
+        store.registerOptimistic(setterOrPartialState, transition)
+    }
+
     const createSetScheduler: Met["createSetScheduler"] = (
       newState,
       newStateContext,
@@ -366,10 +388,36 @@ export function newStoreDef<
     }
 
     const getState: Met["getState"] = () => store.state
+    const getOptimisticState: Met["getOptimisticState"] = () =>
+      store.optimisticState
+
+    function calculateOptimisticState(
+      registry: Registry<TState>,
+      state: TState
+    ) {
+      const allOptimisticSetters = Object.values(registry).flat()
+      if (allOptimisticSetters.length === 0) return state
+      const optimisticState = allOptimisticSetters.reduce(
+        (acc: TState, setter) => {
+          setter = mergeSetterWithState(
+            ensureSetter(setter as SetterOrPartialState<TState>)
+          )
+          const newState = setter(acc)
+          return mergeObj(acc, newState) as TState
+        },
+        cloneObj(state)
+      )
+
+      return optimisticState
+    }
 
     const defineState = (newState: TState) => {
       if (newState === undefined) debugger
       store.state = newState
+      store.optimisticState = calculateOptimisticState(
+        store.optimisticRegistry.get(),
+        store.state
+      )
     }
 
     const commitTransition: Met["commitTransition"] = (
@@ -392,6 +440,8 @@ export function newStoreDef<
         ...store.settersRegistry,
         [transitionKey]: [],
       }
+      store.optimisticRegistry.clear(transitionKey)
+
       const newStateFromSetters = setters.reduce((acc: TState, setter) => {
         setter = mergeSetterWithState(ensureSetter(setter))
         const newState = setter(acc)
@@ -468,26 +518,30 @@ export function newStoreDef<
     }
 
     const cleanUpTransition = (transition: any[], error: unknown | null) => {
-      const transitionString = transition.join(":")
-      if (transitionString === "bootstrap") {
+      const transitionKey = transition.join(":")
+      if (transitionKey === "bootstrap") {
         errorsStore.setState({ bootstrap: error })
       }
-      if (store.settersRegistry[transitionString] != null) {
-        store.settersRegistry = {
-          ...store.settersRegistry,
-          [transitionString]: [],
-        }
-      }
+      store.settersRegistry = setImmutable(
+        store.settersRegistry,
+        transitionKey,
+        []
+      )
+      store.optimisticRegistry.clear(transitionKey)
       const newActionAbort = isNewActionError(error)
       if (!newActionAbort) {
         handleError(error, transition)
-        console.log(`%cTransition failed! [${transitionString}]`, "color: red")
+        console.log(`%cTransition failed! [${transitionKey}]`, "color: red")
       } else {
         console.log(
-          `%cPrevious transition canceled! [${transitionString}], creating new one.`,
+          `%cPrevious transition canceled! [${transitionKey}], creating new one.`,
           "color: orange"
         )
       }
+
+      // // just to re-run optimistic state
+      // defineState(store.state)
+      // store.notify()
     }
 
     const handleRegisterTransition = (
@@ -644,6 +698,8 @@ export function newStoreDef<
           action.transition
         )
 
+        const scheduleOptimistic = createOptimisticScheduler(action.transition)
+
         const futurePrevState = cloneObj(newState)
         const context: ReducerProps<
           TState,
@@ -665,6 +721,7 @@ export function newStoreDef<
             controller.signal
           ),
           set: scheduleSetter,
+          optimistic: scheduleOptimistic,
           diff: createDiff(prevState, newState),
           dispatch: (action: TActions) => {
             actionsQueue.push({
@@ -767,6 +824,7 @@ export function newStoreDef<
     }
 
     const rerender: Met["rerender"] = () => {
+      const transition = null
       const signal = new AbortController().signal
       const result = userReducer({
         action: { type: "noop" } as TActions,
@@ -776,15 +834,16 @@ export function newStoreDef<
           store,
           store.state,
           store.stateContext,
-          null,
+          transition,
           signal
         ),
         set: store.createSetScheduler(
           store.state,
           store.stateContext,
           "set",
-          null
+          transition
         ),
+        optimistic: store.createOptimisticScheduler(transition),
         prevState: store.state,
         events: store.events,
         store,
@@ -795,6 +854,27 @@ export function newStoreDef<
       })
       defineState(result)
       subject.notify()
+    }
+
+    const registerOptimistic: Met["registerOptimistic"] = (
+      setterOrPartialStateList,
+      transition
+    ) => {
+      // 1. register de optimistic setter or partial state
+      if (transition) {
+        const transitionKey = transition.join(":")
+        store.optimisticRegistry.add(transitionKey, setterOrPartialStateList)
+      }
+
+      // 2. Do not assign to the reducer state!
+
+      // // 3. Immediately calculate optimistic state and notify components
+      // const optimisticState = calculateOptimisticState(
+      //   store.optimisticRegistry,
+      //   store.state
+      // )
+      // store.optimisticState = optimisticState
+      // store.notify()
     }
 
     const registerSet: Met["registerSet"] = (
@@ -809,13 +889,12 @@ export function newStoreDef<
       })
       if (transition) {
         const transitionKey = transition.join(":")
-        store.settersRegistry = {
-          ...store.settersRegistry,
-          [transitionKey]: [
-            ...(store.settersRegistry[transitionKey] ?? []),
-            setterOrPartialStateList,
-          ],
-        }
+
+        store.settersRegistry = setImmutableFn(
+          store.settersRegistry,
+          transitionKey,
+          (setters = []) => [...setters, setterOrPartialStateList]
+        )
       }
 
       const setter = mergeSetterWithState(
@@ -844,6 +923,7 @@ export function newStoreDef<
             "set",
             transition
           ),
+          optimistic: store.createOptimisticScheduler(transition),
           async: createAsync(
             store,
             newState,
@@ -873,18 +953,26 @@ export function newStoreDef<
         transition: action.transition ?? [GENERAL_TRANSITION],
         controller: action.controller,
       })
+      const transition = null
       const stateFromReducer = userReducer({
         action,
         diff: createDiff(store.state, newState),
         state: newState,
         prevState: cloneObj(store.state),
-        async: createAsync(store, newState, store.stateContext, null, signal), // um set state pode ocasionar em chamadas assíncronas, e como isso é cancelado?
+        async: createAsync(
+          store,
+          newState,
+          store.stateContext,
+          transition,
+          signal
+        ), // um set state pode ocasionar em chamadas assíncronas, e como isso é cancelado?
         set: store.createSetScheduler(
           newState,
           store.stateContext,
           "set",
-          null
+          transition
         ),
+        optimistic: store.createOptimisticScheduler(transition),
         events: store.events,
         store,
         dispatch: (action: TActions) => {
@@ -917,10 +1005,13 @@ export function newStoreDef<
 
     const methods: Met = {
       createSetScheduler,
+      createOptimisticScheduler,
       getState,
+      getOptimisticState,
       dispatch,
       setState,
       registerSet,
+      registerOptimistic,
       registerErrorHandler,
       handleError,
       undo,
@@ -1007,8 +1098,9 @@ export function newStoreDef<
                 initialState,
                 prevStateContext,
                 "set",
-                null
+                null // Should be BOOTSTRAP_TRANSITION?
               ),
+              optimistic: store.createOptimisticScheduler(null), // Should be BOOTSTRAP_TRANSITION?
               prevState,
               events: store.events,
               store,
@@ -1051,8 +1143,9 @@ export function newStoreDef<
               initialState,
               prevStateContext,
               "set",
-              null
+              null // Should be BOOTSTRAP_TRANSITION?
             ),
+            optimistic: store.createOptimisticScheduler(null), // Should be BOOTSTRAP_TRANSITION?
             prevState,
             events: store.events,
             store,

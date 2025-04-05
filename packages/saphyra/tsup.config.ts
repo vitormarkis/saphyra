@@ -5,7 +5,7 @@ export default defineConfig({
   format: ["esm", "cjs"],
   dts: true,
   shims: true,
-  // sourcemap: true,
+  sourcemap: true,
   skipNodeModulesBundle: true,
   clean: true,
   tsconfig: "./tsconfig.json",

@@ -64,16 +64,21 @@ export function createStoreUtils<
     }, [store])
   }
 
-  function useStore<R = TState>(
-    selector?: (data: TState) => R,
-    store = getDefaultStore()
-  ) {
-    const finalSelector = selector ?? (defaultSelector as (data: TState) => R)
-    return useSyncExternalStore(
-      cb => store.subscribe(cb),
-      () => finalSelector(store.getState())
-    )
+  function createUseStore(getStoreState: (store: TStore) => TState) {
+    return function useStore<R = TState>(
+      selector?: (data: TState) => R,
+      store = getDefaultStore()
+    ) {
+      const finalSelector = selector ?? (defaultSelector as (data: TState) => R)
+      return useSyncExternalStore(
+        cb => store.subscribe(cb),
+        () => finalSelector(getStoreState(store))
+      )
+    }
   }
+
+  const useStore = createUseStore(store => store.getState())
+  const useOptimisticStore = createUseStore(store => store.getOptimisticState())
 
   function useLazyValue<TTransition extends any[], TPromiseResult, R = TState>(
     options: LazyValueOptions<TState, TActions, TTransition, TPromiseResult, R>
@@ -109,6 +114,7 @@ export function createStoreUtils<
   const utils: StoreUtils<TState, TStore> = {
     Provider: Context.Provider,
     useStore,
+    useOptimisticStore,
     useUseState,
     useTransition,
     useErrorHandlers,
@@ -142,6 +148,10 @@ export type StoreUtils<
 > = {
   Provider: React.Provider<any>
   useStore: <R = TState>(selector?: (data: TState) => R, store?: TStore) => R
+  useOptimisticStore: <R = TState>(
+    selector?: (data: TState) => R,
+    store?: TStore
+  ) => R
   useUseState: () => [TStore, React.Dispatch<React.SetStateAction<TStore>>]
   useTransition: (transition: any[], store?: TStore) => boolean
   useErrorHandlers: (handler: StoreErrorHandler, store?: TStore) => void
