@@ -419,7 +419,16 @@ export function newStoreDef<
             state: newState,
             prevState,
             async: mockAsync(),
-            set: setter => derivedSets.push(setter),
+            set: setterOrPartialState => {
+              const setter = mergeSetterWithState(
+                ensureSetter(
+                  setterOrPartialState as SetterOrPartialState<TState>
+                )
+              )
+              const newStateWithSetterApplied = setter(newState) as TState
+              assignObjValues(newState, newStateWithSetterApplied)
+              derivedSets.push(setterOrPartialState)
+            },
             optimistic: () => {}, // allow only one level of optimistic updates per dispatch
             events: mockEventEmitter<TEvents>(),
             store,
