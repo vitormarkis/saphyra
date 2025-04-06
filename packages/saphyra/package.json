@@ -1,11 +1,14 @@
 {
   "name": "saphyra",
   "description": "A tool for creating declarative stores and managing state that embraces async behavior.",
-  "version": "0.5.3",
+  "version": "0.5.4",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
+  "bundleDependencies": [
+    "@saphyra/common"
+  ],
   "keywords": [
     "react",
     "state",
