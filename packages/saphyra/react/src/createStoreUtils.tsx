@@ -13,8 +13,8 @@ import type {
   BaseAction,
   ExtractActions,
   StoreErrorHandler,
-  TransitionFunctionOptions,
   StoreInstantiatorGeneric,
+  TransitionFunctionOptions,
 } from "saphyra"
 
 function defaultSelector<T>(data: T) {

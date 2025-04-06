@@ -26,6 +26,11 @@
       "types": "./dist/index.d.ts",
       "require": "./dist/index.js",
       "import": "./dist/index.mjs"
+    },
+    "./react": {
+      "types": "./dist/react.d.ts",
+      "require": "./dist/react.js",
+      "import": "./dist/react.mjs"
     }
   },
   "files": [
@@ -42,7 +47,7 @@
     "pr": "prettier --write src",
     "test": "vitest --config vitest.config.ts --silent",
     "test:debug": "vitest --config vitest.config.ts --inspect-brk --browser --no-file-parallelism",
-    "build": "tsup src/index.ts",
+    "build": "tsup",
     "build-vite": "vite build",
     "check-types": "npm run check"
   },

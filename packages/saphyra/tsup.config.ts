@@ -1,7 +1,10 @@
 import { defineConfig } from "tsup"
 
 export default defineConfig({
-  entry: ["src/index.ts"],
+  entry: {
+    index: "src/index.ts",
+    react: "react/src/index.ts",
+  },
   format: ["esm", "cjs"],
   dts: true,
   shims: true,
@@ -9,7 +12,6 @@ export default defineConfig({
   skipNodeModulesBundle: true,
   clean: true,
   tsconfig: "./tsconfig.json",
-  outDir: "dist",
   noExternal: ["@saphyra/common"],
   outExtension: ({ format }) => ({
     js: format === "esm" ? ".mjs" : ".js",

@@ -21,9 +21,10 @@
     "noFallthroughCasesInSwitch": true,
     "baseUrl": ".",
     "paths": {
-      "~/*": ["./src/*"]
+      "~/*": ["./src/*"],
+      "saphyra": ["./src/index.ts"]
     },
     "allowSyntheticDefaultImports": true
   },
-  "include": ["src"]
+  "include": ["src", "react/src"]
 }
