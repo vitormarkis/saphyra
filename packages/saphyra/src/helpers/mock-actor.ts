@@ -1,3 +1,5 @@
+import { mockAsync } from "./mock-async"
+
 export const mockActor = () => ({
   set() {
     debugger
@@ -5,16 +7,5 @@ export const mockActor = () => ({
   dispatch() {
     debugger
   },
-  async: {
-    promise() {
-      return {
-        onSuccess() {
-          debugger
-        },
-      }
-    },
-    timer() {
-      debugger
-    },
-  },
+  async: mockAsync(),
 })

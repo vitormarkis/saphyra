@@ -32,7 +32,6 @@ export class OptimisticRegistry<TState> {
      */
     this.onMutate = (settersOrPartialStateList: Registry<TState>) => {
       if (this.onMutate_scheduled) return
-
       const self = this
       this.onMutate_scheduled = true
       setTimeout(function onMutateST() {
@@ -42,15 +41,19 @@ export class OptimisticRegistry<TState> {
     }
   }
 
-  add(key: string, setterOrPartialState: SetterOrPartialState<TState>) {
+  add(
+    key: string,
+    setterOrPartialState: SetterOrPartialState<TState>,
+    notify: "notify" | "no-notify"
+  ) {
     this.settersOrPartialStateList[key] ??= []
     this.settersOrPartialStateList[key].push(setterOrPartialState)
-    this.onMutate(this.settersOrPartialStateList)
+    notify === "notify" && this.onMutate(this.settersOrPartialStateList)
   }
 
-  clear(key: string) {
+  clear(key: string, notify: "notify" | "no-notify") {
     this.settersOrPartialStateList[key] = []
-    this.onMutate(this.settersOrPartialStateList)
+    notify === "notify" && this.onMutate(this.settersOrPartialStateList)
   }
 
   check(transition: any[] | null | undefined) {
@@ -126,7 +129,8 @@ export type GenericStoreMethods<
     transition: any[] | null | undefined
   ): ReducerSet<TState>
   createOptimisticScheduler(
-    transition: any[] | null | undefined
+    transition: any[] | null | undefined,
+    notify: "notify" | "no-notify"
   ): ReducerSet<TState>
   registerErrorHandler(handler: StoreErrorHandler): () => void
   rerender(): void
@@ -302,7 +306,8 @@ export type ReducerSet<TState> = (
 ) => void
 export type InnerReducerOptimistic<TState> = (
   setterOrPartialStateList: SetterOrPartialState<TState>,
-  transition: any[] | null | undefined
+  transition: any[] | null | undefined,
+  notify: "notify" | "no-notify"
 ) => void
 export type InnerReducerSet<TState> = (
   setterOrPartialStateList: SetterOrPartialState<TState>,

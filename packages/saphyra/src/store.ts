@@ -42,6 +42,8 @@ import {
 } from "./helpers/utils"
 import { defaultErrorHandler } from "./default-error-handler"
 import { setImmutable, setImmutableFn } from "./fn/common"
+import { mockAsync } from "./helpers/mock-async"
+import { mockEventEmitter } from "./helpers/mock-event-emitter"
 
 export type ExternalProps = Record<string, any> | null
 
@@ -365,10 +367,11 @@ export function newStoreDef<
     }
 
     const createOptimisticScheduler: Met["createOptimisticScheduler"] = (
-      transition
+      transition,
+      notify
     ): ReducerOptimistic<TState> => {
       return setterOrPartialState =>
-        store.registerOptimistic(setterOrPartialState, transition)
+        store.registerOptimistic(setterOrPartialState, transition, notify)
     }
 
     const createSetScheduler: Met["createSetScheduler"] = (
@@ -395,15 +398,39 @@ export function newStoreDef<
       registry: Registry<TState>,
       state: TState
     ) {
-      const allOptimisticSetters = Object.values(registry).flat()
-      if (allOptimisticSetters.length === 0) return state
-      const optimisticState = allOptimisticSetters.reduce(
-        (acc: TState, setter) => {
+      const allSetters = Object.values(registry).flat()
+      if (allSetters.length === 0) return state
+      /**
+       * Use optimistic setters to derive more state
+       *
+       * Use derived setters to just mutate the state
+       */
+      const optimisticState = allSetters.reduce(
+        (prevStateOriginal: TState, setter: SetterOrPartialState<TState>) => {
           setter = mergeSetterWithState(
             ensureSetter(setter as SetterOrPartialState<TState>)
           )
-          const newState = setter(acc)
-          return mergeObj(acc, newState) as TState
+          const prevState = cloneObj(prevStateOriginal)
+          const newState = setter(prevState) as TState
+          const derivedSets: SetterOrPartialState<TState>[] = []
+          const derivedState = userReducer({
+            action: { type: "noop" } as TActions,
+            diff: createDiff(prevState, newState),
+            state: newState,
+            prevState,
+            async: mockAsync(),
+            set: derivedSets.push,
+            optimistic: () => {}, // allow only one level of optimistic updates per dispatch
+            events: mockEventEmitter<TEvents>(),
+            store,
+            dispatch: () => {},
+            deps,
+          }) as TState
+          const derivedStatePlusDerivations = applySettersListToState({
+            state: derivedState,
+            setters: derivedSets,
+          })
+          return derivedStatePlusDerivations
         },
         cloneObj(state)
       )
@@ -436,17 +463,17 @@ export function newStoreDef<
         )
       }
 
-      store.settersRegistry = {
-        ...store.settersRegistry,
-        [transitionKey]: [],
-      }
-      store.optimisticRegistry.clear(transitionKey)
-
       const newStateFromSetters = setters.reduce((acc: TState, setter) => {
         setter = mergeSetterWithState(ensureSetter(setter))
         const newState = setter(acc)
         return mergeObj(acc, newState) as TState
       }, cloneObj(store.state))
+
+      store.settersRegistry = {
+        ...store.settersRegistry,
+        [transitionKey]: [],
+      }
+      store.optimisticRegistry.clear(transitionKey, "notify")
 
       const [newState, newHistory] = handleNewStateToHistory({
         state: newStateFromSetters,
@@ -527,7 +554,7 @@ export function newStoreDef<
         transitionKey,
         []
       )
-      store.optimisticRegistry.clear(transitionKey)
+      store.optimisticRegistry.clear(transitionKey, "notify")
       const newActionAbort = isNewActionError(error)
       if (!newActionAbort) {
         handleError(error, transition)
@@ -698,7 +725,10 @@ export function newStoreDef<
           action.transition
         )
 
-        const scheduleOptimistic = createOptimisticScheduler(action.transition)
+        const scheduleOptimistic = createOptimisticScheduler(
+          action.transition,
+          "notify"
+        )
 
         const futurePrevState = cloneObj(newState)
         const context: ReducerProps<
@@ -843,7 +873,7 @@ export function newStoreDef<
           "set",
           transition
         ),
-        optimistic: store.createOptimisticScheduler(transition),
+        optimistic: store.createOptimisticScheduler(transition, "notify"),
         prevState: store.state,
         events: store.events,
         store,
@@ -858,12 +888,17 @@ export function newStoreDef<
 
     const registerOptimistic: Met["registerOptimistic"] = (
       setterOrPartialStateList,
-      transition
+      transition,
+      notify: "notify" | "no-notify" = "notify"
     ) => {
       // 1. register de optimistic setter or partial state
       if (transition) {
         const transitionKey = transition.join(":")
-        store.optimisticRegistry.add(transitionKey, setterOrPartialStateList)
+        store.optimisticRegistry.add(
+          transitionKey,
+          setterOrPartialStateList,
+          notify
+        )
       }
 
       // 2. Do not assign to the reducer state!
@@ -923,7 +958,7 @@ export function newStoreDef<
             "set",
             transition
           ),
-          optimistic: store.createOptimisticScheduler(transition),
+          optimistic: store.createOptimisticScheduler(transition, "notify"),
           async: createAsync(
             store,
             newState,
@@ -972,7 +1007,7 @@ export function newStoreDef<
           "set",
           transition
         ),
-        optimistic: store.createOptimisticScheduler(transition),
+        optimistic: store.createOptimisticScheduler(transition, "notify"),
         events: store.events,
         store,
         dispatch: (action: TActions) => {
@@ -1100,7 +1135,7 @@ export function newStoreDef<
                 "set",
                 null // Should be BOOTSTRAP_TRANSITION?
               ),
-              optimistic: store.createOptimisticScheduler(null), // Should be BOOTSTRAP_TRANSITION?
+              optimistic: store.createOptimisticScheduler(null, "notify"), // Should be BOOTSTRAP_TRANSITION?
               prevState,
               events: store.events,
               store,
@@ -1145,7 +1180,7 @@ export function newStoreDef<
               "set",
               null // Should be BOOTSTRAP_TRANSITION?
             ),
-            optimistic: store.createOptimisticScheduler(null), // Should be BOOTSTRAP_TRANSITION?
+            optimistic: store.createOptimisticScheduler(null, "notify"), // Should be BOOTSTRAP_TRANSITION?
             prevState,
             events: store.events,
             store,
@@ -1228,4 +1263,21 @@ function handleNewStateToHistory<TState>({
   }
   const newState = newHistory.at(-1)!
   return [newState, newHistory] as const
+}
+
+type ApplySettersListToStateReturnType<TState> = {
+  state: TState
+  setters: SetterOrPartialState<TState>[]
+}
+
+function applySettersListToState<TState>({
+  state,
+  setters,
+}: ApplySettersListToStateReturnType<TState>) {
+  return setters.reduce((prevState: TState, setter) => {
+    setter = mergeSetterWithState(
+      ensureSetter(setter as SetterOrPartialState<TState>)
+    )
+    return setter(prevState) as TState
+  }, state as TState)
 }
