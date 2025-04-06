@@ -1,3 +1,24 @@
+### v0.5.0
+```jsx
+// Store Definition
+const store = newStoreDef({
+  reducer({ prevState, state, action, optimistic, async, deps }) {
+    optimistic(s => ({ likedPosts: [...s.likedPosts, action.postId] })) // <-
+    async
+      .promise(ctx => deps.likePost(action.postId, ctx.signal))
+      .onSuccess((likedPosts, actor) => actor.set({ likedPosts }))
+    return state
+  }
+})
+
+// Component
+function App({ post }) {
+  const isLiked = Posts.useOptimisticStore(s => s.likedPosts.includes(post.id))
+
+  // ...
+}
+```
+
 ### v0.4.0
 - pass a custom function to determine whether to push a new state to the history stack, clean the stack, prevent pushing altogether, or implement any other custom behavior
 
