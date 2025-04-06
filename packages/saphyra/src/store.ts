@@ -41,7 +41,7 @@ import {
   newSetter,
 } from "./helpers/utils"
 import { defaultErrorHandler } from "./default-error-handler"
-import { setImmutable, setImmutableFn } from "@saphyra/common"
+import { setImmutable, setImmutableFn } from "./fn/common"
 
 export type ExternalProps = Record<string, any> | null
 

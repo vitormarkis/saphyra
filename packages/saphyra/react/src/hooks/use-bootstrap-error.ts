@@ -1,6 +1,6 @@
-import { exact } from "@saphyra/common"
 import { useCallback, useSyncExternalStore } from "react"
 import type { ReactState, SomeStoreGeneric } from "saphyra"
+import { exact } from "~/fn/common"
 
 export function useBootstrapError<TStore extends SomeStoreGeneric>(
   [store, setStore]: ReactState<TStore>,

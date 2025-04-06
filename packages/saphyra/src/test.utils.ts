@@ -1,7 +1,7 @@
 import { newStoreDef } from "./store"
 import { SomeStore, SomeStoreGeneric } from "./types"
-import { sleep } from "@saphyra/common"
 import { cloneObj } from "./helpers/obj-descriptors"
+import { sleep } from "./fn/common"
 
 type CounterState = {
   count: number

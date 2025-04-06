@@ -6,9 +6,6 @@
   "main": "./dist/index.cjs",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
-  "bundleDependencies": [
-    "@saphyra/common"
-  ],
   "keywords": [
     "react",
     "state",
@@ -52,7 +49,6 @@
     "check-types": "npm run check"
   },
   "dependencies": {
-    "@saphyra/common": "workspace:*",
     "tiny-invariant": "^1.3.3"
   },
   "devDependencies": {

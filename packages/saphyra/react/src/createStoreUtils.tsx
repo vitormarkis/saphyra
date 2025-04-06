@@ -7,7 +7,6 @@ import {
   useRef,
   useSyncExternalStore,
 } from "react"
-import { exact } from "@saphyra/common"
 import type {
   AsyncActor,
   BaseAction,
@@ -16,6 +15,7 @@ import type {
   StoreInstantiatorGeneric,
   TransitionFunctionOptions,
 } from "saphyra"
+import { exact } from "~/fn/common"
 
 function defaultSelector<T>(data: T) {
   return data

@@ -12,9 +12,9 @@ export default defineConfig({
   skipNodeModulesBundle: true,
   clean: true,
   tsconfig: "./tsconfig.json",
-  noExternal: ["@saphyra/common"],
   outExtension: ({ format }) => ({
     js: format === "esm" ? ".mjs" : ".cjs",
+    dts: format === "esm" ? ".d.ts" : ".d.cts",
   }),
   // minify: true,
 })

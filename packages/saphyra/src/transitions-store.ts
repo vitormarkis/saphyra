@@ -1,7 +1,7 @@
 import { DoneKeyOptions, OnFinishTransition } from "./types"
 import { EventEmitter } from "./event-emitter"
 import { Subject } from "./Subject"
-import { setImmutable } from "@saphyra/common"
+import { setImmutable } from "./fn/common"
 
 export type TransitionsStoreState = {
   transitions: Record<string, number>

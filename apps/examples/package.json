@@ -39,8 +39,7 @@
     "scheduler": "^0.25.0",
     "tiny-invariant": "^1.3.3",
     "use-context-selector": "^2.0.0",
-    "saphyra": "workspace:*",
-    "@saphyra/common": "workspace:*"
+    "saphyra": "workspace:*"
   },
   "devDependencies": {
     "@blueprintjs/core": "^5.14.2",

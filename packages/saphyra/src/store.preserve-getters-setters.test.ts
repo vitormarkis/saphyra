@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest"
 import { newStoreDef } from "./store"
 import { SomeStore } from "./types"
-import { sleep } from "@saphyra/common"
+import { sleep } from "./fn/common"
 
 let store: SomeStore<{ count: 0; $stepsArr: number[] }, any, any, any, any>
 
