@@ -1,7 +1,7 @@
 {
   "name": "saphyra",
   "description": "A tool for creating declarative stores and managing state that embraces async behavior.",
-  "version": "0.5.6",
+  "version": "0.5.7",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.mjs",
@@ -29,7 +29,7 @@
     },
     "./react": {
       "types": "./dist/react.d.ts",
-      "require": "./dist/react.js",
+      "require": "./dist/react.cjs",
       "import": "./dist/react.mjs"
     }
   },
