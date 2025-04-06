@@ -14,7 +14,7 @@ export default defineConfig({
   tsconfig: "./tsconfig.json",
   noExternal: ["@saphyra/common"],
   outExtension: ({ format }) => ({
-    js: format === "esm" ? ".mjs" : ".js",
+    js: format === "esm" ? ".mjs" : ".cjs",
   }),
   // minify: true,
 })
