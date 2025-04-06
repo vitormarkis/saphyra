@@ -4,7 +4,7 @@ import { sleep } from "./sleep"
 import { Devtools } from "~/devtools/devtools"
 import { Waterfall } from "./devtools/waterfall"
 import { newStoreDef } from "saphyra"
-import { createStoreUtils, useHistory } from "@saphyra/react"
+import { createStoreUtils, useHistory } from "saphyra/react"
 
 type CounterState = {
   count: number

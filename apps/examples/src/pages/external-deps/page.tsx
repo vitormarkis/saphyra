@@ -17,7 +17,7 @@ import { fetchLikedPosts } from "./fn/fetch-liked-posts"
 import { fetchPosts } from "./fn/fetch-posts"
 import { placeComment } from "./fn/fetch-place-commment"
 import { likePost } from "./fn/like-post"
-import { useHistory } from "@saphyra/react"
+import { useHistory } from "saphyra/react"
 
 export function ExternalDepsPage() {
   const postsStoreState = useState(() =>

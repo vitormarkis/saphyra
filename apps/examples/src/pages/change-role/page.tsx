@@ -11,7 +11,7 @@ import { CodeEditor } from "~/components/code-editor"
 import { removeCurrentToastsAndRegisterNewToasts } from "./fn/isjdf"
 import { toastWithResult } from "./fn/toast-with-result"
 import { Waterfall } from "~/devtools/waterfall"
-import { createStoreUtils, useBootstrapError, useHistory } from "@saphyra/react"
+import { createStoreUtils, useBootstrapError, useHistory } from "saphyra/react"
 
 export type SelectedRole = "user" | "admin"
 

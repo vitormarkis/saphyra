@@ -1,4 +1,4 @@
-import { createStoreUtils } from "@saphyra/react"
+import { createStoreUtils } from "saphyra/react"
 import { newStoreDef } from "saphyra"
 import { GithubProfile } from "./types"
 import { Devtools } from "~/devtools/devtools"

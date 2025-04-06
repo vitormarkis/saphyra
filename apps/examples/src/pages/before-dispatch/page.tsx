@@ -15,7 +15,7 @@ import { useSuspenseQuery } from "@tanstack/react-query"
 import { noop } from "lodash"
 import { CSSProperties, ReactNode, Suspense, useState } from "react"
 import invariant from "tiny-invariant"
-import { createStoreUtils } from "@saphyra/react"
+import { createStoreUtils } from "saphyra/react"
 import { newStoreDef } from "saphyra"
 import { runSuccessCallback } from "saphyra"
 import {

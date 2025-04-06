@@ -40,7 +40,6 @@
     "tiny-invariant": "^1.3.3",
     "use-context-selector": "^2.0.0",
     "saphyra": "workspace:*",
-    "@saphyra/react": "workspace:*",
     "@saphyra/common": "workspace:*"
   },
   "devDependencies": {

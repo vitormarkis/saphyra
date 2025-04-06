@@ -9,7 +9,7 @@ import { Devtools } from "~/devtools/devtools"
 import invariant from "tiny-invariant"
 import { TextChart } from "~/components/text-chart"
 import { Waterfall } from "~/devtools/waterfall"
-import { createStoreUtils, useBootstrapError } from "@saphyra/react"
+import { createStoreUtils, useBootstrapError } from "saphyra/react"
 
 type PokemonState = {
   currentPokemonId: number

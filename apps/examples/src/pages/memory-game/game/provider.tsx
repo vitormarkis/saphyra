@@ -7,7 +7,7 @@ import { updateCard } from "./fn/update-card"
 import { handleExpandNode } from "~/lib/utils"
 import { Devtools } from "~/devtools/devtools"
 import { newStoreDef } from "saphyra"
-import { createStoreUtils, useHistory } from "@saphyra/react"
+import { createStoreUtils, useHistory } from "saphyra/react"
 
 type CardsContent = readonly [
   string,

@@ -5,7 +5,7 @@ import { randomString } from "~/lib/utils"
 import { queryClient } from "~/query-client"
 import { getCommentsQueryOptions } from "~/pages/external-deps/query-options/get-comments-query-options"
 import { IExternalDepsDependencies } from "./IStore"
-import { createStoreUtils } from "@saphyra/react"
+import { createStoreUtils } from "saphyra/react"
 
 type PostsState = {
   currentTransition: null
