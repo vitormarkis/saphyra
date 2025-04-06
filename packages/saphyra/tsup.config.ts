@@ -10,6 +10,7 @@ export default defineConfig({
   clean: true,
   tsconfig: "./tsconfig.json",
   outDir: "dist",
+  noExternal: ["@saphyra/common"],
   outExtension: ({ format }) => ({
     js: format === "esm" ? ".mjs" : ".js",
   }),
