@@ -419,7 +419,7 @@ export function newStoreDef<
             state: newState,
             prevState,
             async: mockAsync(),
-            set: derivedSets.push,
+            set: setter => derivedSets.push(setter),
             optimistic: () => {}, // allow only one level of optimistic updates per dispatch
             events: mockEventEmitter<TEvents>(),
             store,
