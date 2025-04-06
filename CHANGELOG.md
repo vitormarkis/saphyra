@@ -1,4 +1,10 @@
 ### v0.5.0
+Changes in state triggered by transitions happen in background states, which aren't displayed on the screen until the transition finishes. However, you might want to display some values immediately to improve the user experience.
+
+In v0.5.X, you can use the `optimistic` module from the reducer props to immediately set a state, which is temporarily and bound to the transition.
+
+I introduced a new state called `optimisticState`, which uses the main `state` as its source and applies all optimistic updates from running transitions. Once a transition is completed, the optimistic updates tied to it are removed, and a new `optimisticState` is recalculated.
+
 ```jsx
 // Store Definition
 const store = newStoreDef({
@@ -13,6 +19,8 @@ const store = newStoreDef({
 
 // Component
 function App({ post }) {
+  // You can read from useStore to read the valid state
+  // Or you can read from the optimistic state using useOptimisticStore
   const isLiked = Posts.useOptimisticStore(s => s.likedPosts.includes(post.id))
 
   // ...
