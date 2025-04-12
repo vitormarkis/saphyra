@@ -692,13 +692,13 @@ export function newStoreDef<
         transitionStore: store.transitions,
         transition: initialAction.transition,
         events: store.events,
-        async: (transition, signal) =>
+        createAsync: (transition, signal) =>
           createAsync(
             store,
             newState,
             stateContext,
-            transition,
-            signal
+            transition ?? initialAction.transition,
+            signal ?? initialController.signal
           ) as Async<any, TActions>,
       }) as TActions
 

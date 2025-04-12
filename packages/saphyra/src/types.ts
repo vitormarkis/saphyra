@@ -213,9 +213,9 @@ export type TransitionStartConfig<
    */
   events: EventEmitter<TEvents>
 
-  async: (
-    transition: any[] | null | undefined,
-    signal: AbortSignal
+  createAsync: (
+    transition?: any[] | null | undefined,
+    signal?: AbortSignal
   ) => Async<TState, TActions>
 }
 
