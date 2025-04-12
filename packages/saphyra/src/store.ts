@@ -1069,7 +1069,7 @@ export function newStoreDef<
     }
 
     store = mergeObj(subject, store, methods)
-    const ensureAbortController = createEnsureAbortController(store as any)
+    const ensureAbortController = createEnsureAbortController(store.transitions)
 
     function construct(
       initialProps: TInitialProps,
