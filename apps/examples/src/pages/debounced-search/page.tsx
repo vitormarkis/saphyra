@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react"
 import { newStoreDef } from "saphyra"
 import { CenteredSpinner } from "~/components/CenteredSpinner"
 import { CenteredErrorUnknown } from "~/components/CenteredError"
+import { cn } from "~/lib/cn"
 
 type DebouncedSearchEvents = {}
 
@@ -31,8 +32,9 @@ const newDebouncedSearch = newStoreDef<
       name: initialProps.initialName ?? "",
     }
   },
-  reducer({ prevState, state, action, set, async, diff }) {
+  reducer({ prevState, state, action, set, async, diff, optimistic }) {
     if (action.type === "change-name") {
+      optimistic({ name: action.name })
       set({ name: action.name })
     }
 
@@ -95,10 +97,12 @@ export function DebouncedSearchView({}: DebouncedSearchViewProps) {
   }, [debouncedSearch])
 
   const state = DebouncedSearch.useStore()
+  const query = DebouncedSearch.useOptimisticStore(s => s.name)
 
   useEffect(() => console.log({ state }), [state])
   console.log(state.$users.length)
 
+  const isLoading = DebouncedSearch.useTransition(["debounced-search", "name"])
   return (
     <div className="flex flex-col">
       <label
@@ -109,10 +113,9 @@ export function DebouncedSearchView({}: DebouncedSearchViewProps) {
       </label>
       <input
         type="text"
-        id="name"
         className="border"
         placeholder="John"
-        value={state.name}
+        value={query}
         onChange={e => {
           const name = e.target.value
           debouncedSearch.dispatch({
@@ -122,7 +125,13 @@ export function DebouncedSearchView({}: DebouncedSearchViewProps) {
           })
         }}
       />
-      <div className="flex flex-col gap-4 py-4">
+      <div
+        className={cn(
+          "relative flex flex-col gap-4 py-4",
+          isLoading && "pointer-events-none"
+        )}
+      >
+        {isLoading && <div className="absolute z-10 inset-0 bg-black/30" />}
         {state.$users.map(user => (
           <article className="flex gap-1">
             <div>
