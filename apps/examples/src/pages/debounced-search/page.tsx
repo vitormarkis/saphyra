@@ -17,7 +17,7 @@ type DebouncedSearchInitialProps = {
 
 type DebouncedSearchState = {
   name: string
-  $users: string[]
+  $users: Record<string, any>[]
 }
 
 const newDebouncedSearch = newStoreDef<
@@ -122,15 +122,35 @@ export function DebouncedSearchView({}: DebouncedSearchViewProps) {
           })
         }}
       />
-      <pre>{JSON.stringify(state, null, 2)}</pre>
+      <div className="flex flex-col gap-4 py-4">
+        {state.$users.map(user => (
+          <article className="flex gap-1">
+            <div>
+              <div className="relative h-full aspect-square">
+                <img
+                  src={user.image}
+                  alt=""
+                  className="absolute inset-0 w-full h-full"
+                />
+              </div>
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <strong>
+                {user.firstName} {user.lastName}
+              </strong>
+              <span className="text-neutral-400">{user.email}</span>
+            </div>
+          </article>
+        ))}
+      </div>
     </div>
   )
 }
 
 async function listUsers(name: string, signal: AbortSignal) {
-  const url = new URL("/users", "https://dummyjson.com")
+  const url = new URL("/users/search", "https://dummyjson.com")
   if (name !== "") {
-    url.searchParams.append("search", name)
+    url.searchParams.append("q", name)
   }
   const response = await fetch(url, {
     signal,
