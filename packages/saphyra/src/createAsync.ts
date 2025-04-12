@@ -128,7 +128,7 @@ export function createAsync<
     if (!transition) throw errorNoTransition()
     const async = createAsync(store, state, stateContext, transition, signal)
     store.transitions.addKey(transition)
-    setTimeout(() => {
+    const timerId = setTimeout(() => {
       try {
         callback({
           dispatch,
@@ -149,6 +149,8 @@ export function createAsync<
         store.transitions.emitError(transition, error)
       }
     }, time)
+
+    return timerId
   }
 
   return {

@@ -312,7 +312,7 @@ export type Async<TState, TActions extends BaseAction<TState>> = {
   timer(
     callback: (actor: AsyncActor<TState, TActions>) => void,
     time?: number
-  ): void
+  ): NodeJS.Timeout
 }
 
 export type Diff<TState> = (keys: (keyof TState)[]) => boolean
