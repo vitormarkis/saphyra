@@ -23,6 +23,7 @@ import type {
   StoreInternalEvents,
   ReducerOptimistic,
   Registry,
+  SomeStoreGeneric,
 } from "./types"
 import { EventEmitter, EventsTuple } from "./event-emitter"
 import { noop } from "./fn/noop"
@@ -519,18 +520,6 @@ export function newStoreDef<
       commitTransition(transition, action.onTransitionEnd)
     }
 
-    function ensureAbortController(props: {
-      transition: any[]
-      controller?: AbortController | null | undefined
-    }): AbortController {
-      const key = props.transition.join(":")
-      let controller = store.transitions.controllers.get(key)
-      if (controller != null) return controller
-      controller = props.controller ?? new AbortController()
-      store.transitions.controllers.set(props.transition, controller)
-      return controller
-    }
-
     function getAbortController(props: {
       transition?: any[] | null | undefined
     }) {
@@ -692,12 +681,25 @@ export function newStoreDef<
 
       const { beforeDispatch = createDefaultBeforeDispatch() } = initialAction
 
+      const initialController = ensureAbortController({
+        transition: initialAction.transition ?? [GENERAL_TRANSITION],
+        controller: initialAction.controller,
+      })
+
       const rootAction = beforeDispatch({
         action: getSnapshotAction(initialAction),
         meta: store.transitions.meta.get(initialAction.transition),
         transitionStore: store.transitions,
         transition: initialAction.transition,
         events: store.events,
+        async: (transition, signal) =>
+          createAsync(
+            store,
+            newState,
+            stateContext,
+            transition,
+            signal
+          ) as Async<any, TActions>,
       }) as TActions
 
       if (rootAction == null) throw rollback
@@ -1067,6 +1069,7 @@ export function newStoreDef<
     }
 
     store = mergeObj(subject, store, methods)
+    const ensureAbortController = createEnsureAbortController(store as any)
 
     function construct(
       initialProps: TInitialProps,
@@ -1230,6 +1233,20 @@ export function newStoreDef<
   }
 
   return createStore
+}
+
+export function createEnsureAbortController(transitionStore: TransitionsStore) {
+  return function (props: {
+    transition: any[]
+    controller?: AbortController | null | undefined
+  }): AbortController {
+    const key = props.transition.join(":")
+    let controller = transitionStore.controllers.get(key)
+    if (controller != null) return controller
+    controller = props.controller ?? new AbortController()
+    transitionStore.controllers.set(props.transition, controller)
+    return controller
+  }
 }
 
 export function mergeSetterWithState<TState>(setter: Setter<TState>) {

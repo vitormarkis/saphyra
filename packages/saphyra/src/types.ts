@@ -187,6 +187,8 @@ export type DefaultActions =
     }
 
 export type TransitionStartConfig<
+  TState,
+  TActions extends BaseAction<TState>,
   TBaseAction extends GenericAction,
   TEvents extends EventsTuple,
 > = {
@@ -210,6 +212,11 @@ export type TransitionStartConfig<
    * The store events
    */
   events: EventEmitter<TEvents>
+
+  async: (
+    transition: any[] | null | undefined,
+    signal: AbortSignal
+  ) => Async<TState, TActions>
 }
 
 export type GenericAction = {
@@ -217,14 +224,20 @@ export type GenericAction = {
 } & Record<string, any>
 
 export type BeforeDispatchOptions<
+  TState,
+  TActions extends BaseAction<TState>,
   TBaseAction extends GenericAction,
   TEvents extends EventsTuple,
-> = TransitionStartConfig<TBaseAction, TEvents>
+> = TransitionStartConfig<TState, TActions, TBaseAction, TEvents>
 
 export type BeforeDispatch<
+  TState = any,
+  TActions extends BaseAction<TState> = BaseAction<TState>,
   TBaseAction extends GenericAction = GenericAction,
   TEvents extends EventsTuple = EventsTuple,
-> = (options: BeforeDispatchOptions<TBaseAction, TEvents>) => TBaseAction | void
+> = (
+  options: BeforeDispatchOptions<TState, TActions, TBaseAction, TEvents>
+) => TBaseAction | void
 
 export type OnTransitionEndProps<TState, TEvents extends EventsTuple> = {
   transition: any[]
@@ -253,7 +266,7 @@ export type BaseAction<
    *
    * If you return the action, it will be dispatched to the store. If you return a nullish value, the action will be ignored.
    */
-  beforeDispatch?: BeforeDispatch<TBaseAction>
+  beforeDispatch?: BeforeDispatch<TState, TBaseAction>
   transition?: any[]
 } & Record<string, any>
 

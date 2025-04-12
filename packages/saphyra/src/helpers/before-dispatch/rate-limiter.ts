@@ -3,7 +3,7 @@ import type { BeforeDispatch, GenericAction } from "~/types"
 export const rateLimiter = <TBaseAction extends GenericAction = GenericAction>(
   intervalMs = 500,
   attempts = 3
-): BeforeDispatch<TBaseAction> => {
+): BeforeDispatch<any, TBaseAction> => {
   return ({ action, meta }) => {
     const now = Date.now()
     meta.timestamps ??= []

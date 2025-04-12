@@ -2,7 +2,7 @@ import type { BeforeDispatch, GenericAction } from "~/types"
 
 export const throttle = <TBaseAction extends GenericAction = GenericAction>(
   intervalMs = 500
-): BeforeDispatch<TBaseAction> => {
+): BeforeDispatch<any, TBaseAction> => {
   return ({ action, meta }) => {
     const now = Date.now()
     meta.timestamps ??= []
