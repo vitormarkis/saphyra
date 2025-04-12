@@ -122,6 +122,14 @@ export function DebouncedSearchView({}: DebouncedSearchViewProps) {
             type: "change-name",
             name,
             transition: ["debounced-search", "name"],
+            beforeDispatch({ action, transition, transitionStore }) {
+              if (transitionStore.isHappeningUnique(transition)) {
+                const controller = transitionStore.controllers.get(transition)
+                controller?.abort()
+              }
+
+              return action
+            },
           })
         }}
       />
