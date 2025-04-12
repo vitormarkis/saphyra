@@ -692,6 +692,12 @@ export function newStoreDef<
         transitionStore: store.transitions,
         transition: initialAction.transition,
         events: store.events,
+        redispatch: (partialAction = {}) => {
+          const finalAction = getSnapshotAction(
+            mergeObj(initialAction, partialAction)
+          ) as TActions
+          store.dispatch(finalAction)
+        },
         createAsync: (transition, signal) =>
           createAsync(
             store,
