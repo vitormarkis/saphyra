@@ -4,6 +4,8 @@ import { newStoreDef } from "saphyra"
 import { CenteredSpinner } from "~/components/CenteredSpinner"
 import { CenteredErrorUnknown } from "~/components/CenteredError"
 import { cn } from "~/lib/cn"
+import { toast } from "sonner"
+import { extractErrorMessage } from "~/lib/extract-error-message"
 
 type DebouncedSearchEvents = {}
 
@@ -32,7 +34,7 @@ const newDebouncedSearch = newStoreDef<
       name: initialProps.initialName ?? "",
     }
   },
-  reducer({ prevState, state, action, set, async, diff, optimistic }) {
+  reducer({ prevState, state, action, set, async, diff, optimistic, store }) {
     if (action.type === "change-name") {
       optimistic({ name: action.name })
       set({ name: action.name })
@@ -99,10 +101,12 @@ export function DebouncedSearchView({}: DebouncedSearchViewProps) {
   const state = DebouncedSearch.useStore()
   const query = DebouncedSearch.useOptimisticStore(s => s.name)
 
-  useEffect(() => console.log({ state }), [state])
-  console.log(state.$users.length)
+  DebouncedSearch.useErrorHandlers(error => {
+    toast(extractErrorMessage(error))
+  }, debouncedSearch)
 
   const isLoading = DebouncedSearch.useTransition(["debounced-search", "name"])
+
   return (
     <div className="flex flex-col">
       <label
@@ -111,27 +115,106 @@ export function DebouncedSearchView({}: DebouncedSearchViewProps) {
       >
         Name
       </label>
+      <button
+        onClick={() => {
+          const action = (newQuery: string) => {
+            debouncedSearch.dispatch({
+              type: "change-name",
+              name: newQuery,
+              transition: ["debounced-search", "name"],
+              beforeDispatch({
+                transition,
+                transitionStore,
+                createAsync,
+                redispatch,
+                meta,
+                events,
+              }) {
+                const async = createAsync()
+                const randomStr = Math.random().toString(36).substring(2, 5)
+
+                if (transitionStore.isHappeningUnique(transition)) {
+                  console.log(
+                    `%c 00) k CANCELED PREVIOUS! Next is: ${randomStr}`,
+                    "color: red"
+                  )
+                  const controller = transitionStore.controllers.get(transition)
+                  controller?.abort()
+                  debouncedSearch.cleanUpTransition(transition!, { code: 20 })
+                }
+
+                // meta.cleanup?.()
+                console.log(`00) key timer: [${randomStr}]`)
+                async.timer(
+                  () => {
+                    console.log(`00) k DISPATCHING`)
+                    redispatch()
+                  },
+                  500,
+                  randomStr
+                )
+              },
+              onTransitionEnd: meta => {
+                // if ("cleanup" in meta) {
+                // delete meta.cleanup
+                // }
+                console.log("00) key ON TRANSITION END")
+              },
+            })
+          }
+
+          function dispatchingThenCancelling() {
+            action("e")
+            setTimeout(() => {
+              action("em")
+            }, 520)
+            setTimeout(() => {
+              action("emily")
+            }, 1040)
+          }
+
+          function cancellingBeforeRedispatch() {
+            action("e")
+            setTimeout(() => {
+              action("em")
+            }, 300)
+            setTimeout(() => {
+              action("emily")
+            }, 600)
+          }
+
+          function abortTimerThenAbortRequest() {
+            action("e")
+            setTimeout(() => {
+              action("em")
+            }, 300)
+            setTimeout(() => {
+              action("emily")
+            }, 820)
+          }
+          function abortRequestThenAbortTimer() {
+            action("e")
+            setTimeout(() => {
+              action("em")
+            }, 520)
+            setTimeout(() => {
+              action("emily")
+            }, 820)
+          }
+          // dispatchingThenCancelling()
+          // cancellingBeforeRedispatch()
+          // abortTimerThenAbortRequest()
+          abortRequestThenAbortTimer()
+        }}
+      >
+        Test
+      </button>
       <input
         type="text"
         className="border"
         placeholder="John"
         value={query}
-        onChange={e => {
-          const name = e.target.value
-          debouncedSearch.dispatch({
-            type: "change-name",
-            name,
-            transition: ["debounced-search", "name"],
-            beforeDispatch({ action, transition, transitionStore }) {
-              if (transitionStore.isHappeningUnique(transition)) {
-                const controller = transitionStore.controllers.get(transition)
-                controller?.abort()
-              }
-
-              return action
-            },
-          })
-        }}
+        // onChange={e => {}}
       />
       <div
         className={cn(

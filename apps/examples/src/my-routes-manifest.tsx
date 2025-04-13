@@ -8,36 +8,36 @@ import { BeforeDispatchPage } from "./pages/before-dispatch/page"
 import { DebouncedSearchPage } from "./pages/debounced-search/page"
 
 export const myRoutesManifest = [
-  {
-    path: "/github-profile",
-    element: <GithubProfilePage />,
-  },
-  {
-    path: "/change-role",
-    element: <ChangeRolePage />,
-  },
-  {
-    path: "/zustand-like",
-    element: <ZustandLikePage />,
-  },
-  {
-    path: "/memory-game",
-    element: <MemoryGamePage />,
-  },
-  {
-    path: "/external-deps",
-    element: <ExternalDepsPage />,
-  },
-  {
-    path: "/before-dispatch",
-    element: <BeforeDispatchPage />,
-  },
+  // {
+  //   path: "/github-profile",
+  //   element: <GithubProfilePage />,
+  // },
+  // {
+  //   path: "/change-role",
+  //   element: <ChangeRolePage />,
+  // },
+  // {
+  //   path: "/zustand-like",
+  //   element: <ZustandLikePage />,
+  // },
+  // {
+  //   path: "/memory-game",
+  //   element: <MemoryGamePage />,
+  // },
+  // {
+  //   path: "/external-deps",
+  //   element: <ExternalDepsPage />,
+  // },
+  // {
+  //   path: "/before-dispatch",
+  //   element: <BeforeDispatchPage />,
+  // },
   {
     path: "/debounced-search",
     element: <DebouncedSearchPage />,
   },
-  {
-    path: "/pokemon",
-    element: <PokemonPage />,
-  },
+  // {
+  //   path: "/pokemon",
+  //   element: <PokemonPage />,
+  // },
 ]

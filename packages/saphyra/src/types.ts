@@ -149,6 +149,7 @@ export type GenericStoreMethods<
     transition: any[] | null | undefined,
     onTransitionEnd?: OnTransitionEnd<TState, TEvents>
   ): void
+  cleanUpTransition(transition: any[], error: unknown | null): void
 }
 
 type UncontrolledState<
@@ -311,8 +312,9 @@ export type Async<TState, TActions extends BaseAction<TState>> = {
   ): PromiseResult<T, TState, TActions>
   timer(
     callback: (actor: AsyncActor<TState, TActions>) => void,
-    time?: number
-  ): NodeJS.Timeout
+    time?: number,
+    id?: string
+  ): () => void
 }
 
 export type Diff<TState> = (keys: (keyof TState)[]) => boolean

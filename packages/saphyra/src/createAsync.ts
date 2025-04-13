@@ -40,6 +40,7 @@ function createTransitionDispatch<
   }
 }
 
+let times = {}
 export function createAsync<
   TState extends Record<string, any> = Record<string, any>,
   TActions extends BaseAction<TState> = DefaultActions & BaseAction<TState>,
@@ -51,7 +52,8 @@ export function createAsync<
   state: TState,
   stateContext: StateContext,
   transition: any[] | null | undefined,
-  signal: AbortSignal
+  signal: AbortSignal,
+  from?: string
 ): Async<TState, TActions> {
   type AsyncInner = Async<TState, TActions>
   type AsyncActorInner = AsyncActor<TState, TActions>
@@ -74,13 +76,22 @@ export function createAsync<
     let onSuccess: (value: T, actor: AsyncActor<TState, TActions>) => void =
       noop
     if (!transition) throw errorNoTransition()
-    store.transitions.addKey(transition)
     const transitionString = transition.join(":")
+
+    store.transitions.addKey(transition, `async-promise/${from}`)
 
     async function handlePromise(promise: Promise<T>) {
       if (!transition) throw errorNoTransition()
-      const async = createAsync(store, state, stateContext, transition, signal)
-      const transitionHasAbortedStr = `abort::${JSON.stringify(transition)}`
+      const async = createAsync(
+        store,
+        state,
+        stateContext,
+        transition,
+        signal,
+        "for-promise-actor"
+      )
+      const racePromise = Promise.withResolvers<T>()
+      const abortEventStr = `abort::${JSON.stringify(transition)}`
 
       let wasAborted = false
       const abortLocally = () => {
@@ -89,27 +100,47 @@ export function createAsync<
           id: `${transitionString}-${stateContext.when}`,
           status: "cancelled",
         })
+
+        racePromise.reject({ code: 20 })
       }
-      const off = store.events.once(transitionHasAbortedStr).run(abortLocally)
+      // times[transition.join(":")] ??= 0
+      // times[transition.join(":")]++
+      const off = store.events.once(abortEventStr).run(abortLocally)
       try {
         if (!transition) throw errorNoTransition()
-        const value = await promise
+        promise.then(off)
+        const value = await Promise.race<T>([promise, racePromise.promise])
         onSuccess(value, {
           dispatch,
           set,
           async,
         })
-        store.transitions.doneKey(transition, {
-          onFinishTransition: runSuccessCallback,
-        })
+        store.transitions.doneKey(
+          transition,
+          {
+            onFinishTransition: runSuccessCallback,
+          },
+          "async-promise/on-success"
+        )
       } catch (error) {
-        if (wasAborted) return
-        store.transitions.emitError(transition, error)
-        store.transitions.doneKey(transition, {
-          onFinishTransition: noop,
-        })
+        if (
+          typeof error === "object" &&
+          error !== null &&
+          "code" in error &&
+          error.code !== 20
+        ) {
+          store.transitions.emitError(transition, error)
+        }
+        // if (wasAborted || error.code === 20) return
+        store.transitions.doneKey(
+          transition,
+          {
+            onFinishTransition: noop,
+          },
+          "async-promise/on-error"
+        )
       } finally {
-        off()
+        // off()
       }
     }
     handlePromise(promise({ signal }))
@@ -123,11 +154,19 @@ export function createAsync<
 
   const timer = (
     callback: (actor: AsyncActor<TState, TActions>) => void,
-    time = 0
+    time = 0,
+    id?: string
   ) => {
     if (!transition) throw errorNoTransition()
-    const async = createAsync(store, state, stateContext, transition, signal)
-    store.transitions.addKey(transition)
+    const async = createAsync(
+      store,
+      state,
+      stateContext,
+      transition,
+      signal,
+      "for-timer-actor"
+    )
+    store.transitions.addKey(transition, `async-timer/${from}`)
     const timerId = setTimeout(() => {
       try {
         callback({
@@ -135,22 +174,41 @@ export function createAsync<
           set,
           async,
         })
-        store.transitions.doneKey(transition, {
-          onFinishTransition: runSuccessCallback,
-        })
+        store.transitions.doneKey(
+          transition,
+          {
+            onFinishTransition: runSuccessCallback,
+          },
+          "async-timer/on-success"
+        )
+        const meta = store.transitions.meta.get(transition)
+        if (meta.timers) {
+          meta.timers = meta.timers.filter(
+            ([arrTimerId]: [NodeJS.Timeout, string]) => arrTimerId !== timerId
+          )
+        }
       } catch (error) {
         console.log(
           "%cSomething went wrong! Rolling back the store state. [TODO]",
           "color: palevioletred"
         )
-        store.transitions.doneKey(transition, {
-          onFinishTransition: noop,
-        }) // TODO
+        store.transitions.doneKey(
+          transition,
+          {
+            onFinishTransition: noop,
+          },
+          "async-timer/on-error"
+        ) // TODO
         store.transitions.emitError(transition, error)
       }
     }, time)
 
-    return timerId
+    const transitionString = transition.join(":")
+    store.transitions.meta.values[transitionString] ??= {}
+    store.transitions.meta.values[transitionString].timers ??= []
+    store.transitions.meta.values[transitionString].timers.push([timerId, id])
+
+    return () => {}
   }
 
   return {
