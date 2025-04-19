@@ -107,6 +107,60 @@ export function DebouncedSearchView({}: DebouncedSearchViewProps) {
 
   const isLoading = DebouncedSearch.useTransition(["debounced-search", "name"])
 
+  const action = useCallback(
+    (newQuery: string) => {
+      debouncedSearch.dispatch({
+        type: "change-name",
+        name: newQuery,
+        transition: ["debounced-search", "name"],
+        beforeDispatch({
+          transition,
+          transitionStore,
+          createAsync,
+          redispatch,
+          meta,
+          events,
+        }) {
+          const async = createAsync()
+          const randomStr = Math.random().toString(36).substring(2, 5)
+
+          console.log(`00) key timer: [${randomStr}]`)
+          const shouldCancel = transitionStore.isHappeningUnique(transition)
+          if (shouldCancel) {
+            console.log(
+              `%c 00) k CANCELED PREVIOUS! Next is: ${randomStr}`,
+              "color: red"
+            )
+            const controller = transitionStore.controllers.get(transition)
+            controller?.signal.addEventListener("abort", () => {
+              // debouncedSearch.cleanUpTransition(transition!, { code: 20 })
+            })
+            debouncedSearch.cleanUpTransition(transition!, { code: 20 })
+            controller?.abort()
+            console.log("33: clean up - controller", controller)
+          }
+
+          // meta.cleanup?.()
+          async.timer(
+            () => {
+              console.log(`00) k DISPATCHING`)
+              redispatch()
+            },
+            500,
+            randomStr
+          )
+        },
+        onTransitionEnd: meta => {
+          // if ("cleanup" in meta) {
+          // delete meta.cleanup
+          // }
+          console.log("00) key ON TRANSITION END")
+        },
+      })
+    },
+    [debouncedSearch]
+  )
+
   return (
     <div className="flex flex-col">
       <label
@@ -117,52 +171,6 @@ export function DebouncedSearchView({}: DebouncedSearchViewProps) {
       </label>
       <button
         onClick={() => {
-          const action = (newQuery: string) => {
-            debouncedSearch.dispatch({
-              type: "change-name",
-              name: newQuery,
-              transition: ["debounced-search", "name"],
-              beforeDispatch({
-                transition,
-                transitionStore,
-                createAsync,
-                redispatch,
-                meta,
-                events,
-              }) {
-                const async = createAsync()
-                const randomStr = Math.random().toString(36).substring(2, 5)
-
-                if (transitionStore.isHappeningUnique(transition)) {
-                  console.log(
-                    `%c 00) k CANCELED PREVIOUS! Next is: ${randomStr}`,
-                    "color: red"
-                  )
-                  const controller = transitionStore.controllers.get(transition)
-                  controller?.abort()
-                  debouncedSearch.cleanUpTransition(transition!, { code: 20 })
-                }
-
-                // meta.cleanup?.()
-                console.log(`00) key timer: [${randomStr}]`)
-                async.timer(
-                  () => {
-                    console.log(`00) k DISPATCHING`)
-                    redispatch()
-                  },
-                  500,
-                  randomStr
-                )
-              },
-              onTransitionEnd: meta => {
-                // if ("cleanup" in meta) {
-                // delete meta.cleanup
-                // }
-                console.log("00) key ON TRANSITION END")
-              },
-            })
-          }
-
           function dispatchingThenCancelling() {
             action("e")
             setTimeout(() => {
@@ -201,10 +209,18 @@ export function DebouncedSearchView({}: DebouncedSearchViewProps) {
               action("emily")
             }, 820)
           }
+          function typingSlowly() {
+            action("e")
+            setTimeout(() => void action("em"), 20)
+            setTimeout(() => void action("emi"), 700)
+            setTimeout(() => void action("emil"), 1200)
+            setTimeout(() => void action("emily"), 1500)
+          }
           // dispatchingThenCancelling()
           // cancellingBeforeRedispatch()
           // abortTimerThenAbortRequest()
-          abortRequestThenAbortTimer()
+          // abortRequestThenAbortTimer()
+          typingSlowly()
         }}
       >
         Test
@@ -214,7 +230,10 @@ export function DebouncedSearchView({}: DebouncedSearchViewProps) {
         className="border"
         placeholder="John"
         value={query}
-        // onChange={e => {}}
+        onChange={e => {
+          const value = e.target.value
+          action(value)
+        }}
       />
       <div
         className={cn(

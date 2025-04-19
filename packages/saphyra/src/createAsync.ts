@@ -12,6 +12,7 @@ import {
 } from "./types"
 import { noop } from "./fn/noop"
 import { runSuccessCallback } from "./transitions-store"
+import { isNewActionError } from "./utils"
 
 export const errorNoTransition = () =>
   new Error(
@@ -91,11 +92,8 @@ export function createAsync<
         "for-promise-actor"
       )
       const racePromise = Promise.withResolvers<T>()
-      const abortEventStr = `abort::${JSON.stringify(transition)}`
 
-      let wasAborted = false
       const abortLocally = () => {
-        wasAborted = true
         store.internal.events.emit("transition-completed", {
           id: `${transitionString}-${stateContext.when}`,
           status: "cancelled",
@@ -105,6 +103,7 @@ export function createAsync<
       }
       // times[transition.join(":")] ??= 0
       // times[transition.join(":")]++
+      const abortEventStr = `abort::${JSON.stringify(transition)}`
       const off = store.events.once(abortEventStr).run(abortLocally)
       try {
         if (!transition) throw errorNoTransition()
@@ -123,15 +122,9 @@ export function createAsync<
           "async-promise/on-success"
         )
       } catch (error) {
-        if (
-          typeof error === "object" &&
-          error !== null &&
-          "code" in error &&
-          error.code !== 20
-        ) {
+        if (!isNewActionError(error)) {
           store.transitions.emitError(transition, error)
         }
-        // if (wasAborted || error.code === 20) return
         store.transitions.doneKey(
           transition,
           {
@@ -139,8 +132,6 @@ export function createAsync<
           },
           "async-promise/on-error"
         )
-      } finally {
-        // off()
       }
     }
     handlePromise(promise({ signal }))
@@ -167,6 +158,9 @@ export function createAsync<
       "for-timer-actor"
     )
     store.transitions.addKey(transition, `async-timer/${from}`)
+    const abortEventStr = `abort::${JSON.stringify(transition)}`
+    const off = store.events.once(abortEventStr).run(abortLocally)
+
     const timerId = setTimeout(() => {
       try {
         callback({
@@ -200,13 +194,21 @@ export function createAsync<
           "async-timer/on-error"
         ) // TODO
         store.transitions.emitError(transition, error)
+      } finally {
+        off()
       }
     }, time)
 
-    const transitionString = transition.join(":")
-    store.transitions.meta.values[transitionString] ??= {}
-    store.transitions.meta.values[transitionString].timers ??= []
-    store.transitions.meta.values[transitionString].timers.push([timerId, id])
+    function abortLocally() {
+      clearTimeout(timerId)
+      store.transitions.doneKey(
+        transition,
+        {
+          onFinishTransition: () => {},
+        },
+        "clean-up-transition/timer"
+      )
+    }
 
     return () => {}
   }

@@ -547,6 +547,10 @@ export function newStoreDef<
     }
 
     const cleanUpTransition = (transition: any[], error: unknown | null) => {
+      const abortEventStr = `abort::${JSON.stringify(transition)}` as const
+      // @ts-ignore
+      store.events.emit(abortEventStr, null)
+
       const transitionKey = transition.join(":")
       if (transitionKey === "bootstrap") {
         errorsStore.setState({ bootstrap: error })
@@ -569,23 +573,23 @@ export function newStoreDef<
       //   )
       // }
 
-      const transitionString = transition.join(":")
-      store.transitions.meta.values[transitionString] ??= {}
-      store.transitions.meta.values[transitionString].timers ??= []
-      store.transitions.meta.values[transitionString].timers.forEach(
-        ([timerId, id]: [NodeJS.Timeout, string]) => {
-          console.log(`00) k clearing timer [${id}]`)
-          clearTimeout(timerId)
-          store.transitions.doneKey(
-            transition,
-            {
-              onFinishTransition: () => {},
-            },
-            "clean-up-transition/timer"
-          )
-        }
-      )
-      store.transitions.meta.values[transitionString].timers = []
+      // const transitionString = transition.join(":")
+      // store.transitions.meta.values[transitionString] ??= {}
+      // store.transitions.meta.values[transitionString].timers ??= []
+      // store.transitions.meta.values[transitionString].timers.forEach(
+      //   ([timerId, id]: [NodeJS.Timeout, string]) => {
+      //     console.log(`00) k clearing timer [${id}]`)
+      //     clearTimeout(timerId)
+      //     store.transitions.doneKey(
+      //       transition,
+      //       {
+      //         onFinishTransition: () => {},
+      //       },
+      //       "clean-up-transition/timer"
+      //     )
+      //   }
+      // )
+      // store.transitions.meta.values[transitionString].timers = []
 
       const newActionAbort = isNewActionError(error)
       if (!newActionAbort) {
@@ -637,29 +641,29 @@ export function newStoreDef<
           `%c 00) k WAS ABORTED: [${pastWasAborted}]`,
           "color: purple"
         )
-        if (pastWasAborted) {
-          const transitionString = action.transition.join(":")
-          // This event is basically saying to all pending promises that you
-          // the current transition was canceled, and all the transition keys
-          // are already cleaned up, turn some flag on to prevent the catch
-          // method from doning keys since this effect is already done
+        // if (pastWasAborted && !!0 === true) {
+        //   const transitionString = action.transition.join(":")
+        //   // This event is basically saying to all pending promises that you
+        //   // the current transition was canceled, and all the transition keys
+        //   // are already cleaned up, turn some flag on to prevent the catch
+        //   // method from doning keys since this effect is already done
 
-          const abortEventStr =
-            `abort::${JSON.stringify(action.transition)}` as const
-          // @ts-ignore
-          store.events.emit(abortEventStr, null)
+        //   const abortEventStr =
+        //     `abort::${JSON.stringify(action.transition)}` as const
+        //   // @ts-ignore
+        //   store.events.emit(abortEventStr, null)
 
-          // store.transitions.doneKey(
-          //   action.transition,
-          //   {
-          //     onFinishTransition: noop,
-          //   },
-          //   "erase-key/abort"
-          // )
-          // cleanUpTransition(action.transition, {
-          //   code: 20,
-          // })
-        }
+        //   // store.transitions.doneKey(
+        //   //   action.transition,
+        //   //   {
+        //   //     onFinishTransition: noop,
+        //   //   },
+        //   //   "erase-key/abort"
+        //   // )
+        //   // cleanUpTransition(action.transition, {
+        //   //   code: 20,
+        //   // })
+        // }
 
         stateContext.currentTransition = action.transition
         stateContext.when = Date.now()
