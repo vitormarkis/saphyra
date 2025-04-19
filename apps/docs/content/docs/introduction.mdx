@@ -19,6 +19,8 @@ At the end of the day, as long as it works for the user, there is no difference.
 Here are a few points:
 
 - Imperative loses traceability because you are always mutating the source value. Isso torna o processo de debugging mais difícil.
+- Voce consegue lapidar sua store colocando pequenas regras de negócio por vez, de pequenas em pequenas regras voce lapida sua store até ela ficar do formato que voce deseja. Eu quero que quando isso mude, voce derive esse outro valor. Quando usuario quiser fazer isso, voce busque esse valor da API e dispare esse evento...
+  COm abordagem imperativa, voce precisa sempre garantir todas as regras de negocio em cada setstate.
 
 ### Promise
 
