@@ -235,6 +235,12 @@ export type TransitionStartConfig<
    * All the original arguments are optional, so you can override them
    */
   redispatch: Redispatch<TState, TActions>
+  /**
+   * Used to abort an ongoing transition
+   *
+   * If the provided transition is not ongoing, it will do nothing
+   */
+  abort(transition: any[] | null | undefined): void
 }
 
 export type GenericAction = {

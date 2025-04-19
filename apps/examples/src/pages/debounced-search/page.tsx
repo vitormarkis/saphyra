@@ -6,6 +6,7 @@ import { CenteredErrorUnknown } from "~/components/CenteredError"
 import { cn } from "~/lib/cn"
 import { toast } from "sonner"
 import { extractErrorMessage } from "~/lib/extract-error-message"
+import { noop } from "lodash"
 
 type DebouncedSearchEvents = {}
 
@@ -113,48 +114,10 @@ export function DebouncedSearchView({}: DebouncedSearchViewProps) {
         type: "change-name",
         name: newQuery,
         transition: ["debounced-search", "name"],
-        beforeDispatch({
-          transition,
-          transitionStore,
-          createAsync,
-          redispatch,
-          meta,
-          events,
-        }) {
+        beforeDispatch({ transition, createAsync, redispatch, abort }) {
           const async = createAsync()
-          const randomStr = Math.random().toString(36).substring(2, 5)
-
-          console.log(`00) key timer: [${randomStr}]`)
-          const shouldCancel = transitionStore.isHappeningUnique(transition)
-          if (shouldCancel) {
-            console.log(
-              `%c 00) k CANCELED PREVIOUS! Next is: ${randomStr}`,
-              "color: red"
-            )
-            const controller = transitionStore.controllers.get(transition)
-            controller?.signal.addEventListener("abort", () => {
-              // debouncedSearch.cleanUpTransition(transition!, { code: 20 })
-            })
-            debouncedSearch.cleanUpTransition(transition!, { code: 20 })
-            controller?.abort()
-            console.log("33: clean up - controller", controller)
-          }
-
-          // meta.cleanup?.()
-          async.timer(
-            () => {
-              console.log(`00) k DISPATCHING`)
-              redispatch()
-            },
-            500,
-            randomStr
-          )
-        },
-        onTransitionEnd: meta => {
-          // if ("cleanup" in meta) {
-          // delete meta.cleanup
-          // }
-          console.log("00) key ON TRANSITION END")
+          abort(transition)
+          async.timer(redispatch, 500)
         },
       })
     },
@@ -210,6 +173,12 @@ export function DebouncedSearchView({}: DebouncedSearchViewProps) {
             }, 820)
           }
           function typingSlowly() {
+            // action("e")
+            // setTimeout(() => void action("em"), 200)
+            // setTimeout(() => void action("em_"), 390)
+            // setTimeout(() => void action("emi"), 550)
+            // setTimeout(() => void action("emil"), 1200)
+            // setTimeout(() => void action("emily"), 1500)
             action("e")
             setTimeout(() => void action("em"), 20)
             setTimeout(() => void action("emi"), 700)

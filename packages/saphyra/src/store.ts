@@ -24,6 +24,7 @@ import type {
   ReducerOptimistic,
   Registry,
   SomeStoreGeneric,
+  TransitionStartConfig,
 } from "./types"
 import { EventEmitter, EventsTuple } from "./event-emitter"
 import { noop } from "./fn/noop"
@@ -762,6 +763,20 @@ export function newStoreDef<
       userReducer(context)
     }
 
+    const abort: TransitionStartConfig<
+      TState,
+      TActions,
+      any,
+      TEvents
+    >["abort"] = transition => {
+      const isHappening = store.transitions.isHappeningUnique(transition)
+      if (!isHappening || !transition) return
+      const controller = store.transitions.controllers.get(transition)
+      // I would love to run `cleanUpTransition` as an event listener of the signal abortion
+      store.cleanUpTransition(transition!, { code: 20 })
+      controller?.abort()
+    }
+
     const dispatch: Met["dispatch"] = (initialAction: TActions) => {
       try {
         const rollback = new Rollback()
@@ -808,6 +823,7 @@ export function newStoreDef<
             signal ?? initialController.signal,
             "before-dispatch-async"
           ) as Async<any, TActions>,
+        abort,
       }) as TActions
 
       if (rootAction == null) {
