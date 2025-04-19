@@ -18,7 +18,6 @@ export const runSuccessCallback: OnFinishTransition = ({
 }
 
 export class TransitionsStore extends Subject {
-  #prefix = "00)"
   controllers: {
     get: (
       transition: any[] | null | undefined | string,
@@ -45,13 +44,8 @@ export class TransitionsStore extends Subject {
     error: new Map<string, ((error: unknown) => void) | null>(),
   }
 
-  #shouldLog = true
-
-  constructor(shouldLog?: boolean) {
+  constructor() {
     super()
-    if (shouldLog !== undefined) {
-      this.#shouldLog = shouldLog
-    }
     this.state = {
       transitions: {},
     }
@@ -75,16 +69,12 @@ export class TransitionsStore extends Subject {
     return this.meta.values[key]
   }
 
-  eraseKey(
-    transition: any[] | null | undefined,
-    options: DoneKeyOptions,
-    from?: string
-  ) {
+  eraseKey(transition: any[] | null | undefined, options: DoneKeyOptions) {
     if (!transition) return
     const key = transition.join(":")
     const subTransitions = this.state.transitions[key]
     for (let i = 0; i < subTransitions; i++) {
-      this.doneKey(transition, options, from)
+      this.doneKey(transition, options)
     }
   }
 
@@ -130,8 +120,6 @@ export class TransitionsStore extends Subject {
 
   private setState(newState: TransitionsStoreState) {
     this.state = newState
-    if (this.#shouldLog)
-      console.log(`${this.#prefix} transitions`, this.state.transitions)
     this.notify()
   }
 
@@ -147,7 +135,7 @@ export class TransitionsStore extends Subject {
     return state
   }
 
-  addKey(transition: any[] | null | undefined, from?: string) {
+  addKey(transition: any[] | null | undefined) {
     if (!transition) return
 
     const state = {
@@ -164,46 +152,28 @@ export class TransitionsStore extends Subject {
 
     this.setState(newState)
 
-    if (this.#shouldLog) {
-      const key = transition?.join(":")
-      const sub = this.state.transitions[key] ?? 0
-      console.log(
-        `%c ${this.#prefix} k add: ${key} ${from} [${sub}]`,
-        "color: steelblue"
-      )
-    }
-
     return () =>
-      this.doneKey(
-        transition,
-        {
-          onFinishTransition: runSuccessCallback,
-        },
-        "add-key-cleanup"
-      )
+      this.doneKey(transition, {
+        onFinishTransition: runSuccessCallback,
+      })
   }
 
   done(
     state: TransitionsStoreState,
     transitionName: string | null,
-    options: DoneKeyOptions,
-    functionsToRun: Record<string, Function[]>
+    options: DoneKeyOptions
   ) {
     if (!transitionName) return
     state.transitions[transitionName] ??= 0
     state.transitions[transitionName]--
 
     if (state.transitions[transitionName] <= 0) {
-      if (transitionName !== null) {
-        functionsToRun[transitionName] ??= []
-        functionsToRun[transitionName].push(() => {
-          this.events.done.emit(transitionName)
-          options.onFinishTransition({
-            transitionName,
-            transitionStore: this,
-          })
-        })
-      }
+      delete state.transitions[transitionName]
+      this.events.done.emit(transitionName)
+      options.onFinishTransition({
+        transitionName,
+        transitionStore: this,
+      })
     }
 
     return state
@@ -220,11 +190,7 @@ export class TransitionsStore extends Subject {
     this.setState(state)
   }
 
-  doneKey(
-    transition: any[] | null | undefined,
-    options: DoneKeyOptions,
-    from?: string
-  ) {
+  doneKey(transition: any[] | null | undefined, options: DoneKeyOptions) {
     if (!transition) return
 
     const state = {
@@ -232,26 +198,14 @@ export class TransitionsStore extends Subject {
       transitions: { ...this.state.transitions },
     }
 
-    const functionsToRun: Record<string, Function[]> = {}
     let meta = ""
     const newState = transition.reduce((acc, key) => {
       if (meta !== "") key = `${meta}:${key}`
       meta = key
-      return this.done(acc, key, options, functionsToRun)
+      return this.done(acc, key, options)
     }, state)
 
     this.setState(newState)
-    if (this.#shouldLog) {
-      const key = transition?.join(":")!
-      const sub = this.state.transitions[key] ?? 0
-      console.log(
-        `%c ${this.#prefix} k done: ${key} ${from} [${sub}]`,
-        "color: turquoise"
-      )
-    }
-    Object.values(functionsToRun)
-      .flat()
-      .forEach(fn => fn())
   }
 
   isHappeningUnique(transition: any[] | null | undefined) {

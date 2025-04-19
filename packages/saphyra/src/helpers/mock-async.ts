@@ -1,6 +1,4 @@
-import { Async } from "~/types"
-
-export const mockAsync: () => Async<any, any> = () => ({
+export const mockAsync = () => ({
   promise() {
     return {
       onSuccess() {
@@ -10,6 +8,5 @@ export const mockAsync: () => Async<any, any> = () => ({
   },
   timer() {
     // debugger
-    return Math.random() as unknown as NodeJS.Timeout
   },
 })
