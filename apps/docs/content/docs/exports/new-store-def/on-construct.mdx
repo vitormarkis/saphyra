@@ -1,0 +1,19 @@
+---
+title: onConstruct
+description: A function that runs before the store is instantiated.
+---
+
+### How it looks like:
+```js
+const newAuthStore = newStoreDef({
+  onConstruct({ initialProps }) {
+    const [name, surname] = initialProps.name.split(" ")
+    
+    return {
+      name,
+      surname,
+    }
+  },
+})
+
+
