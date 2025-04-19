@@ -548,11 +548,10 @@ export function newStoreDef<
     }
 
     const cleanUpTransition = (transition: any[], error: unknown | null) => {
-      const abortEventStr = `abort::${JSON.stringify(transition)}` as const
-      // @ts-ignore
-      store.events.emit(abortEventStr, null)
-
       const transitionKey = transition.join(":")
+      const cleanUpList = store.transitions.cleanUpList[transitionKey] ?? []
+      cleanUpList.forEach(fn => fn())
+
       if (transitionKey === "bootstrap") {
         errorsStore.setState({ bootstrap: error })
       }
@@ -562,35 +561,6 @@ export function newStoreDef<
         []
       )
       store.optimisticRegistry.clear(transitionKey, "notify")
-
-      // const times = store.transitions.state.transitions[transitionKey]
-      // for (let i = 0; i < times; i++) {
-      //   store.transitions.doneKey(
-      //     transition,
-      //     {
-      //       onFinishTransition: () => {},
-      //     },
-      //     "clean-up-transition/all"
-      //   )
-      // }
-
-      // const transitionString = transition.join(":")
-      // store.transitions.meta.values[transitionString] ??= {}
-      // store.transitions.meta.values[transitionString].timers ??= []
-      // store.transitions.meta.values[transitionString].timers.forEach(
-      //   ([timerId, id]: [NodeJS.Timeout, string]) => {
-      //     console.log(`00) k clearing timer [${id}]`)
-      //     clearTimeout(timerId)
-      //     store.transitions.doneKey(
-      //       transition,
-      //       {
-      //         onFinishTransition: () => {},
-      //       },
-      //       "clean-up-transition/timer"
-      //     )
-      //   }
-      // )
-      // store.transitions.meta.values[transitionString].timers = []
 
       const newActionAbort = isNewActionError(error)
       if (!newActionAbort) {
@@ -602,10 +572,6 @@ export function newStoreDef<
           "color: orange"
         )
       }
-
-      // // just to re-run optimistic state
-      // defineState(store.state)
-      // store.notify()
     }
 
     const handleRegisterTransition = (

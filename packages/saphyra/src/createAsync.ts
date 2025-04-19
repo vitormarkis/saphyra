@@ -74,11 +74,14 @@ export function createAsync<
   const promise: AsyncInner["promise"] = <T>(
     promise: (props: AsyncPromiseProps) => Promise<T>
   ): PromiseResult<T, TState, TActions> => {
+    if (!transition) throw errorNoTransition()
+    const transitionKey = transition.join(":")
+
+    const cleanUpList = (store.transitions.cleanUpList[transitionKey] ??=
+      new Set())
+
     let onSuccess: (value: T, actor: AsyncActor<TState, TActions>) => void =
       noop
-    if (!transition) throw errorNoTransition()
-    const transitionString = transition.join(":")
-
     store.transitions.addKey(transition, `async-promise/${from}`)
 
     async function handlePromise(promise: Promise<T>) {
@@ -94,26 +97,24 @@ export function createAsync<
       const racePromise = Promise.withResolvers<T>()
 
       const abortLocally = () => {
+        cleanUpList.delete(abortLocally)
         store.internal.events.emit("transition-completed", {
-          id: `${transitionString}-${stateContext.when}`,
+          id: `${transitionKey}-${stateContext.when}`,
           status: "cancelled",
         })
 
         racePromise.reject({ code: 20 })
       }
-      // times[transition.join(":")] ??= 0
-      // times[transition.join(":")]++
-      const abortEventStr = `abort::${JSON.stringify(transition)}`
-      const off = store.events.once(abortEventStr).run(abortLocally)
+      cleanUpList.add(abortLocally)
       try {
         if (!transition) throw errorNoTransition()
-        promise.then(off)
         const value = await Promise.race<T>([promise, racePromise.promise])
         onSuccess(value, {
           dispatch,
           set,
           async,
         })
+        cleanUpList.delete(abortLocally)
         store.transitions.doneKey(
           transition,
           {
@@ -149,6 +150,11 @@ export function createAsync<
     id?: string
   ) => {
     if (!transition) throw errorNoTransition()
+    const transitionKey = transition.join(":")
+
+    const cleanUpList = (store.transitions.cleanUpList[transitionKey] ??=
+      new Set())
+
     const async = createAsync(
       store,
       state,
@@ -158,9 +164,7 @@ export function createAsync<
       "for-timer-actor"
     )
     store.transitions.addKey(transition, `async-timer/${from}`)
-    const abortEventStr = `abort::${JSON.stringify(transition)}`
-    const off = store.events.once(abortEventStr).run(abortLocally)
-
+    cleanUpList.add(abortLocally)
     const timerId = setTimeout(() => {
       try {
         callback({
@@ -168,6 +172,7 @@ export function createAsync<
           set,
           async,
         })
+        cleanUpList.delete(abortLocally)
         store.transitions.doneKey(
           transition,
           {
@@ -175,12 +180,6 @@ export function createAsync<
           },
           "async-timer/on-success"
         )
-        const meta = store.transitions.meta.get(transition)
-        if (meta.timers) {
-          meta.timers = meta.timers.filter(
-            ([arrTimerId]: [NodeJS.Timeout, string]) => arrTimerId !== timerId
-          )
-        }
       } catch (error) {
         console.log(
           "%cSomething went wrong! Rolling back the store state. [TODO]",
@@ -194,12 +193,11 @@ export function createAsync<
           "async-timer/on-error"
         ) // TODO
         store.transitions.emitError(transition, error)
-      } finally {
-        off()
       }
     }, time)
 
     function abortLocally() {
+      cleanUpList.delete(abortLocally)
       clearTimeout(timerId)
       store.transitions.doneKey(
         transition,

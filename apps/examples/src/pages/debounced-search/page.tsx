@@ -185,11 +185,11 @@ export function DebouncedSearchView({}: DebouncedSearchViewProps) {
             setTimeout(() => void action("emil"), 1200)
             setTimeout(() => void action("emily"), 1500)
           }
-          // dispatchingThenCancelling()
+          dispatchingThenCancelling()
           // cancellingBeforeRedispatch()
           // abortTimerThenAbortRequest()
           // abortRequestThenAbortTimer()
-          typingSlowly()
+          // typingSlowly()
         }}
       >
         Test
@@ -212,7 +212,10 @@ export function DebouncedSearchView({}: DebouncedSearchViewProps) {
       >
         {isLoading && <div className="absolute z-10 inset-0 bg-black/30" />}
         {state.$users.map(user => (
-          <article className="flex gap-1">
+          <article
+            key={user.id}
+            className="flex gap-1"
+          >
             <div>
               <div className="relative h-full aspect-square">
                 <img

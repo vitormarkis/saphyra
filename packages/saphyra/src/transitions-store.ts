@@ -44,6 +44,7 @@ export class TransitionsStore extends Subject {
     done: new Map<string, (() => void) | null>(),
     error: new Map<string, ((error: unknown) => void) | null>(),
   }
+  cleanUpList: Record<string, Set<VoidFunction>> = {}
 
   #shouldLog = true
 
