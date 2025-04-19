@@ -24,6 +24,7 @@ import type {
   ReducerOptimistic,
   Registry,
   SomeStoreGeneric,
+  TransitionStartConfig,
 } from "./types"
 import { EventEmitter, EventsTuple } from "./event-emitter"
 import { noop } from "./fn/noop"
@@ -472,7 +473,13 @@ export function newStoreDef<
           "No setters found for this transition. It's most likely you didn't use the `set` function in your reducer."
         )
       }
+      console.log("%c 00) k applying setters", "color: orange", setters)
+      // if (setters.length > 0) {
+      //   const has = setters.some(s => "name" in s)
+      //   if (!has) debugger
+      // }
 
+      if (setters.length === 0 && transitionKey !== "bootstrap") debugger
       const newStateFromSetters = setters.reduce((acc: TState, setter) => {
         setter = mergeSetterWithState(ensureSetter(setter))
         const newState = setter(acc)
@@ -520,15 +527,13 @@ export function newStoreDef<
       commitTransition(transition, action.onTransitionEnd)
     }
 
-    function getAbortController(props: {
-      transition?: any[] | null | undefined
-    }) {
-      if (!props.transition)
+    function getAbortController(transition?: any[] | null | undefined) {
+      if (!transition)
         return {
           controller: undefined,
           rollback: noop,
         }
-      const key = props.transition.join(":")
+      const key = transition.join(":")
       const initial = store.transitions.controllers.values[key]
       return {
         controller: initial,
@@ -543,6 +548,10 @@ export function newStoreDef<
     }
 
     const cleanUpTransition = (transition: any[], error: unknown | null) => {
+      const abortEventStr = `abort::${JSON.stringify(transition)}` as const
+      // @ts-ignore
+      store.events.emit(abortEventStr, null)
+
       const transitionKey = transition.join(":")
       if (transitionKey === "bootstrap") {
         errorsStore.setState({ bootstrap: error })
@@ -553,6 +562,36 @@ export function newStoreDef<
         []
       )
       store.optimisticRegistry.clear(transitionKey, "notify")
+
+      // const times = store.transitions.state.transitions[transitionKey]
+      // for (let i = 0; i < times; i++) {
+      //   store.transitions.doneKey(
+      //     transition,
+      //     {
+      //       onFinishTransition: () => {},
+      //     },
+      //     "clean-up-transition/all"
+      //   )
+      // }
+
+      // const transitionString = transition.join(":")
+      // store.transitions.meta.values[transitionString] ??= {}
+      // store.transitions.meta.values[transitionString].timers ??= []
+      // store.transitions.meta.values[transitionString].timers.forEach(
+      //   ([timerId, id]: [NodeJS.Timeout, string]) => {
+      //     console.log(`00) k clearing timer [${id}]`)
+      //     clearTimeout(timerId)
+      //     store.transitions.doneKey(
+      //       transition,
+      //       {
+      //         onFinishTransition: () => {},
+      //       },
+      //       "clean-up-transition/timer"
+      //     )
+      //   }
+      // )
+      // store.transitions.meta.values[transitionString].timers = []
+
       const newActionAbort = isNewActionError(error)
       if (!newActionAbort) {
         handleError(error, transition)
@@ -588,7 +627,7 @@ export function newStoreDef<
         stateContext.when = Date.now()
         stateContext.currentTransition = action.transition
 
-        const initialAbort = getAbortController(action)
+        const initialAbort = getAbortController(action.transition)
         rollback.add(initialAbort.rollback)
         const controller = ensureAbortController({
           transition: action.transition,
@@ -597,19 +636,35 @@ export function newStoreDef<
 
         invariant(controller, "NSTH: controller is ensured")
 
-        const wasAborted = controller.signal.aborted
+        const pastWasAborted = controller.signal.aborted
 
-        if (wasAborted) {
-          // @ts-ignore
-          store.events.emit(`abort::${JSON.stringify(action.transition)}`, null)
+        console.log(
+          `%c 00) k WAS ABORTED: [${pastWasAborted}]`,
+          "color: purple"
+        )
+        // if (pastWasAborted && !!0 === true) {
+        //   const transitionString = action.transition.join(":")
+        //   // This event is basically saying to all pending promises that you
+        //   // the current transition was canceled, and all the transition keys
+        //   // are already cleaned up, turn some flag on to prevent the catch
+        //   // method from doning keys since this effect is already done
 
-          store.transitions.eraseKey(action.transition, {
-            onFinishTransition: noop,
-          })
-          cleanUpTransition(action.transition, {
-            code: 20,
-          })
-        }
+        //   const abortEventStr =
+        //     `abort::${JSON.stringify(action.transition)}` as const
+        //   // @ts-ignore
+        //   store.events.emit(abortEventStr, null)
+
+        //   // store.transitions.doneKey(
+        //   //   action.transition,
+        //   //   {
+        //   //     onFinishTransition: noop,
+        //   //   },
+        //   //   "erase-key/abort"
+        //   // )
+        //   // cleanUpTransition(action.transition, {
+        //   //   code: 20,
+        //   // })
+        // }
 
         stateContext.currentTransition = action.transition
         stateContext.when = Date.now()
@@ -621,9 +676,10 @@ export function newStoreDef<
          * with the error, which mean the transition should not be running
          * from this point forward
          */
-        const isRunning = store.transitions.get(action.transition) > 0
-        store.transitions.addKey(action.transition)
-        if (!isRunning) {
+        const shouldRegister =
+          store.transitions.get(action.transition) === 0 || isNewTransition
+        store.transitions.addKey(action.transition, "dispatch/new-transition")
+        if (shouldRegister) {
           const transition = action.transition
           const transitionString = transition.join(":")
 
@@ -634,6 +690,10 @@ export function newStoreDef<
           } as { transitionName: string; id: string })
 
           store.transitions.callbacks.done.set(transitionString, () => {
+            console.log(
+              `00) k done [${transitionString}]`,
+              store.settersRegistry
+            )
             store.completeTransition(action, transition)
             store.internal.events.emit("transition-completed", {
               id: internalTransitionId,
@@ -661,6 +721,62 @@ export function newStoreDef<
       }
     }
 
+    type RunOptimisticsOnlyProps = {
+      prevState: TState
+      newState: TState
+      action: TActions
+    }
+
+    const runOptimisticsOnly = ({
+      action,
+      prevState,
+      newState,
+    }: RunOptimisticsOnlyProps) => {
+      const scheduleOptimistic = createOptimisticScheduler(
+        action.transition,
+        "notify"
+      )
+
+      const context: ReducerProps<
+        TState,
+        TActions,
+        TEvents,
+        TUncontrolledState,
+        TDeps
+      > = {
+        prevState: prevState,
+        state: newState,
+        action,
+        events: mockEventEmitter<TEvents>(),
+        store,
+        async: mockAsync(),
+        set: () => {},
+        optimistic: scheduleOptimistic,
+        diff: createDiff(prevState, newState),
+        dispatch: () => {},
+        deps,
+      }
+
+      // I'm not using the returned state here because the only side effect that I want
+      // is happening on the `scheduleOptimistic`, which is updating the optimistic state
+      // immediately
+      userReducer(context)
+    }
+
+    const abort: TransitionStartConfig<
+      TState,
+      TActions,
+      any,
+      TEvents
+    >["abort"] = transition => {
+      const isHappening = store.transitions.isHappeningUnique(transition)
+      if (!isHappening || !transition) return
+      const controller = store.transitions.controllers.get(transition)
+      // I would love to run `cleanUpTransition` as an event listener of the signal abortion
+      store.cleanUpTransition(transition!, { code: 20 })
+      controller?.abort()
+    }
+
     const dispatch: Met["dispatch"] = (initialAction: TActions) => {
       try {
         const rollback = new Rollback()
@@ -686,23 +802,41 @@ export function newStoreDef<
         controller: initialAction.controller,
       })
 
-      const rootAction = beforeDispatch({
+      let rootAction = beforeDispatch({
         action: getSnapshotAction(initialAction),
         meta: store.transitions.meta.get(initialAction.transition),
         transitionStore: store.transitions,
         transition: initialAction.transition,
         events: store.events,
-        async: (transition, signal) =>
+        redispatch: (partialAction = {}) => {
+          const finalAction = getSnapshotAction(
+            mergeObj(initialAction, partialAction)
+          ) as TActions
+          store.dispatch(finalAction)
+        },
+        createAsync: (transition, signal) =>
           createAsync(
             store,
             newState,
             stateContext,
-            transition,
-            signal
+            transition ?? initialAction.transition,
+            signal ?? initialController.signal,
+            "before-dispatch-async"
           ) as Async<any, TActions>,
+        abort,
       }) as TActions
 
-      if (rootAction == null) throw rollback
+      if (rootAction == null) {
+        runOptimisticsOnly({
+          action: initialAction,
+          newState,
+          prevState: store.state,
+        })
+        console.log("%c 44: done dispatching! (opt)", "color: coral")
+        return
+
+        // throw rollback
+      }
 
       handleRegisterTransition(
         newState,
@@ -759,7 +893,8 @@ export function newStoreDef<
             newState,
             stateContext,
             action.transition,
-            controller.signal
+            controller.signal,
+            "traditional/dispatch"
           ),
           set: scheduleSetter,
           optimistic: scheduleOptimistic,
@@ -808,9 +943,13 @@ export function newStoreDef<
       }
 
       if (rootAction.transition != null) {
-        store.transitions.doneKey(rootAction.transition, {
-          onFinishTransition: runSuccessCallback,
-        })
+        store.transitions.doneKey(
+          rootAction.transition,
+          {
+            onFinishTransition: runSuccessCallback,
+          },
+          "action-had-transition"
+        )
         // the observers will be notified
         // when the transition is done
       } else {
@@ -832,6 +971,7 @@ export function newStoreDef<
         defineState(newState)
         subject.notify()
       }
+      console.log("%c 44: done dispatching!", "color: coral")
     }
 
     const handleError: Met["handleError"] = (error, transition) => {
@@ -876,7 +1016,8 @@ export function newStoreDef<
           store.state,
           store.stateContext,
           transition,
-          signal
+          signal,
+          "rerender"
         ),
         set: store.createSetScheduler(
           store.state,
@@ -939,7 +1080,11 @@ export function newStoreDef<
         store.settersRegistry = setImmutableFn(
           store.settersRegistry,
           transitionKey,
-          (setters = []) => [...setters, setterOrPartialStateList]
+          (setters = []) => {
+            const val = [...setters, setterOrPartialStateList]
+            console.log(`99: register set [${transitionKey}]`, val)
+            return val
+          }
         )
       }
 
@@ -975,7 +1120,8 @@ export function newStoreDef<
             newState,
             currentStateContext,
             transition,
-            signal
+            signal,
+            "register-set"
           ),
           prevState: currentState,
           events: store.events,
@@ -1010,7 +1156,8 @@ export function newStoreDef<
           newState,
           store.stateContext,
           transition,
-          signal
+          signal,
+          "set-state"
         ), // um set state pode ocasionar em chamadas assíncronas, e como isso é cancelado?
         set: store.createSetScheduler(
           newState,
@@ -1066,6 +1213,7 @@ export function newStoreDef<
       rebuild,
       completeTransition,
       commitTransition,
+      cleanUpTransition,
     }
 
     store = mergeObj(subject, store, methods)
@@ -1120,7 +1268,8 @@ export function newStoreDef<
           prevState,
           prevStateContext,
           BOOTSTRAP_TRANSITION,
-          signal
+          signal,
+          "on-construct-async"
         )
 
         async
@@ -1139,7 +1288,8 @@ export function newStoreDef<
                 initialState,
                 prevStateContext,
                 BOOTSTRAP_TRANSITION,
-                signal
+                signal,
+                "on-construct-produce-initial-state"
               ),
               set: createSetScheduler(
                 initialState,
@@ -1184,7 +1334,8 @@ export function newStoreDef<
               initialState,
               prevStateContext,
               BOOTSTRAP_TRANSITION,
-              signal
+              signal,
+              "on-construct-synchronous"
             ),
             set: createSetScheduler(
               initialState,
@@ -1209,9 +1360,13 @@ export function newStoreDef<
         }
       }
 
-      store.transitions.doneKey(BOOTSTRAP_TRANSITION, {
-        onFinishTransition: runSuccessCallback,
-      })
+      store.transitions.doneKey(
+        BOOTSTRAP_TRANSITION,
+        {
+          onFinishTransition: runSuccessCallback,
+        },
+        "bootstrap"
+      )
 
       const isOkToPushToHistory = (() => {
         const isTransitioning =

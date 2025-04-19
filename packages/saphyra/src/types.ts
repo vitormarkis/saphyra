@@ -149,6 +149,7 @@ export type GenericStoreMethods<
     transition: any[] | null | undefined,
     onTransitionEnd?: OnTransitionEnd<TState, TEvents>
   ): void
+  cleanUpTransition(transition: any[], error: unknown | null): void
 }
 
 type UncontrolledState<
@@ -186,6 +187,10 @@ export type DefaultActions =
       onSuccess: (value: any, actor: AsyncActor<any, any>) => void
     }
 
+type Redispatch<TState, TActions extends BaseAction<TState>> = (
+  action?: Partial<TActions>
+) => void
+
 export type TransitionStartConfig<
   TState,
   TActions extends BaseAction<TState>,
@@ -212,11 +217,30 @@ export type TransitionStartConfig<
    * The store events
    */
   events: EventEmitter<TEvents>
-
-  async: (
-    transition: any[] | null | undefined,
-    signal: AbortSignal
+  /**
+   * Enables you to add more async operations in the name of a transition
+   *
+   * For example: you can debounce a search query and group the wait
+   * time and request time under the same transition
+   */
+  createAsync: (
+    transition?: any[] | null | undefined,
+    signal?: AbortSignal
   ) => Async<TState, TActions>
+  /**
+   * Allows you to dispatch the same action that initiated the `beforeDispatch` callback
+   *
+   * The redispatch doesn't include the `beforeDispatch` callback to prevent infinite loops
+   *
+   * All the original arguments are optional, so you can override them
+   */
+  redispatch: Redispatch<TState, TActions>
+  /**
+   * Used to abort an ongoing transition
+   *
+   * If the provided transition is not ongoing, it will do nothing
+   */
+  abort(transition: any[] | null | undefined): void
 }
 
 export type GenericAction = {
@@ -294,8 +318,9 @@ export type Async<TState, TActions extends BaseAction<TState>> = {
   ): PromiseResult<T, TState, TActions>
   timer(
     callback: (actor: AsyncActor<TState, TActions>) => void,
-    time?: number
-  ): void
+    time?: number,
+    id?: string
+  ): () => void
 }
 
 export type Diff<TState> = (keys: (keyof TState)[]) => boolean
