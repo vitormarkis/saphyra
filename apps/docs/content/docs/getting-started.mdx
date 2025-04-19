@@ -1,0 +1,150 @@
+---
+title: Getting Started
+description: Learn how to set up your first Saphyra store
+---
+
+import { Tab, Tabs } from "fumadocs-ui/components/tabs"
+import { Step, Steps } from "fumadocs-ui/components/steps"
+ 
+<Steps>  
+<Step>  
+### Install the package
+
+```bash tab="npm"
+npm install saphyra
+```
+
+```bash tab="yarn"
+yarn add saphyra
+```
+
+```bash tab="pnpm"
+pnpm add saphyra
+```
+
+```bash tab="bun"
+bun add saphyra
+```
+
+</Step>  
+<Step>  
+### Create a store definition
+
+The `newStoreDef` function returns a store factory.
+
+```js
+import { newStoreDef } from "saphyra"
+
+const newAuthStore = newStoreDef()
+```
+
+</Step>  
+<Step>  
+### Instantiation
+
+Define your store's lifecycle. If it's a global store, instantiate and export it from a file. If it's a local store, instantiate it within `useState` and provide it via Context.
+
+```js
+// Global store
+const authStore = newAuthStore({})
+
+// Local store
+function App() {
+  const [authStore, setAuthStore] = useState(newAuthStore({}))
+}
+```
+
+</Step>  
+<Step>  
+### Rendering state
+
+A Saphyra store is a plain JavaScript object instance. To integrate it with the React lifecycle, you need touse hooks to translate the store state into React state.
+
+Saphyra provides a helper called `createStoreUtils`, which generates many useful hooks and utilities to make this integration a breeze.
+
+```js
+import { newStoreDef } from "saphyra"
+
+const newAuthStore = newStoreDef()
+const AuthStore = createStoreUtils()
+
+function App() {
+  const [authStore, setAuthStore] = useState(
+    () => newAuthStore({ count: 0 })
+  )
+  const count = AuthStore.useStore(s => s.count, authStore)
+
+  return <span>{count}</span>
+}
+```
+
+</Step>  
+<Step>  
+### Setting state
+
+There are two ways to update state in a Saphyra store:
+
+#### `dispatch`
+
+Use this for actions — first-class commands that drive your store logic.
+
+#### `setState`
+
+Use this for non-critical updates, such as UI state changes from color pickers, form inputs, etc.
+
+```js
+import { newStoreDef } from "saphyra"
+
+const newAuthStore = newStoreDef()
+const AuthStore = createStoreUtils()
+
+function App() {
+  const [authStore, setAuthStore] = useState(
+    () => newAuthStore({ count: 0 })
+  )
+  const count = AuthStore.useStore(s => s.count, authStore)
+  const setToTen = () => authStore.setState({ count: 10 })
+
+  return (
+    <div>
+      <span>{count}</span>
+      <button onClick={setToTen}>Set to 10</button>
+    </div>
+  )
+}
+```
+
+</Step>  
+<Step>  
+### Providing with Context
+
+The `AuthStore` module exposes a `Provider` component that you can use to provide the store state to children. It also provides a hook called `useUseState` to consume the context.
+
+```js
+import { newStoreDef } from "saphyra"
+
+const newAuthStore = newStoreDef()
+const AuthStore = createStoreUtils()
+
+function AuthProvider({ initialCount, children }) {
+  const [authStore, setAuthStore] = useState(() =>
+    newAuthStore({ count: initialCount })
+  )
+
+  return (
+    <AuthStore.Provider value={[authStore, setAuthStore]}>
+      {children}
+    </AuthStore.Provider>
+  )
+}
+
+function Children() {
+  const [authStore] = AuthStore.useUseState()
+  const count = AuthStore.useStore(s => s.count)
+
+  // ...
+}
+```
+</Step>  
+</Steps>
+

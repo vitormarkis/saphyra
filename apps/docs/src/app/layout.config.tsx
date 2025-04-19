@@ -24,7 +24,7 @@ export const baseOptions: BaseLayoutProps = {
             fill="currentColor"
           />
         </svg>
-        My App
+        Saphyra Docs
       </>
     ),
   },
