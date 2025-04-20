@@ -35,46 +35,62 @@ The `newStoreDef` function returns a store factory.
 ```js
 import { newStoreDef } from "saphyra"
 
-const newAuthStore = newStoreDef()
+const newCountStore = newStoreDef()
 ```
 
 </Step>  
 <Step>  
 ### Instantiation
 
-Define your store's lifecycle. If it's a global store, instantiate and export it from a file. If it's a local store, instantiate it within `useState` and provide it via Context.
+Define your store's lifecycle, local or global.
 
-```js
-// Global store
-const authStore = newAuthStore({})
-
-// Local store
+```js tab="Local"
 function App() {
-  const [authStore, setAuthStore] = useState(newAuthStore({}))
+  const [countStore, setCountStore] = useState(newCountStore({}))
 }
+```
+
+```js tab="Global"
+export const countStore = newCountStore({})
 ```
 
 </Step>  
 <Step>  
 ### Rendering state
 
-A Saphyra store is a plain JavaScript object instance. To integrate it with the React lifecycle, you need touse hooks to translate the store state into React state.
+A Saphyra store is a plain JavaScript object instance. To integrate it with the React lifecycle, you need to use hooks to translate the store state into React state.
 
 Saphyra provides a helper called `createStoreUtils`, which generates many useful hooks and utilities to make this integration a breeze.
 
-```js
+```js tab="Local"
 import { newStoreDef } from "saphyra"
+import { createStoreUtils } from "saphyra/react"
 
-const newAuthStore = newStoreDef()
-const AuthStore = createStoreUtils()
+const newCountStore = newStoreDef()
+const CountStore = createStoreUtils()
 
 function App() {
-  const [authStore, setAuthStore] = useState(
-    () => newAuthStore({ count: 0 })
+  const [countStore, setCountStore] = useState(() =>
+    newCountStore({ count: 0 })
   )
-  const count = AuthStore.useStore(s => s.count, authStore)
+  const count = CountStore.useStore(s => s.count, countStore) // [!code ++]
 
-  return <span>{count}</span>
+  return <span>{count}</span> // [!code ++]
+}
+```
+
+```js tab="Global"
+import { newStoreDef } from "saphyra"
+import { createStoreUtils } from "saphyra/react"
+
+const newCountStore = newStoreDef()
+const countStore = newCountStore({ count: 0 })
+const CountStore = createStoreUtils(countStore)
+
+function App() {
+  const count = CountStore.useStore(s => s.count, countStore) // [!code ++]
+
+  return <span>{count}</span> // [!code ++]
 }
 ```
 
@@ -90,25 +106,46 @@ Use this for actions — first-class commands that drive your store logic.
 
 #### `setState`
 
-Use this for non-critical updates, such as UI state changes from color pickers, form inputs, etc.
+Use this for non-critical updates, such as UI state changes from color pickers, control form inputs, etc.
 
-```js
+```js tab="Local"
 import { newStoreDef } from "saphyra"
+import { createStoreUtils } from "saphyra/react"
 
-const newAuthStore = newStoreDef()
-const AuthStore = createStoreUtils()
+const newCountStore = newStoreDef()
+const CountStore = createStoreUtils()
 
 function App() {
-  const [authStore, setAuthStore] = useState(
-    () => newAuthStore({ count: 0 })
+  const [countStore, setCountStore] = useState(() =>
+    newCountStore({ count: 0 })
   )
-  const count = AuthStore.useStore(s => s.count, authStore)
-  const setToTen = () => authStore.setState({ count: 10 })
+  const count = CountStore.useStore(s => s.count, countStore)
+  const setToTen = () => countStore.setState({ count: 10 }) // [!code ++]
 
   return (
     <div>
       <span>{count}</span>
-      <button onClick={setToTen}>Set to 10</button>
+      <button onClick={setToTen}>Set to 10</button> // [!code ++]
+    </div>
+  )
+}
+```
+
+```js tab="Global"
+import { newStoreDef } from "saphyra"
+
+const newCountStore = newStoreDef()
+const countStore = newCountStore({ count: 0 })
+const CountStore = createStoreUtils(countStore)
+
+function App() {
+  const count = CountStore.useStore(s => s.count, countStore)
+  const setToTen = () => countStore.setState({ count: 10 }) // [!code ++]
+
+  return (
+    <div>
+      <span>{count}</span>
+      <button onClick={setToTen}>Set to 10</button> // [!code ++]
     </div>
   )
 }
@@ -118,33 +155,44 @@ function App() {
 <Step>  
 ### Providing with Context
 
-The `AuthStore` module exposes a `Provider` component that you can use to provide the store state to children. It also provides a hook called `useUseState` to consume the context.
+In case you stick with local (recommended), the `CountStore` module exposes a `Provider` component that you can use to provide the store state to children. It also provides a hook called `useUseState` to consume the context.
 
 ```js
 import { newStoreDef } from "saphyra"
 
-const newAuthStore = newStoreDef()
-const AuthStore = createStoreUtils()
+const newCountStore = newStoreDef()
+const CountStore = createStoreUtils()
 
-function AuthProvider({ initialCount, children }) {
-  const [authStore, setAuthStore] = useState(() =>
-    newAuthStore({ count: initialCount })
+function CountProvider({ initialCount, children }) {
+  const [countStore, setCountStore] = useState(() =>
+    newCountStore({ count: initialCount })
   )
 
   return (
-    <AuthStore.Provider value={[authStore, setAuthStore]}>
+    <CountStore.Provider value={[countStore, setCountStore]}> // [!code ++]
       {children}
-    </AuthStore.Provider>
+    </CountStore.Provider> // [!code ++]
   )
 }
 
 function Children() {
-  const [authStore] = AuthStore.useUseState()
-  const count = AuthStore.useStore(s => s.count)
+  const [countStore] = CountStore.useUseState()
+  const count = CountStore.useStore(s => s.count)
 
   // ...
 }
 ```
+
+### We're all set up
+
+That's pretty much it. Every feature you want to add to your app should look like this at first.
+
+These are the basic concepts. Now, let's explore what makes Saphyra unique and powerful.
+
+#### Next Steps:
+
+- [Actions](/docs/actions)
+- [Transitions](/docs/transitions)
+
 </Step>  
 </Steps>
-

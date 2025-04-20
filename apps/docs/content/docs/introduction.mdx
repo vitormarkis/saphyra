@@ -10,6 +10,8 @@ A tool for creating declarative stores and managing state that embraces async be
 
 ### When should I use Saphyra?
 
+When you only want to have a reactive object without many rules, and you can't call it a complete feature, use another tool.
+
 When you want to centralize all the logic of your feature in a single place instead of having it scattered across various locations using multiple libraries.
 
 ### Why declarative instead of imperative?
@@ -18,8 +20,9 @@ At the end of the day, as long as it works for the user, there is no difference.
 
 Here are a few points:
 
-- Imperative loses traceability because you are always mutating the source value. Isso torna o processo de debugging mais difícil.
-- Voce consegue lapidar sua store colocando pequenas regras de negócio por vez, de pequenas em pequenas regras voce lapida sua store até ela ficar do formato que voce deseja. Eu quero que quando isso mude, voce derive esse outro valor. Quando usuario quiser fazer isso, voce busque esse valor da API e dispare esse evento...
+- Imperative loses traceability because you are always mutating the source value. Isso torna o processo de debugging mais difícil. O que fez a store chegar a esse estado? Como ela chegou aqui?
+- Com uma abordagem declarativa, voce consegue lapidar sua store colocando pequenas regras de negócio por vez, de pequenas em pequenas regras voce lapida sua store até ela ficar do formato que voce deseja. Eu quero que quando isso mude, voce derive esse outro valor. Quando usuario quiser fazer isso, voce busque esse valor da API e dispare esse evento. O mesmo processo ocorre independente do tamanho e da complexidade da sua feature. Pra expandir ela é o mesmo custo de quando ela não tinha complexidade, você declara mais uma regra, por isso o termo lapidar.
+- Com uma abordagem imperativa, você precisa garantir todas as regras de negócio sejam aplicadas em cada setstate. Cada ação carrega toda a carga cognitiva de garantir que todas as regras de negócio da feature seja aplicadas, e para cada nova regra, você precisa atualizar
   COm abordagem imperativa, voce precisa sempre garantir todas as regras de negocio em cada setstate.
 
 ### Promise
