@@ -127,13 +127,8 @@ export function Content() {
               todosStore.dispatch({
                 type: "increment-ten",
                 transition: ["increment", "ten"],
-                beforeDispatch({ action, transitionStore, transition }) {
-                  if (transitionStore.isHappeningUnique(transition)) {
-                    const controller =
-                      transitionStore.controllers.get(transition)
-                    controller?.abort()
-                  }
-
+                beforeDispatch({ action, transition, abort }) {
+                  abort(transition)
                   return action
                 },
               })

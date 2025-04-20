@@ -12,7 +12,7 @@ import "prismjs/themes/prism-okaidia.css"
 
 import { Spinner, Text } from "@blueprintjs/core"
 import { useSuspenseQuery } from "@tanstack/react-query"
-import { noop } from "lodash"
+import { create, noop } from "lodash"
 import { CSSProperties, ReactNode, Suspense, useState } from "react"
 import invariant from "tiny-invariant"
 import { createStoreUtils } from "saphyra/react"
@@ -145,20 +145,14 @@ const EXAMPLES_FACTORY: ExampleFactory[] = [
     action: {
       type: "fetch-albums",
       transition: ["albums"],
-      beforeDispatch({ action, transitionStore, transition }) {
-        if (transitionStore.isHappeningUnique(transition)) {
-          const controller = transitionStore.controllers.get(transition)
-          controller?.abort()
-        }
+      beforeDispatch({ action, transition, abort }) {
+        abort(transition)
         return action
       },
     },
     script: `
-      beforeDispatch({ action, transitionStore, transition }) {
-        if (transitionStore.isHappeningUnique(transition)) {
-          const controller = transitionStore.controllers.get(transition)
-          controller?.abort()
-        }
+      beforeDispatch({ action, transition, abort }) {
+        abort(transition)
         return action
       }
     `,
@@ -257,14 +251,14 @@ const EXAMPLES_FACTORY: ExampleFactory[] = [
     action: {
       type: "fetch-albums",
       transition: ["albums"],
-      beforeDispatch({ action, transitionStore, transition }) {
+      beforeDispatch({ action, transition, abort }) {
         const timeoutId = setTimeout(() => {
-          const controller = transitionStore.controllers.get(transition)
-          controller?.abort()
+          abort(transition)
         }, 1000) // 1 second
+
         return {
           ...action,
-          onTransitionEnd(props) {
+          onTransitionEnd(props: any) {
             clearTimeout(timeoutId)
             return action.onTransitionEnd?.(props)
           },
@@ -272,11 +266,11 @@ const EXAMPLES_FACTORY: ExampleFactory[] = [
       },
     },
     script: `
-      beforeDispatch({ action, transitionStore, transition }) {
+      beforeDispatch({ action, transition, abort }) {
         const timeoutId = setTimeout(() => {
-          const controller = transitionStore.controllers.get(transition)
-          controller?.abort()
+          abort(transition)
         }, 1000) // 1 second
+
         return {
           ...action,
           onTransitionEnd(props) {

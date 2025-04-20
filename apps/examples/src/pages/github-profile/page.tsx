@@ -2,10 +2,12 @@ import { createStoreUtils } from "saphyra/react"
 import { newStoreDef } from "saphyra"
 import { GithubProfile } from "./types"
 import { Devtools } from "~/devtools/devtools"
+import { Spinner } from "@blueprintjs/core"
+import { cancelPrevious, debounce } from "~/saphyra/bd-presets"
 
 type UserStoreInitialProps = {
   username: string
-  profile: GithubProfile | null
+  $profile: GithubProfile | null
   currentTransition: null
 }
 
@@ -16,12 +18,14 @@ async function fetchUser(username: string, signal: AbortSignal) {
 }
 
 const newUserStore = newStoreDef<UserStoreInitialProps>({
-  reducer({ state, action, async }) {
-    if (action.type === "fetch-user") {
+  reducer({ state, action, async, set, optimistic }) {
+    if (action.type === "update-user") {
+      optimistic({ username: action.username })
+      set({ username: action.username })
       async
         .promise(ctx => fetchUser(state.username, ctx.signal))
         .onSuccess((profile, actor) => {
-          actor.set({ profile })
+          actor.set({ $profile: profile })
         })
     }
 
@@ -31,55 +35,41 @@ const newUserStore = newStoreDef<UserStoreInitialProps>({
 
 const userStore = newUserStore({
   username: "",
-  profile: null,
   currentTransition: null,
 })
 
 export const User = createStoreUtils<typeof newUserStore>(userStore)
 
 export function GithubProfilePage() {
-  const username = User.useStore(s => s.username)
+  const username = User.useOptimisticStore(s => s.username)
   const isFetchingUser = User.useTransition(["user", "fetch"])
 
   return (
     <div className="flex flex-col p-4 overflow-hidden h-full">
-      <form
-        action=""
-        className="flex flex-col gap-2 h-full"
-        onSubmit={e => {
-          e.preventDefault()
-          userStore.dispatch({
-            type: "fetch-user",
-            transition: ["user", "fetch"],
-            beforeDispatch({ action, transitionStore, transition }) {
-              if (transitionStore.isHappeningUnique(transition)) return
-              return action
-            },
-          })
-        }}
-      >
-        <label htmlFor="username">Username</label>
+      <label htmlFor="username">Username</label>
+      <div className="flex gap-2 items-center">
+        {/* {isFetchingUser && <Spinner size={24} />} */}
         <input
           id="username"
           type="text"
           placeholder="Enter your username"
           autoComplete="off"
+          className="w-full"
           value={username}
-          disabled={isFetchingUser}
+          // disabled={isFetchingUser}
           onChange={e => {
-            userStore.setState({
+            userStore.dispatch({
+              type: "update-user",
               username: e.target.value,
+              transition: ["user", "fetch"],
+              beforeDispatch: cancelPrevious(),
             })
           }}
         />
-        <button
-          disabled={isFetchingUser}
-          type="submit"
-        >
-          Fetch user
-        </button>
-        <Devtools store={userStore} />
-      </form>
+        {isFetchingUser ? <Spinner size={24} /> : <div className="w-6 h-6" />}
+      </div>
+
+      <Devtools store={userStore} />
     </div>
   )
 }

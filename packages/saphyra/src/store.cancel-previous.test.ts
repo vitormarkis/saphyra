@@ -19,17 +19,8 @@ let store: TestCounterStore
 let spy_completeTransition: MockInstance<any>
 let spy_emitError: MockInstance<any>
 
-const cancelPrevious: BeforeDispatch = ({
-  action,
-  transition,
-  transitionStore,
-}) => {
-  if (transitionStore.isHappeningUnique(transition)) {
-    const controller = transitionStore.controllers.get(transition)
-    invariant(controller)
-    controller.abort()
-  }
-
+const cancelPrevious: BeforeDispatch = ({ action, transition, abort }) => {
+  abort(transition)
   return action
 }
 

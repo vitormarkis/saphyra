@@ -1,7 +1,7 @@
 import { Spinner } from "@blueprintjs/core"
 import { useCallback, useEffect, useState } from "react"
 import { ErrorPage } from "~/components/error-page"
-import { newStoreDef } from "saphyra"
+import { newStoreDef, TransitionStartConfig } from "saphyra"
 import { BeforeDispatchOptions } from "saphyra"
 import { cn } from "~/lib/cn"
 import { getPokemon } from "~/pages/zustand-like/fn/get-pokemon"
@@ -108,15 +108,10 @@ type PokemonPageContentProps = {}
 
 const beforeDispatch = ({
   action,
-  meta,
   transition,
-  transitionStore,
-}: BeforeDispatchOptions<any, any>) => {
-  if (transitionStore.isHappeningUnique(transition)) {
-    const controller = transitionStore.controllers.get(transition)
-    invariant(controller)
-    controller.abort()
-  }
+  abort,
+}: TransitionStartConfig<any, any, any, any>) => {
+  abort(transition)
   return action
 }
 
