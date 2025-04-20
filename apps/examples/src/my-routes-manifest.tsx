@@ -6,8 +6,16 @@ import { ZustandLikePage } from "./pages/zustand-like/page"
 import { PokemonPage } from "~/pages/pokemon/page"
 import { BeforeDispatchPage } from "./pages/before-dispatch/page"
 import { DebouncedSearchPage } from "./pages/debounced-search/page"
+import { DispatchInAsyncPage } from "./pages/DispatchInAsyncPage/page"
 
-export const myRoutesManifest = [
+const DEV_ROUTES = [
+  {
+    path: "/dispatch-in-async",
+    element: <DispatchInAsyncPage />,
+  },
+]
+
+const PROD_ROUTES = [
   {
     path: "/github-profile",
     element: <GithubProfilePage />,
@@ -40,4 +48,9 @@ export const myRoutesManifest = [
     path: "/pokemon",
     element: <PokemonPage />,
   },
+]
+
+export const myRoutesManifest = [
+  ...(import.meta.env.DEV ? DEV_ROUTES : []),
+  ...PROD_ROUTES,
 ]
