@@ -575,115 +575,72 @@ export function newStoreDef<
     }
 
     const handleRegisterTransition = (
-      newState: TState,
       action: TActions,
       store: SomeStore<TState, TActions, TEvents, TUncontrolledState, TDeps>,
       stateContext: StateContext,
       rollback: Rollback
     ) => {
-      // stateContext ??= {
-      //   currentTransition: null,
-      //   when: Date.now(),
-      // }
       const currentTransitionName = stateContext.currentTransition?.join(":")
       const actionTransitionName = action.transition?.join(":")!
       const isNewTransition = currentTransitionName !== actionTransitionName
 
-      if (action.transition != null && isNewTransition) {
-        stateContext.when = Date.now()
-        stateContext.currentTransition = action.transition
+      if (!(action.transition != null && isNewTransition)) return
 
-        const initialAbort = getAbortController(action.transition)
-        rollback.add(initialAbort.rollback)
-        const controller = ensureAbortController({
-          transition: action.transition,
-          controller: initialAbort.controller,
+      stateContext.when = Date.now()
+      stateContext.currentTransition = action.transition
+
+      const initialAbort = getAbortController(action.transition)
+      rollback.add(initialAbort.rollback)
+      const controller = ensureAbortController({
+        transition: action.transition,
+        controller: initialAbort.controller,
+      })
+
+      invariant(controller, "NSTH: controller is ensured")
+
+      stateContext.currentTransition = action.transition
+      stateContext.when = Date.now()
+      store.transitions.setController(action.transition, action.controller)
+
+      const shouldRegisterNewTransition =
+        store.transitions.get(action.transition) === 0 || isNewTransition
+
+      store.transitions.addKey(action.transition, "dispatch/new-transition")
+      if (shouldRegisterNewTransition) {
+        const transition = action.transition
+        const transitionKey = transition.join(":")
+
+        const internalTransitionId = `${transitionKey}-${stateContext.when}`
+        store.internal.events.emit("new-transition", {
+          transitionName: transitionKey,
+          id: internalTransitionId,
+        } as { transitionName: string; id: string })
+
+        store.transitions.callbacks.done.set(transitionKey, () => {
+          console.log(`00) k done [${transitionKey}]`, store.settersRegistry)
+          store.completeTransition(action, transition)
+          store.internal.events.emit("transition-completed", {
+            id: internalTransitionId,
+            status: "success",
+          })
         })
 
-        invariant(controller, "NSTH: controller is ensured")
-
-        const pastWasAborted = controller.signal.aborted
-
-        console.log(
-          `%c 00) k WAS ABORTED: [${pastWasAborted}]`,
-          "color: purple"
-        )
-        // if (pastWasAborted && !!0 === true) {
-        //   const transitionString = action.transition.join(":")
-        //   // This event is basically saying to all pending promises that you
-        //   // the current transition was canceled, and all the transition keys
-        //   // are already cleaned up, turn some flag on to prevent the catch
-        //   // method from doning keys since this effect is already done
-
-        //   const abortEventStr =
-        //     `abort::${JSON.stringify(action.transition)}` as const
-        //   // @ts-ignore
-        //   store.events.emit(abortEventStr, null)
-
-        //   // store.transitions.doneKey(
-        //   //   action.transition,
-        //   //   {
-        //   //     onFinishTransition: noop,
-        //   //   },
-        //   //   "erase-key/abort"
-        //   // )
-        //   // cleanUpTransition(action.transition, {
-        //   //   code: 20,
-        //   // })
-        // }
-
-        stateContext.currentTransition = action.transition
-        stateContext.when = Date.now()
-        store.transitions.setController(action.transition, action.controller)
-
-        /**
-         * After running `beforeDispatch`, user may have aborted the transition,
-         * which would case an error, being caught by async promise, doning the key
-         * with the error, which mean the transition should not be running
-         * from this point forward
-         */
-        const shouldRegister =
-          store.transitions.get(action.transition) === 0 || isNewTransition
-        store.transitions.addKey(action.transition, "dispatch/new-transition")
-        if (shouldRegister) {
-          const transition = action.transition
-          const transitionString = transition.join(":")
-
-          const internalTransitionId = `${transitionString}-${stateContext.when}`
-          store.internal.events.emit("new-transition", {
-            transitionName: transitionString,
+        store.transitions.callbacks.error.set(transitionKey, error => {
+          invariant(action.transition, "NSTH: a transition")
+          cleanUpTransition(action.transition, error)
+          store.internal.events.emit("transition-completed", {
             id: internalTransitionId,
-          } as { transitionName: string; id: string })
-
-          store.transitions.callbacks.done.set(transitionString, () => {
-            console.log(
-              `00) k done [${transitionString}]`,
-              store.settersRegistry
-            )
-            store.completeTransition(action, transition)
-            store.internal.events.emit("transition-completed", {
-              id: internalTransitionId,
-              status: "success",
-            })
+            status: "fail",
           })
-
-          store.transitions.callbacks.error.set(transitionString, error => {
-            invariant(action.transition, "NSTH: a transition")
-            cleanUpTransition(action.transition, error)
-            store.internal.events.emit("transition-completed", {
-              id: internalTransitionId,
-              status: "fail",
-            })
-            action.onTransitionEnd?.({
-              error,
-              events: store.events,
-              meta: store.transitions.meta.get(transition),
-              state: store.state,
-              transition,
-              transitionStore: store.transitions,
-            })
+          action.onTransitionEnd?.({
+            error,
+            events: store.events,
+            meta: store.transitions.meta.get(transition),
+            state: store.state,
+            transition,
+            transitionStore: store.transitions,
           })
-        }
+        })
       }
     }
 
@@ -804,13 +761,7 @@ export function newStoreDef<
         // throw rollback
       }
 
-      handleRegisterTransition(
-        newState,
-        rootAction,
-        store,
-        stateContext,
-        rollback
-      )
+      handleRegisterTransition(rootAction, store, stateContext, rollback)
 
       /**
        * Sobreescrevendo controller, quando na verdade cada action
@@ -1207,7 +1158,6 @@ export function newStoreDef<
         transition: BOOTSTRAP_TRANSITION,
       } as TActions
       handleRegisterTransition(
-        prevState,
         bootstrapAction,
         store,
         prevStateContext,
