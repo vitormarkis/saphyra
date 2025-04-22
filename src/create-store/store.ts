@@ -38,7 +38,6 @@ import { Rollback } from "~/create-store/helpers/rollback"
 import invariant from "tiny-invariant"
 import { GENERAL_TRANSITION } from "~/create-store/const"
 import { assignObjValues, cloneObj, mergeObj } from "./helpers/obj-descriptors"
-import { mockAsync } from "./helpers/mock-async"
 
 export type ExternalProps = Record<string, any> | null
 
@@ -965,7 +964,6 @@ export function newStoreDef<
               prevState,
               state: initialState,
               stateContext: prevStateContext,
-              createAsync: mockAsync,
             }
           )
 
