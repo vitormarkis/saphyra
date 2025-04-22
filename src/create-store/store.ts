@@ -959,6 +959,7 @@ export function newStoreDef<
           const handledDispatch = handleAction(
             {
               type: "noop",
+              transition: BOOTSTRAP_TRANSITION,
             } as TActions,
             {
               prevState,
