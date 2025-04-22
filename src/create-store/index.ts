@@ -8,7 +8,6 @@ export {
   type SomeStoreGeneric,
   type DefaultActions,
   type GenericAction,
-  type AsyncActor,
   type Async,
   type StoreErrorHandler,
   type StoreInstantiator,

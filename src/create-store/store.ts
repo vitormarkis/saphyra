@@ -1,4 +1,3 @@
-import _ from "lodash"
 import { createDiffOnKeyChange } from "../diff"
 import { createSubject } from "../Subject"
 import { RemoveDollarSignProps } from "../types"
@@ -36,10 +35,10 @@ import {
 } from "~/create-store/utils"
 import { getSnapshotAction } from "~/create-store/helpers/get-snapshot-action"
 import { Rollback } from "~/create-store/helpers/rollback"
-import { mockActor } from "~/create-store/helpers/mock-actor"
 import invariant from "tiny-invariant"
 import { GENERAL_TRANSITION } from "~/create-store/const"
 import { assignObjValues, cloneObj, mergeObj } from "./helpers/obj-descriptors"
+import { mockAsync } from "./helpers/mock-async"
 
 export type ExternalProps = Record<string, any> | null
 
@@ -116,7 +115,7 @@ type ReducerProps<
   prevState: TState
   state: TState
   action: TActions
-  async: Async<TState, TActions>
+  async: Async
   store: SomeStore<TState, TActions, TEvents, TUncontrolledState, TDeps>
   events: EventEmitter<TEvents>
   set: ReducerSet<TState>
@@ -159,7 +158,7 @@ type OnPushToHistoryProps<
   history: TState[]
   state: TState
   transition: any[] | null | undefined
-  from: "dispatch" | "set"
+  from: "dispatch" | "set" | "rerender"
   store: SomeStore<TState, TActions, TEvents, TUncontrolledState, TDeps>
 }
 
@@ -350,22 +349,6 @@ export function newStoreDef<
       return diff
     }
 
-    const createSetScheduler: Met["createSetScheduler"] = (
-      newState,
-      newStateContext,
-      mergeType = "set",
-      transition = null
-    ): ReducerSet<TState> => {
-      return setterOrPartialState =>
-        store.registerSet(
-          setterOrPartialState,
-          newState,
-          newStateContext,
-          transition,
-          mergeType
-        )
-    }
-
     const getState: Met["getState"] = () => store.state
 
     const defineState = (newState: TState) => {
@@ -492,7 +475,6 @@ export function newStoreDef<
     }
 
     const handleRegisterTransition = (
-      newState: TState,
       action: TActions,
       store: SomeStore<TState, TActions, TEvents, TUncontrolledState, TDeps>,
       stateContext: StateContext,
@@ -520,7 +502,6 @@ export function newStoreDef<
         invariant(controller, "NSTH: controller is ensured")
 
         const wasAborted = controller.signal.aborted
-
         if (wasAborted) {
           // @ts-expect-error
           store.events.emit(`abort::${JSON.stringify(action.transition)}`, null)
@@ -533,8 +514,6 @@ export function newStoreDef<
           })
         }
 
-        stateContext.currentTransition = action.transition
-        stateContext.when = Date.now()
         store.transitions.setController(action.transition, action.controller)
 
         /**
@@ -613,13 +592,7 @@ export function newStoreDef<
 
       if (rootAction == null) throw rollback
 
-      handleRegisterTransition(
-        newState,
-        rootAction,
-        store,
-        stateContext,
-        rollback
-      )
+      handleRegisterTransition(rootAction, store, stateContext, rollback)
 
       /**
        * Sobreescrevendo controller, quando na verdade cada action
@@ -630,85 +603,13 @@ export function newStoreDef<
        *
        * A primeira promise tem apenas o controller do primeiro dispatch, e não de todos
        */
-      const controller = ensureAbortController({
-        transition: rootAction.transition ?? [GENERAL_TRANSITION],
-        controller: rootAction.controller,
+
+      const handledDispatch = handleAction(rootAction, {
+        state: newState,
+        stateContext,
       })
-      const actionsQueue: TActions[] = [rootAction]
-
-      let prevState = store.state
-      for (const action of actionsQueue) {
-        const scheduleSetter = createSetScheduler(
-          newState,
-          stateContext,
-          "set",
-          action.transition
-        )
-
-        const futurePrevState = cloneObj(newState)
-        const context: ReducerProps<
-          TState,
-          TActions,
-          TEvents,
-          TUncontrolledState,
-          TDeps
-        > = {
-          prevState: prevState,
-          state: newState,
-          action,
-          events: store.events,
-          store,
-          async: createAsync(
-            store,
-            newState,
-            stateContext,
-            action.transition,
-            controller.signal
-          ),
-          set: scheduleSetter,
-          diff: createDiff(prevState, newState),
-          dispatch: (action: TActions) => {
-            actionsQueue.push({
-              ...action,
-              transition: rootAction.transition ?? null, // sobreescrevendo transition, deve agrupar varias TODO
-              onTransitionEnd: rootAction.onTransitionEnd ?? null,
-            })
-          },
-          deps,
-        }
-        const reducer: Reducer<
-          TState,
-          TActions,
-          TEvents,
-          TUncontrolledState,
-          TDeps
-        > = (
-          props: ReducerProps<
-            TState,
-            TActions,
-            TEvents,
-            TUncontrolledState,
-            TDeps
-          >
-        ) => {
-          if (props.action.type === "$$lazy-value") {
-            props.async
-              .promise(ctx => {
-                return props.action.transitionFn({
-                  transition: props.action.transition,
-                  actor: mockActor(),
-                  signal: ctx.signal,
-                })
-              })
-              .onSuccess(props.action.onSuccess ?? noop)
-          }
-          return userReducer(props)
-        }
-        const producedState = reducer(context)
-        // looks redundant but user might return prev state
-        newState = producedState
-        prevState = futurePrevState
-      }
+      newState = handledDispatch.newState
+      stateContext = handledDispatch.stateContext
 
       if (rootAction.transition != null) {
         store.transitions.doneKey(rootAction.transition, {
@@ -768,140 +669,15 @@ export function newStoreDef<
     }
 
     const rerender: Met["rerender"] = () => {
-      const signal = new AbortController().signal
-      const result = userReducer({
-        action: { type: "noop" } as TActions,
-        diff: createDiff(store.state, store.state),
-        state: store.state,
-        async: createAsync(
-          store,
-          store.state,
-          store.stateContext,
-          null,
-          signal
-        ),
-        set: store.createSetScheduler(
-          store.state,
-          store.stateContext,
-          "set",
-          null
-        ),
-        prevState: store.state,
-        events: store.events,
-        store,
-        dispatch: (action: TActions) => {
-          console.log("dispatch", action)
-        },
-        deps,
-      })
-      defineState(result)
-      subject.notify()
-    }
-
-    const registerSet: Met["registerSet"] = (
-      setterOrPartialStateList,
-      currentState,
-      currentStateContext,
-      transition,
-      mergeType
-    ) => {
-      const { signal } = ensureAbortController({
-        transition: transition ?? [GENERAL_TRANSITION],
-      })
-      if (transition) {
-        const transitionKey = transition.join(":")
-        store.settersRegistry = {
-          ...store.settersRegistry,
-          [transitionKey]: [
-            ...(store.settersRegistry[transitionKey] ?? []),
-            setterOrPartialStateList,
-          ],
-        }
-      }
-
-      const setter = mergeSetterWithState(
-        ensureSetter(setterOrPartialStateList)
-      )
-      // mutating the current new state so user
-      // can have access to the future value
-      // in the same function
-      let newState = setter(currentState) as TState
-
-      /**
-       * Re-running the reducer since the promise onSuccess
-       * callback only sets the state without running the reducer
-       *
-       * re-running the reducer is what derives the states
-       * and make sure the store state is always in a valid state
-       */
-      if (mergeType === "reducer") {
-        const processedState = userReducer({
-          action: { type: "noop" } as TActions,
-          state: newState,
-          diff: createDiff(currentState, newState),
-          set: createSetScheduler(
-            newState,
-            currentStateContext,
-            "set",
-            transition
-          ),
-          async: createAsync(
-            store,
-            newState,
-            currentStateContext,
-            transition,
-            signal
-          ),
-          prevState: currentState,
-          events: store.events,
-          dispatch: action => {
-            debugger
-          },
-          store,
-          deps,
-        })
-
-        newState = mergeObj(newState, processedState)
-      }
-
-      assignObjValues(currentState, newState)
-    }
-
-    const setState: Met["setState"] = (newPartialState: Partial<TState>) => {
-      const newState = mergeObj(store.state, newPartialState)
-      const action = { type: "noop" } as TActions
-      const { signal } = ensureAbortController({
-        transition: action.transition ?? [GENERAL_TRANSITION],
-        controller: action.controller,
-      })
-      const stateFromReducer = userReducer({
-        action,
-        diff: createDiff(store.state, newState),
-        state: newState,
-        prevState: cloneObj(store.state),
-        async: createAsync(store, newState, store.stateContext, null, signal), // um set state pode ocasionar em chamadas assíncronas, e como isso é cancelado?
-        set: store.createSetScheduler(
-          newState,
-          store.stateContext,
-          "set",
-          null
-        ),
-        events: store.events,
-        store,
-        dispatch: (action: TActions) => {
-          console.log("dispatch", action)
-        },
-        deps,
-      })
-
+      const actionResult = handleAction({ type: "noop" } as TActions)
       const [historyLatestState, newHistory] = handleNewStateToHistory({
-        state: stateFromReducer,
+        state: actionResult.newState,
         getNewHistoryStack: state =>
           onPushToHistory({
             history: store.history,
             state,
             transition: null,
-            from: "set",
+            from: "rerender",
             store,
           }),
       })
@@ -912,16 +688,208 @@ export function newStoreDef<
       subject.notify()
     }
 
+    type HandleActionProps<
+      TInitialProps extends Record<string, any>,
+      TState extends Record<string, any> = TInitialProps,
+      TActions extends BaseAction<TState> = DefaultActions & BaseAction<TState>,
+    > = {
+      state?: TState
+      prevState?: TState
+      stateContext?: StateContext
+      createAsync?: (props: InnerCreateAsync) => Async
+      onSet?: (setterOrPartialState: SetterOrPartialState<TState>) => void
+    }
+
+    type InnerCreateAsync = {
+      store: SomeStore<TState, TActions, TEvents, TUncontrolledState, TDeps>
+      state: TState
+      stateContext: StateContext
+      transition: any[] | null | undefined
+      signal: AbortSignal
+    }
+
+    const defaultInnerCreateAsync = ({
+      store,
+      state,
+      stateContext,
+      transition,
+      signal,
+    }: InnerCreateAsync) => {
+      return createAsync(store, state, stateContext, transition, signal)
+    }
+
+    const registerOnSettersRegistry = (
+      setterOrPartialState: SetterOrPartialState<TState>,
+      transition: any[]
+    ) => {
+      const transitionKey = transition.join(":")
+      store.settersRegistry = {
+        ...store.settersRegistry,
+        [transitionKey]: [
+          ...(store.settersRegistry[transitionKey] ?? []),
+          setterOrPartialState,
+        ],
+      }
+    }
+
+    const applySetterOnCurrentState = (
+      setterOrPartialState: SetterOrPartialState<TState>,
+      newState: TState
+    ) => {
+      const setter = ensureSetter(setterOrPartialState)
+      const stateFromSetter = setter(newState)
+      assignObjValues(newState, stateFromSetter)
+    }
+
+    const handleAction = (
+      rootAction: TActions & BaseAction<TState>,
+      props?: HandleActionProps<TInitialProps, TState, TActions>
+    ) => {
+      let stateContext = cloneObj(props?.stateContext ?? store.stateContext)
+      let newState = cloneObj(props?.state ?? store.state)
+      let prevState = props?.prevState ?? store.state
+      const { createAsync = defaultInnerCreateAsync } = props ?? {}
+
+      const transition = rootAction.transition ?? [GENERAL_TRANSITION]
+      const controller = ensureAbortController({
+        transition,
+        controller: rootAction.controller,
+      })
+
+      let isSync = true
+      const actionsQueue: TActions[] = [rootAction]
+
+      for (const action of actionsQueue) {
+        const futurePrevState = cloneObj(newState)
+        const async: Async = createAsync({
+          state: newState,
+          stateContext,
+          store,
+          transition: action.transition,
+          signal: controller.signal,
+        })
+        const context: ReducerProps<
+          TState,
+          TActions,
+          TEvents,
+          TUncontrolledState,
+          TDeps
+        > = {
+          prevState: prevState,
+          state: newState,
+          action,
+          events: store.events,
+          store,
+          async,
+          set: setterOrPartialState => {
+            if (transition)
+              registerOnSettersRegistry(setterOrPartialState, transition)
+
+            if (isSync) {
+              applySetterOnCurrentState(setterOrPartialState, newState)
+              props?.onSet?.(setterOrPartialState)
+            } else {
+              const setter = ensureSetter(setterOrPartialState)
+              const stateFromSetter = setter(newState)
+              store.setState(stateFromSetter, { transition })
+            }
+          },
+          diff: createDiff(prevState, newState),
+          dispatch: (action: TActions) => {
+            const safeAction = {
+              ...action,
+              transition: rootAction.transition ?? null, // sobreescrevendo transition, deve agrupar varias TODO
+              onTransitionEnd: () => {}, // it will become a mess if multiple of these run at the same time
+            }
+            if (isSync) {
+              actionsQueue.push(safeAction)
+            } else {
+              store.dispatch(safeAction)
+            }
+          },
+          deps,
+        }
+        const reducer: Reducer<
+          TState,
+          TActions,
+          TEvents,
+          TUncontrolledState,
+          TDeps
+        > = (
+          props: ReducerProps<
+            TState,
+            TActions,
+            TEvents,
+            TUncontrolledState,
+            TDeps
+          >
+        ) => {
+          if (props.action.type === "$$lazy-value") {
+            props.async.promise(ctx => {
+              return props.action.transitionFn({
+                transition: props.action.transition,
+                signal: ctx.signal,
+              })
+            })
+          }
+          return userReducer(props)
+        }
+        const producedState = reducer(context)
+        // looks redundant but user might return prev state
+        newState = producedState
+        prevState = futurePrevState
+      }
+
+      isSync = false
+      return {
+        newState,
+        prevState,
+        stateContext,
+      }
+    }
+
+    const setState: Met["setState"] = (newPartialState, options) => {
+      const action = {
+        type: "noop",
+        transition: options?.transition,
+      } as TActions
+      const actionResult = handleAction(action, {
+        state: mergeObj(store.state, newPartialState),
+      })
+
+      const transitionIsOngoing =
+        options?.transition &&
+        store.transitions.isHappeningUnique(options.transition)
+
+      if (transitionIsOngoing) {
+      } else {
+        const [historyLatestState, newHistory] = handleNewStateToHistory({
+          state: actionResult.newState,
+          getNewHistoryStack: state =>
+            onPushToHistory({
+              history: store.history,
+              state,
+              transition: null,
+              from: "set",
+              store,
+            }),
+        })
+
+        store.history = newHistory
+        defineState(historyLatestState)
+
+        subject.notify()
+      }
+    }
+
     const rebuild: Met["rebuild"] = () => {
       return () => createStore(initialProps, config)
     }
 
     const methods: Met = {
-      createSetScheduler,
       getState,
       dispatch,
       setState,
-      registerSet,
       registerErrorHandler,
       handleError,
       undo,
@@ -930,6 +898,7 @@ export function newStoreDef<
       rebuild,
       completeTransition,
       commitTransition,
+      handleAction,
     }
 
     store = mergeObj(subject, store, methods)
@@ -956,7 +925,6 @@ export function newStoreDef<
         transition: BOOTSTRAP_TRANSITION,
       } as TActions
       handleRegisterTransition(
-        prevState,
         bootstrapAction,
         store,
         prevStateContext,
@@ -986,45 +954,26 @@ export function newStoreDef<
           signal
         )
 
-        async
-          .promise(ctx => handleConstruction(ctx))
-          .onSuccess(pureState => {
-            const initialState = pureState as TState
-
-            const processedState = userReducer({
-              action: {
-                type: "noop",
-              } as TActions,
-              state: initialState,
-              diff: createDiff(prevState, initialState),
-              async: createAsync(
-                store,
-                initialState,
-                prevStateContext,
-                BOOTSTRAP_TRANSITION,
-                signal
-              ),
-              set: createSetScheduler(
-                initialState,
-                prevStateContext,
-                "set",
-                null
-              ),
+        async.promise(async ctx => {
+          const pureState = await handleConstruction(ctx)
+          const initialState = pureState as TState
+          const handledDispatch = handleAction(
+            {
+              type: "noop",
+            } as TActions,
+            {
               prevState,
-              events: store.events,
-              store,
-              dispatch: (action: TActions) => {
-                console.log("dispatch", action)
-              },
-              deps,
-            })
+              state: initialState,
+              stateContext: prevStateContext,
+              createAsync: mockAsync,
+            }
+          )
 
-            // Don't use actor.set since the prevState would be the same
-            // as the one returned in the onConstruct again, causing derivations to run twice
-            // (set state without invoking the reducer)
-            defineState(processedState)
-            subject.notify()
-          })
+          const processedState = handledDispatch.newState
+
+          defineState(processedState)
+          subject.notify()
+        })
       } else {
         const { signal } = ensureAbortController({
           transition: bootstrapAction.transition!,
@@ -1037,30 +986,10 @@ export function newStoreDef<
             deps,
           }) as TState
 
-          const processedState = userReducer({
-            action: bootstrapAction,
+          const { newState: processedState } = handleAction(bootstrapAction, {
             state: initialState,
-            diff: createDiff(prevState, initialState),
-            async: createAsync(
-              store,
-              initialState,
-              prevStateContext,
-              BOOTSTRAP_TRANSITION,
-              signal
-            ),
-            set: createSetScheduler(
-              initialState,
-              prevStateContext,
-              "set",
-              null
-            ),
             prevState,
-            events: store.events,
-            store,
-            dispatch: (action: TActions) => {
-              console.log("dispatch", action)
-            },
-            deps,
+            stateContext: prevStateContext,
           })
 
           defineState(processedState)

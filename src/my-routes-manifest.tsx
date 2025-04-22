@@ -5,6 +5,7 @@ import { MemoryGamePage } from "./pages/memory-game/page"
 import { ZustandLikePage } from "./pages/zustand-like/page"
 import { PokemonPage } from "~/pages/pokemon/page"
 import { BeforeDispatchPage } from "./pages/before-dispatch/page"
+import { ReducerDispatchWhenActorAsync } from "./pages/reducer-dispatch-when-actor-async/page"
 
 export const myRoutesManifest = [
   {
@@ -34,5 +35,9 @@ export const myRoutesManifest = [
   {
     path: "/pokemon",
     element: <PokemonPage />,
+  },
+  {
+    path: "/reducer-dispatch-when-actor-async",
+    element: <ReducerDispatchWhenActorAsync />,
   },
 ]

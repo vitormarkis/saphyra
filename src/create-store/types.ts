@@ -55,6 +55,10 @@ export type GenericStoreValues<
   HistoryExtension<TState> &
   UncontrolledState<TUncontrolledState>
 
+type SetStateOptions = {
+  transition: any[]
+}
+
 export type GenericStoreMethods<
   TState,
   TActions extends BaseAction<TState>,
@@ -64,14 +68,7 @@ export type GenericStoreMethods<
 > = {
   getState(): TState
   dispatch: Dispatch<TState, TActions>
-  setState(newState: Partial<TState>): void
-  registerSet: InnerReducerSet<TState>
-  createSetScheduler(
-    newState: TState & Partial<TState>,
-    newStateContext: StateContext,
-    mergeType: "reducer" | "set",
-    transition: any[] | null | undefined
-  ): ReducerSet<TState>
+  setState(newState: Partial<TState>, options?: SetStateOptions): void
   registerErrorHandler(handler: StoreErrorHandler): () => void
   rerender(): void
   handleError: StoreErrorHandler
@@ -89,6 +86,11 @@ export type GenericStoreMethods<
     transition: any[] | null | undefined,
     onTransitionEnd?: OnTransitionEnd<TState, TEvents>
   ): void
+  handleAction(action: TActions & BaseAction<TState>): {
+    newState: TState
+    prevState: TState
+    stateContext: StateContext
+  }
 }
 
 type UncontrolledState<
@@ -109,7 +111,6 @@ export type SomeStore<
 
 export type TransitionFunctionOptions = {
   transition: any[] | null | undefined
-  actor: AsyncActor<any, any>
   signal: AbortSignal
 }
 
@@ -123,7 +124,7 @@ export type DefaultActions =
       type: "$$lazy-value"
       transition: any[]
       transitionFn: (options: TransitionFunctionOptions) => Promise<any>
-      onSuccess: (value: any, actor: AsyncActor<any, any>) => void
+      onSuccess: (value: any) => void
     }
 
 export type TransitionStartConfig<
@@ -199,12 +200,6 @@ export type BaseAction<
 
 export type SetterOrPartialState<TState> = Setter<TState> | Partial<TState>
 
-export type AsyncActor<TState, TActions extends BaseAction<TState>> = {
-  set: (setterOrPartialState: SetterOrPartialState<TState>) => void
-  dispatch(action: TActions | DefaultActions): void
-  async: Async<TState, TActions>
-}
-
 export const isSetter = <TState>(
   setterOrPartialState: SetterOrPartialState<TState>
 ): setterOrPartialState is Setter<TState> => {
@@ -221,20 +216,13 @@ export type AsyncPromiseProps = {
   signal: AbortSignal
 }
 
-export type PromiseResult<T, TState, TActions extends BaseAction<TState>> = {
-  onSuccess: (
-    callback: (value: T, actor: AsyncActor<TState, TActions>) => void
-  ) => void
+export type PromiseResult<T> = {
+  onSuccess: (callback: (value: T) => void) => void
 }
 
-export type Async<TState, TActions extends BaseAction<TState>> = {
-  promise<T>(
-    promise: (props: AsyncPromiseProps) => Promise<T>
-  ): PromiseResult<T, TState, TActions>
-  timer(
-    callback: (actor: AsyncActor<TState, TActions>) => void,
-    time?: number
-  ): void
+export type Async = {
+  promise<T>(promise: (props: AsyncPromiseProps) => Promise<T>): void
+  timer(callback: () => void, time?: number): void
 }
 
 export type Diff<TState> = (keys: (keyof TState)[]) => boolean
@@ -257,8 +245,7 @@ export type InnerReducerSet<TState> = (
   setterOrPartialStateList: SetterOrPartialState<TState>,
   state: TState,
   stateContext: StateContext,
-  transition: any[] | null | undefined,
-  mergeType: "reducer" | "set"
+  transition: any[] | null | undefined
 ) => void
 
 export type StoreErrorHandler = (

@@ -39,16 +39,13 @@ const newPokemonStore = newStoreDef<PokemonState, PokemonState>({
     }
 
     if (diff(["currentPokemonId"])) {
-      async
-        .promise(async ({ signal }) => {
-          return await getPokemon({
-            id: state.currentPokemonId,
-            signal,
-          })
+      async.promise(async ({ signal }) => {
+        const pokemon = await getPokemon({
+          id: state.currentPokemonId,
+          signal,
         })
-        .onSuccess((pokemon, actor) => {
-          actor.set({ $pokemon: pokemon })
-        })
+        set({ $pokemon: pokemon })
+      })
     }
 
     return state

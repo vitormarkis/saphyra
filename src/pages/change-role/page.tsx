@@ -47,21 +47,19 @@ const newAuthStore = newStoreDef<
   },
   reducer({ prevState, state, action, diff, set, async, events }) {
     if (action?.type === "change-role") {
-      async
-        .promise(({ signal }) => fetchRole({ roleName: action.role, signal }))
-        .onSuccess((role, actor) => {
-          events.emit("got-role", role)
-          actor.set({ role })
-        })
+      async.promise(async ({ signal }) => {
+        const role = await fetchRole({ roleName: action.role, signal })
+        events.emit("got-role", role)
+        set({ role })
+      })
     }
 
     if (prevState.role !== state.role) {
-      async
-        .promise(({ signal }) => fetchPermissions({ role: state.role, signal }))
-        .onSuccess((permissions, actor) => {
-          events.emit("got-permissions", permissions)
-          actor.set({ $permissions: permissions })
-        })
+      async.promise(async ({ signal }) => {
+        const permissions = await fetchPermissions({ role: state.role, signal })
+        events.emit("got-permissions", permissions)
+        set({ $permissions: permissions })
+      })
     }
 
     set(s =>

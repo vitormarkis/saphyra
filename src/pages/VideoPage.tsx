@@ -47,55 +47,43 @@ const newTransitionsStore = newStoreDef<
     store,
   }) {
     if (action.type === "increment-many") {
-      async
-        .promise(async ({ signal }) => {
-          return await sleep(2000, "many", signal)
-        })
-        .onSuccess((_, actor) => {
-          actor.set(s => ({
-            count: s.count + 10,
-          }))
-        })
+      async.promise(async ({ signal }) => {
+        await sleep(2000, "many", signal)
+        set(s => ({ count: s.count + 10 }))
+      })
     }
 
     if (action.type === "fetch-albums") {
-      async
-        .promise(async ({ signal }) => {
-          const response = await fetch(
-            "https://jsonplaceholder.typicode.com/albums",
-            {
-              signal,
-            }
-          )
-          return await response.json()
-        })
-        .onSuccess((albums, actor) => {
-          actor.set({ albums })
-        })
+      async.promise(async ({ signal }) => {
+        const response = await fetch(
+          "https://jsonplaceholder.typicode.com/albums",
+          {
+            signal,
+          }
+        )
+        const albums = await response.json()
+        set({ albums })
+      })
     }
 
     if (action.type === "fetch-todos") {
-      async
-        .promise(async ({ signal }) => {
-          const response = await fetch(
-            "https://jsonplaceholder.typicode.com/todos",
-            {
-              signal,
-            }
-          )
-          return await response.json()
-        })
-        .onSuccess((todos, actor) => {
-          actor.set({ todos })
-        })
+      async.promise(async ({ signal }) => {
+        const response = await fetch(
+          "https://jsonplaceholder.typicode.com/todos",
+          {
+            signal,
+          }
+        )
+        const todos = await response.json()
+        set({ todos })
+      })
     }
 
     if (action.type === "increment-some") {
-      async
-        .promise(ctx => sleep(900, "some", ctx.signal))
-        .onSuccess((_, actor) => {
-          actor.set(s => ({ count: s.count + 4 }))
-        })
+      async.promise(async ctx => {
+        await sleep(900, "some", ctx.signal)
+        set(s => ({ count: s.count + 4 }))
+      })
     }
 
     return state

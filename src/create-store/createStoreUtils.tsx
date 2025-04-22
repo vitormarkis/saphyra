@@ -1,16 +1,11 @@
 import {
   createContext,
-  memo,
-  ReactNode,
   useContext,
   useEffect,
   useRef,
   useSyncExternalStore,
 } from "react"
 import {
-  AsyncActor,
-  BaseAction,
-  ExtractActions,
   StoreErrorHandler,
   StoreInstantiatorGeneric,
   TransitionFunctionOptions,
@@ -22,11 +17,12 @@ function defaultSelector<T>(data: T) {
 }
 
 export function createStoreUtils<
-  TStoreInstantiator extends StoreInstantiatorGeneric = StoreInstantiatorGeneric,
-  TStore extends ReturnType<TStoreInstantiator> = ReturnType<TStoreInstantiator>
+  TStoreInstantiator extends
+    StoreInstantiatorGeneric = StoreInstantiatorGeneric,
+  TStore extends
+    ReturnType<TStoreInstantiator> = ReturnType<TStoreInstantiator>,
 >(store?: TStore) {
   type TState = TStore["state"]
-  type TActions = ExtractActions<TStore>
 
   const Context = createContext<
     [TStore, React.Dispatch<React.SetStateAction<TStore>>] | null
@@ -74,7 +70,7 @@ export function createStoreUtils<
   }
 
   function useLazyValue<TTransition extends any[], TPromiseResult, R = TState>(
-    options: LazyValueOptions<TState, TActions, TTransition, TPromiseResult, R>
+    options: LazyValueOptions<TState, TTransition, TPromiseResult, R>
   ) {
     const hasFetched = useRef(false)
     const store = getDefaultStore()
@@ -119,23 +115,20 @@ export function createStoreUtils<
 
 export interface LazyValueOptions<
   TState,
-  TActions extends BaseAction<TState>,
   TTransition extends any[],
   TPromiseResult,
-  R
+  R,
 > {
   transition: TTransition
   select: (state: TState) => R
   transitionFn: (options: TransitionFunctionOptions) => Promise<TPromiseResult>
-  onSuccess?: (
-    value: TPromiseResult,
-    actor: AsyncActor<TState, TActions>
-  ) => void
+  onSuccess?: (value: TPromiseResult) => void
 }
 
 export type StoreUtils<
   TState,
-  TStore extends ReturnType<StoreInstantiatorGeneric> = ReturnType<StoreInstantiatorGeneric>
+  TStore extends
+    ReturnType<StoreInstantiatorGeneric> = ReturnType<StoreInstantiatorGeneric>,
 > = {
   Provider: React.Provider<any>
   useStore: <R = TState>(selector?: (data: TState) => R, store?: TStore) => R
@@ -143,27 +136,9 @@ export type StoreUtils<
   useTransition: (transition: any[], store?: TStore) => boolean
   useErrorHandlers: (handler: StoreErrorHandler, store?: TStore) => void
   useLazyValue: <const TTransition extends any[], TPromiseResult, R>(
-    options: LazyValueOptions<
-      TState,
-      ExtractActions<TStore>,
-      TTransition,
-      TPromiseResult,
-      R
-    >
+    options: LazyValueOptions<TState, TTransition, TPromiseResult, R>
   ) => [R, false] | [undefined, true]
   createLazyOptions: <const TTransition extends any[], TPromiseResult, R>(
-    options: LazyValueOptions<
-      TState,
-      ExtractActions<TStore>,
-      TTransition,
-      TPromiseResult,
-      R
-    >
-  ) => LazyValueOptions<
-    TState,
-    ExtractActions<TStore>,
-    TTransition,
-    TPromiseResult,
-    R
-  >
+    options: LazyValueOptions<TState, TTransition, TPromiseResult, R>
+  ) => LazyValueOptions<TState, TTransition, TPromiseResult, R>
 }

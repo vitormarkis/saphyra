@@ -56,33 +56,27 @@ const newTransitionsStore = newStoreDef<
     albums: [],
     todos: [],
   }),
-  reducer({ state, action, async }) {
+  reducer({ state, action, async, set }) {
     if (action.type === "fetch-albums") {
-      async
-        .promise(async ({ signal }) => {
-          const endpoint = "https://jsonplaceholder.typicode.com/albums"
-          const response = await fetch(endpoint, {
-            signal,
-          })
-          return await response.json()
+      async.promise(async ({ signal }) => {
+        const endpoint = "https://jsonplaceholder.typicode.com/albums"
+        const response = await fetch(endpoint, {
+          signal,
         })
-        .onSuccess((albums, actor) => {
-          actor.set({ albums })
-        })
+        const albums = await response.json()
+        set({ albums })
+      })
     }
 
     if (action.type === "fetch-todos") {
-      async
-        .promise(async ({ signal }) => {
-          const endpoint = "https://jsonplaceholder.typicode.com/todos"
-          const response = await fetch(endpoint, {
-            signal,
-          })
-          return await response.json()
+      async.promise(async ({ signal }) => {
+        const endpoint = "https://jsonplaceholder.typicode.com/todos"
+        const response = await fetch(endpoint, {
+          signal,
         })
-        .onSuccess((todos, actor) => {
-          actor.set({ todos })
-        })
+        const todos = await response.json()
+        set({ todos })
+      })
     }
 
     return state
