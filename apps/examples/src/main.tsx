@@ -8,7 +8,6 @@ import App from "./App.tsx"
 import { RootLayoutWrapper } from "./Navigation.tsx"
 import { myRoutesManifest } from "./my-routes-manifest.tsx"
 import { Providers } from "./providers.tsx"
-import { VideoPage } from "~/pages/VideoPage.tsx"
 import { PostHogProvider } from "posthog-js/react"
 import { themeStore } from "~/theme.tsx"
 
@@ -34,10 +33,6 @@ ensureThemeChangeOnSystemChange("light")
 ensureThemeChangeOnSystemChange("dark")
 
 export const routesManifest = [
-  {
-    path: "/video",
-    element: <VideoPage />,
-  },
   {
     path: "/",
     element: (

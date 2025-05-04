@@ -35,21 +35,23 @@ const newCount = newStoreDef<CounterState, CounterState, CounterActions>({
     }
 
     if (action.type === "increment-ten") {
-      async
-        .promise(ctx => sleep(2000, "incrementing a lot", ctx.signal))
-        .onSuccess((_, actor) => {
-          actor.set(s => ({
-            count: s.count + 10,
-          }))
-        })
+      async.promise(
+        async ctx => {
+          await sleep(2000, "incrementing a lot", ctx.signal)
+          set(s => ({ count: s.count + 10 }))
+        },
+        { label: "increment ten" }
+      )
     }
 
     if (action.type === "increment-three") {
-      async
-        .promise(ctx => sleep(1800, "incrementing a little bit", ctx.signal))
-        .onSuccess((_, actor) => {
-          actor.set(s => ({ count: s.count + 3 }))
-        })
+      async.promise(
+        async ctx => {
+          await sleep(2000, "incrementing a little bit", ctx.signal)
+          set(s => ({ count: s.count + 3 }))
+        },
+        { label: "increment three" }
+      )
     }
 
     if (state.count !== prevState.count) {
@@ -127,13 +129,8 @@ export function Content() {
               todosStore.dispatch({
                 type: "increment-ten",
                 transition: ["increment", "ten"],
-                beforeDispatch({ action, transitionStore, transition }) {
-                  if (transitionStore.isHappeningUnique(transition)) {
-                    const controller =
-                      transitionStore.controllers.get(transition)
-                    controller?.abort()
-                  }
-
+                beforeDispatch({ action, transition, abort }) {
+                  abort(transition)
                   return action
                 },
               })

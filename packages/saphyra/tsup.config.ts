@@ -5,6 +5,7 @@ export default defineConfig({
     index: "src/index.ts",
     react: "react/src/index.ts",
   },
+  external: ["react"],
   format: ["esm", "cjs"],
   dts: true,
   shims: true,

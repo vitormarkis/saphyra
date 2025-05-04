@@ -5,7 +5,7 @@ export function removeCurrentToastsAndRegisterNewToasts({
   action,
   meta,
   events,
-}: BeforeDispatchOptions<any, any>) {
+}: BeforeDispatchOptions<any, any, any, any, any>) {
   meta.toasts_id_list ??= new Set()
   meta.toasts_id_list.forEach((id: string) => {
     toast.dismiss(id)

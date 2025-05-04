@@ -15,9 +15,10 @@ describe("preserve descriptors", () => {
           set(s => ({ count: s.count + 1 }))
         }
         if (action.type === "increment-async") {
-          async
-            .promise(ctx => sleep(1000, "sleep", ctx.signal))
-            .onSuccess((_, actor) => actor.set(s => ({ count: s.count + 1 })))
+          async.promise(async ctx => {
+            await sleep(1000, "sleep", ctx.signal)
+            set(s => ({ count: s.count + 1 }))
+          })
         }
 
         if (action.type === "derive-steps-list") {

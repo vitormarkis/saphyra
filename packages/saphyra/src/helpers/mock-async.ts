@@ -1,12 +1,10 @@
-export const mockAsync = () => ({
+import { Async } from "../types"
+
+export const mockAsync: () => Async = () => ({
   promise() {
-    return {
-      onSuccess() {
-        // debugger
-      },
-    }
+    return
   },
   timer() {
-    // debugger
+    return () => {}
   },
 })

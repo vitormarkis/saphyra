@@ -15,7 +15,10 @@ export function sleep(
   return new Promise((resolve, reject) => {
     if (signal?.aborted) {
       // console.log("[SLEEP ABORTED]", context)
-      return reject(new Error("Sleep aborted"))
+      return reject({
+        code: 20,
+        message: "Sleep aborted",
+      })
     }
 
     // console.log("[SLEEPING]", context)

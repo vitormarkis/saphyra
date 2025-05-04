@@ -7,6 +7,9 @@ export type BarType = {
   startedAt: Date
   endedAt: Date | "running"
   status: "running" | "fail" | "success" | "cancelled"
+  label: string | null
+  durationMs: number | "running"
+  error?: unknown
 }
 
 export type CurrentSorters = Record<

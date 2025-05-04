@@ -24,7 +24,7 @@ import { noop } from "./fn/noop"
 let store: TestCounterStore
 let spy_completeTransition: MockInstance
 
-const earlyReturn: BeforeDispatch = () => {
+const earlyReturn: BeforeDispatch<any, any, any, any, any> = () => {
   // always skip actoin
   return
 }

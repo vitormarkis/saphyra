@@ -1,16 +1,11 @@
 import {
   createContext,
-  memo,
-  ReactNode,
   useContext,
   useEffect,
   useRef,
   useSyncExternalStore,
 } from "react"
 import type {
-  AsyncActor,
-  BaseAction,
-  ExtractActions,
   StoreErrorHandler,
   StoreInstantiatorGeneric,
   TransitionFunctionOptions,
@@ -28,7 +23,6 @@ export function createStoreUtils<
     ReturnType<TStoreInstantiator> = ReturnType<TStoreInstantiator>,
 >(store?: TStore) {
   type TState = TStore["state"]
-  type TActions = ExtractActions<TStore>
 
   const Context = createContext<
     [TStore, React.Dispatch<React.SetStateAction<TStore>>] | null
@@ -81,7 +75,7 @@ export function createStoreUtils<
   const useOptimisticStore = createUseStore(store => store.getOptimisticState())
 
   function useLazyValue<TTransition extends any[], TPromiseResult, R = TState>(
-    options: LazyValueOptions<TState, TActions, TTransition, TPromiseResult, R>
+    options: LazyValueOptions<TState, TTransition, TPromiseResult, R>
   ) {
     const hasFetched = useRef(false)
     const store = getDefaultStore()
@@ -127,7 +121,6 @@ export function createStoreUtils<
 
 export interface LazyValueOptions<
   TState,
-  TActions extends BaseAction<TState>,
   TTransition extends any[],
   TPromiseResult,
   R,
@@ -135,10 +128,7 @@ export interface LazyValueOptions<
   transition: TTransition
   select: (state: TState) => R
   transitionFn: (options: TransitionFunctionOptions) => Promise<TPromiseResult>
-  onSuccess?: (
-    value: TPromiseResult,
-    actor: AsyncActor<TState, TActions>
-  ) => void
+  onSuccess?: (value: TPromiseResult) => void
 }
 
 export type StoreUtils<
@@ -156,27 +146,9 @@ export type StoreUtils<
   useTransition: (transition: any[], store?: TStore) => boolean
   useErrorHandlers: (handler: StoreErrorHandler, store?: TStore) => void
   useLazyValue: <const TTransition extends any[], TPromiseResult, R>(
-    options: LazyValueOptions<
-      TState,
-      ExtractActions<TStore>,
-      TTransition,
-      TPromiseResult,
-      R
-    >
+    options: LazyValueOptions<TState, TTransition, TPromiseResult, R>
   ) => [R, false] | [undefined, true]
   createLazyOptions: <const TTransition extends any[], TPromiseResult, R>(
-    options: LazyValueOptions<
-      TState,
-      ExtractActions<TStore>,
-      TTransition,
-      TPromiseResult,
-      R
-    >
-  ) => LazyValueOptions<
-    TState,
-    ExtractActions<TStore>,
-    TTransition,
-    TPromiseResult,
-    R
-  >
+    options: LazyValueOptions<TState, TTransition, TPromiseResult, R>
+  ) => LazyValueOptions<TState, TTransition, TPromiseResult, R>
 }

@@ -1,9 +1,16 @@
-import type { BeforeDispatch, GenericAction } from "~/types"
+import { EventsTuple } from "~/event-emitter"
+import type { BeforeDispatch, ActionShape } from "~/types"
 
-export const rateLimiter = <TBaseAction extends GenericAction = GenericAction>(
+export const rateLimiter = <
+  TState extends Record<string, any> = any,
+  TActions extends ActionShape<TState, TEvents> = ActionShape<any, any>,
+  TEvents extends EventsTuple = EventsTuple,
+  TUncontrolledState extends Record<string, any> = Record<string, any>,
+  TDeps = undefined,
+>(
   intervalMs = 500,
   attempts = 3
-): BeforeDispatch<any, TBaseAction> => {
+): BeforeDispatch<TState, TActions, TEvents, TUncontrolledState, TDeps> => {
   return ({ action, meta }) => {
     const now = Date.now()
     meta.timestamps ??= []

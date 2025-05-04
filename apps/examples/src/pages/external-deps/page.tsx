@@ -18,9 +18,11 @@ import { fetchPosts } from "./fn/fetch-posts"
 import { placeComment } from "./fn/fetch-place-commment"
 import { likePost } from "./fn/like-post"
 import { useHistory } from "saphyra/react"
+import { Waterfall } from "~/devtools/waterfall"
+import { X } from "lucide-react"
 
 export function ExternalDepsPage() {
-  const postsStoreState = useState(() =>
+  const [postsStore, setPostsStore] = useState(() =>
     newPostsStore(
       {},
       {
@@ -33,7 +35,6 @@ export function ExternalDepsPage() {
       }
     )
   )
-  const [postsStore] = postsStoreState
 
   const isBootstraping = Posts.useTransition(["bootstrap"], postsStore)
   const isCommentingPost = Posts.useStore(
@@ -82,7 +83,7 @@ export function ExternalDepsPage() {
   }, [postsStore])
 
   return (
-    <Posts.Provider value={postsStoreState}>
+    <Posts.Provider value={[postsStore, setPostsStore]}>
       <div className="h-full gap-4 flex flex-col @xl:flex-row overflow-hidden">
         <div
           className={cn(
@@ -100,9 +101,9 @@ export function ExternalDepsPage() {
             </div>
           )}
         </div>
-        <div className="flex-1 min-h-0 min-w-0 h-full grid gap-4">
+        <div className="grid grid-rows-[1fr,1fr] min-h-0 min-w-0 w-1/2 h-full gap-4">
           <Devtools store={postsStore} />
-          {/* <Waterfall store={postsStore} /> */}
+          <Waterfall store={postsStore} />
         </div>
       </div>
     </Posts.Provider>
@@ -169,11 +170,8 @@ type PostProps = {
 
 export function Post({ post }: PostProps) {
   const [posts] = Posts.useUseState()
-  const isLiked = Posts.useStore(s => s.likedPosts.includes(post.id))
-  // const isLikingSomePost = false
-  const isLikingSomePost = Posts.useTransition(["post"])
+  const isLiked = Posts.useOptimisticStore(s => s.likedPosts.includes(post.id))
   const isPostPending = Posts.useTransition(["post", post.id, "like"])
-  const batchLikes = PostsController.useStore(s => s.batchLikes)
 
   return (
     <li
@@ -182,8 +180,8 @@ export function Post({ post }: PostProps) {
         "border-gray-200 bg-gray-50",
         "dark:border-gray-800 dark:bg-gray-950",
         isLiked &&
-          "ring-2 border-rose-300 ring-rose-50 dark:border-rose-400/40 dark:ring-rose-500/10",
-        isPostPending && "opacity-40"
+          "ring-2 border-rose-300 ring-rose-50 dark:border-rose-400/40 dark:ring-rose-500/10"
+        // isPostPending && "opacity-40"
       )}
     >
       <div
@@ -207,25 +205,38 @@ export function Post({ post }: PostProps) {
           )}
         >
           <IconComment
-            aria-busy={isLikingSomePost}
+            // aria-busy={isLikingSomePost}
             className="dark:aria-busy:fill-rose-700/80 group-active:translate-y-0.5 w-4 h-4 fill-rose-600 dark:fill-rose-400"
           />{" "}
         </div>
         <div
           role="button"
-          aria-busy={isLikingSomePost}
+          // aria-busy={isLikingSomePost}
           onClick={() => {
+            const transition = ["post", post.id, "like"]
+
             posts.dispatch({
               type: "like-post",
               postId: post.id,
-              // transition: ["post", post.id, "like"],
-              transition: ["post", post.id, "like"],
-              // beforeDispatch({ action, transitionStore, transition }) {
-              //   if (transitionStore.isHappeningUnique(transition)) {
-              //     transitionStore.controllers.get(transition)?.abort()
-              //   }
-              //   return action
-              // },
+              transition,
+              beforeDispatch({
+                action,
+                abort,
+                transition,
+                transitionStore,
+                createAsync,
+                store,
+              }) {
+                if (transitionStore.isHappeningUnique(transition)) {
+                  abort(transition)
+                  return
+                }
+
+                const async = createAsync()
+                return async.timer(() => store.dispatch(action), 200, {
+                  label: "debounce",
+                })
+              },
             })
           }}
           className={cn(
@@ -235,14 +246,16 @@ export function Post({ post }: PostProps) {
             "dark:hover:bg-gray-800 dark:bg-gray-900"
           )}
         >
-          {isLiked ? (
+          {isPostPending ? (
+            <X className="dark:aria-busy:text-gray-500 group-active:translate-y-0.5 w-4 h-4" />
+          ) : isLiked ? (
             <IconHeartFull
-              aria-busy={isLikingSomePost}
+              // aria-busy={isLikingSomePost}
               className="dark:aria-busy:fill-rose-700/80 group-active:translate-y-0.5 w-4 h-4 fill-rose-600 dark:fill-rose-400"
             />
           ) : (
             <IconHeart
-              aria-busy={isLikingSomePost}
+              // aria-busy={isLikingSomePost}
               className="dark:aria-busy:text-gray-500 group-active:translate-y-0.5 w-4 h-4"
             />
           )}

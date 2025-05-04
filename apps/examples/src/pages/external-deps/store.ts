@@ -67,7 +67,18 @@ export const newPostsStore = newStoreDef<
       commentsByPostId: {},
     }
   },
-  reducer({ prevState, state, action, set, diff, async, deps }) {
+  reducer({
+    prevState,
+    state,
+    action,
+    set,
+    diff,
+    async,
+    deps,
+    optimistic,
+    store,
+    // optimisticState,
+  }) {
     if (action.type === "place-comment") {
       const newComment: CommentType = {
         id: randomString(),
@@ -75,28 +86,17 @@ export const newPostsStore = newStoreDef<
         body: action.comment,
         postId: action.postId,
       }
-      async
-        .promise(ctx =>
-          deps.placeComment(newComment, action.postId, ctx.signal)
-        )
-        .onSuccess((_, actor) => {
-          /** [external-deps.react-query]
-           * Refetches the post comments after
-           * a successful mutation
-           */
-          const revalidate = () =>
-            queryClient.refetchQueries({
-              ...getCommentsQueryOptions({
-                postId: action.postId,
-              }),
-            })
+      async.promise(async ctx => {
+        await deps.placeComment(newComment, action.postId, ctx.signal)
 
-          if (action.revalidateOnSameTransition) {
-            actor.async.promise(revalidate)
-          } else {
-            revalidate()
-          }
+        /** [external-deps.react-query]
+         * Refetches the post comments after
+         * a successful mutation
+         */
+        await queryClient.refetchQueries({
+          ...getCommentsQueryOptions({ postId: action.postId }),
         })
+      })
     }
 
     if (action.type === "comment-in-post") {
@@ -104,13 +104,26 @@ export const newPostsStore = newStoreDef<
     }
 
     if (action.type === "like-post") {
-      async
-        .promise(ctx =>
-          deps.likePost(state.likedPosts, action.postId, ctx.signal)
-        )
-        .onSuccess((likedPosts, actor) => {
-          actor.set(() => ({ likedPosts }))
-        })
+      const isLiked = state.likedPosts.includes(action.postId)
+      optimistic(state => {
+        return {
+          likedPosts: isLiked
+            ? state.likedPosts.filter(id => id !== action.postId)
+            : [...state.likedPosts, action.postId],
+        }
+      })
+      const label = `Like post [${action.postId}]`
+      async.promise(
+        async ctx => {
+          const likedPosts = await deps.likePost(
+            state.likedPosts,
+            action.postId,
+            ctx.signal
+          )
+          set({ likedPosts })
+        },
+        { label }
+      )
     }
 
     if (diff(["posts"])) {
