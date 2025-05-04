@@ -8,16 +8,15 @@ import { Devtools } from "~/devtools/devtools"
 import { cn } from "~/lib/cn"
 import { TextChart } from "~/components/text-chart"
 import { CodeEditor } from "~/components/code-editor"
-import { removeCurrentToastsAndRegisterNewToasts } from "./fn/isjdf"
+import { removeCurrentToastsAndRegisterNewToasts } from "./fn/removeCurrentToastsAndRegisterNewToasts"
 import { toastWithResult } from "./fn/toast-with-result"
-import { Waterfall } from "~/devtools/waterfall"
 import { createStoreUtils, useBootstrapError, useHistory } from "saphyra/react"
+import { Waterfall } from "~/devtools/waterfall"
 
 export type SelectedRole = "user" | "admin"
 
 type AuthStoreState = {
   role: "user" | "admin"
-  currentTransition: any[] | null
   username: string
   $permissions: string[]
   $welcomeMessage: string
@@ -43,23 +42,31 @@ const newAuthStore = newStoreDef<
       return [...history, state]
     },
   },
-  reducer({ prevState, state, action, diff, set, async, events }) {
+  reducer({ prevState, state, action, diff, set, async, events, optimistic }) {
     if (action?.type === "change-role") {
-      async
-        .promise(({ signal }) => fetchRole({ roleName: action.role, signal }))
-        .onSuccess((role, actor) => {
+      optimistic({ role: action.role })
+      async.promise(
+        async ({ signal }) => {
+          const role = await fetchRole({ roleName: action.role, signal })
           events.emit("got-role", role)
-          actor.set({ role })
-        })
+          set({ role })
+        },
+        { label: "role request" }
+      )
     }
 
     if (prevState.role !== state.role) {
-      async
-        .promise(({ signal }) => fetchPermissions({ role: state.role, signal }))
-        .onSuccess((permissions, actor) => {
+      async.promise(
+        async ({ signal }) => {
+          const permissions = await fetchPermissions({
+            role: state.role,
+            signal,
+          })
           events.emit("got-permissions", permissions)
-          actor.set({ $permissions: permissions })
-        })
+          set({ $permissions: permissions })
+        },
+        { label: "Fetch permissions" }
+      )
     }
 
     set(s =>
@@ -80,17 +87,7 @@ export const Auth = createStoreUtils<typeof newAuthStore>()
 
 export function ChangeRolePage() {
   const instantiateStore = useCallback(
-    () =>
-      newAuthStore(
-        {
-          role: "user",
-          currentTransition: null,
-          username: "",
-        },
-        {
-          name: "AuthStore",
-        }
-      ),
+    () => newAuthStore({ role: "user", username: "" }, { name: "AuthStore" }),
     []
   )
   const authStoreState = useState(instantiateStore)
@@ -136,6 +133,7 @@ export function ChangeRolePage() {
 function ChangeRolePageContent() {
   const [authStore] = Auth.useUseState()
   const state = Auth.useStore()
+  const optimisticRole = Auth.useOptimisticStore(s => s.role)
 
   const isChangingRole = Auth.useTransition(["auth", "role"])
 
@@ -225,10 +223,10 @@ function ChangeRolePageContent() {
             <select
               name=""
               id=""
-              value={state.role}
+              value={optimisticRole}
               className={cn(
-                "disabled:opacity-30 disabled:cursor-not-allowed",
-                isChangingRole && "opacity-30"
+                "disabled:opacity-30 disabled:cursor-not-allowed"
+                // isChangingRole && "opacity-30"
               )}
               onChange={e => {
                 const selectedRole = e.target.value as "user" | "admin"
@@ -255,7 +253,7 @@ function ChangeRolePageContent() {
           </div>
         ) : null}
       </div>
-      <div className="h-full grid grid-cols-2 gap-2 min-w-0">
+      <div className="h-full grid grid-cols-1 gap-2 min-w-0">
         <Devtools
           store={authStore}
           allExpanded

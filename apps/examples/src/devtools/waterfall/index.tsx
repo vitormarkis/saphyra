@@ -1,6 +1,9 @@
 import {
+  createContext,
+  forwardRef,
   memo,
   useCallback,
+  useContext,
   useEffect,
   useMemo,
   useReducer,
@@ -14,12 +17,19 @@ import { SomeStoreGeneric } from "saphyra"
 import { BarSorters } from "./sorters"
 import { ChevronUp } from "lucide-react"
 import React from "react"
+import ReactDOM from "react-dom"
+import { cva, type VariantProps } from "class-variance-authority"
+
+const WaterfallContext = createContext<{
+  extractErrorMessage?: (error: unknown) => string
+} | null>(null)
 
 type WaterfallProps = {
   store: SomeStoreGeneric
+  extractErrorMessage?: (error: unknown) => string
 }
 
-export function Waterfall({ store }: WaterfallProps) {
+export function Waterfall({ store, extractErrorMessage }: WaterfallProps) {
   const waterfallState = useState(() =>
     newWaterfallStore({
       bars: [],
@@ -30,30 +40,38 @@ export function Waterfall({ store }: WaterfallProps) {
   const [waterfallStore] = waterfallState
 
   useEffect(() =>
-    store.internal.events.on("new-transition", ({ transitionName, id }) => {
-      waterfallStore.dispatch({
-        type: "add-bar",
-        payload: { transitionName, id },
-      })
-    })
+    store.internal.events.on(
+      "new-transition",
+      ({ transitionName, id, label }) => {
+        waterfallStore.dispatch({
+          type: "add-bar",
+          payload: { transitionName, id, label },
+        })
+      }
+    )
   )
 
   useEffect(() =>
-    store.internal.events.on("transition-completed", ({ id, status }) => {
-      waterfallStore.dispatch({
-        type: "end-bar",
-        payload: { id, status },
-      })
-    })
+    store.internal.events.on(
+      "transition-completed",
+      ({ id, status, error }) => {
+        waterfallStore.dispatch({
+          type: "end-bar",
+          payload: { id, status, error },
+        })
+      }
+    )
   )
 
   return (
-    <WF.Provider value={waterfallState}>
-      <div className="grid grid-rows-[auto_1fr] gap-1 h-full">
-        <WaterfallController />
-        <WaterfallContent />
-      </div>
-    </WF.Provider>
+    <WaterfallContext.Provider value={{ extractErrorMessage }}>
+      <WF.Provider value={waterfallState}>
+        <div className="grid grid-rows-[auto_1fr] gap-1 h-full">
+          <WaterfallController />
+          <WaterfallContent />
+        </div>
+      </WF.Provider>
+    </WaterfallContext.Provider>
   )
 }
 
@@ -166,6 +184,17 @@ function WaterfallContent() {
   const [waterfallStore] = WF.useUseState()
   const displayingBarsIdList = WF.useStore(s => s.$displayingBarsIdList)
 
+  const [seeingElement, hover] = useState<string | null>(null)
+
+  const tooltipRef = useRef<HTMLDivElement>(null)
+  useMouse({
+    onPosition({ x, y }) {
+      if (!tooltipRef.current) return
+      y = y - 10
+      tooltipRef.current.style.transform = `translate3d(${x}px, ${y}px, 0px)`
+    },
+  })
+
   useEffect(() => {
     Object.assign(window, { waterfallStore })
   }, [])
@@ -235,11 +264,21 @@ function WaterfallContent() {
               />
             ))}
             {displayingBarsIdList.map(barId => (
-              <Bar
-                key={barId}
-                barId={barId}
-              />
+              <RefContextProvider key={barId}>
+                <Bar
+                  barId={barId}
+                  hover={hover}
+                  seeingElement={seeingElement}
+                />
+              </RefContextProvider>
             ))}
+            {ReactDOM.createPortal(
+              <WaterfallTooltip
+                tooltipRef={tooltipRef}
+                seeingElement={seeingElement}
+              />,
+              document.body
+            )}
           </div>
         </div>
       </div>
@@ -247,23 +286,124 @@ function WaterfallContent() {
   )
 }
 
-type BarProps = {
-  barId: string
+type ContentProps = {
+  tooltipRef: MutableRefObject<HTMLDivElement | null>
+  seeingElement: string | null
 }
 
-export const Bar = memo(function Bar({ barId }: BarProps) {
+const MOCK: BarType = {
+  transitionName: "auth:role",
+  startedAt: new Date("2025-04-27T22:33:15.058Z"),
+  endedAt: new Date("2025-04-27T22:33:15.760Z"),
+  status: "fail",
+  id: "auth:role-33m_15s_057ms",
+  durationMs: "running",
+  label: "Fetch permissions",
+  error: new Error("Something went wrong!"),
+} as const
+
+export function WaterfallTooltip({
+  tooltipRef,
+  seeingElement: seeingBar,
+}: ContentProps) {
+  const { extractErrorMessage: extractErrorMessageFn } =
+    useContext(WaterfallContext) ?? {}
+  if (!seeingBar) return null
+  const barInfo = WF.useStore(s => s.$barsByBarId[seeingBar])
+  // const barInfo = MOCK
+  return (
+    <div
+      className="absolute z-50 left-0 top-0 pointer-events-none"
+      ref={tooltipRef}
+    >
+      <div className="-translate-x-1/2 -translate-y-full dark:bg-gray-900 dark:text-white rounded-md border">
+        <div className="p-2">
+          {barInfo.label != null ? (
+            <>
+              <h3 className="pl-1 text-lg tracking-wide font-semibold">
+                {barInfo.label}
+              </h3>
+              <div className="py-1.5" />
+            </>
+          ) : null}
+          <div className="flex items-center justify-between gap-1">
+            <StatusBadge variant={barInfo.status}>{barInfo.status}</StatusBadge>
+            <div className="border px-2 text-sm/none h-5 flex items-center gap-1">
+              <span className="text-xs">took</span>
+              <strong>{getDuration(barInfo)}</strong>
+            </div>
+          </div>
+          <div className="py-0.5" />
+          <div className="flex items-center gap-1">
+            <ul className="flex items-center">
+              {["[", ...barInfo.transitionName.split(":"), "]"].map(
+                subTransition => {
+                  return (
+                    <span className="bg-gray-600 border border-gray-800 text-gray-200 px-1">
+                      {subTransition}
+                    </span>
+                  )
+                }
+              )}
+            </ul>
+          </div>
+        </div>
+        {barInfo.error && !isAbortError(barInfo.error) ? (
+          <>
+            <div className="py-0.5" />
+            <div className="border-b border-gray-700 w-full" />
+            <div className="py-0.5" />
+            <div className="px-2 pb-2">
+              <strong className="text-sm/none py-0.5 pb-2 block">
+                Reason:
+              </strong>
+              <div className="bg-red-900/50 text-red-300 p-2 text-xs/none flex items-center gap-1 rounded-md border border-red-800">
+                <span className="max-w-[256px]">
+                  {extractErrorMessageFn?.(barInfo.error) ??
+                    extractErrorMessage(barInfo.error)}
+                </span>
+              </div>
+            </div>
+          </>
+        ) : null}
+      </div>
+    </div>
+  )
+}
+
+function getDuration(barInfo: BarType) {
+  if (barInfo.endedAt === "running") return "running"
+  const startedAt = new Date(barInfo.startedAt)
+  const endedAt = new Date(barInfo.endedAt)
+  const ms = endedAt.getTime() - startedAt.getTime()
+  return getDisplayingValue(ms)
+}
+
+type BarProps = {
+  barId: string
+  hover(barId: string | null): void
+  seeingElement: string | null
+}
+
+export const Bar = forwardRef(function Bar({
+  barId,
+  hover,
+  seeingElement,
+}: BarProps) {
   const [waterfallStore] = WF.useUseState()
-  const barRef = useRef<HTMLDivElement>(null)
+  const barRef = useContext(RefContext)
   const transitionName = WF.useStore(s => s.$barsByBarId[barId].transitionName)
+  const isHovering = barId === seeingElement
 
   useSyncExternalStore(
     cb => waterfallStore.subscribe(cb),
     () => {
-      if (!barRef.current) return
+      if (!barRef?.current) return
       const state = waterfallStore.getState()
       const config = state.$config
       const bar = state.$barsByBarId[barId]
-      const isHighlighting = state.highlightingTransition !== null
+      // const isHighlighting = state.highlightingTransition !== null
+      const isHighlighting = false
       const dataHighlight =
         state.highlightingTransition === bar.transitionName
           ? "highlight"
@@ -293,6 +433,10 @@ export const Bar = memo(function Bar({ barId }: BarProps) {
       }
       el.setAttribute("data-status", bar.status)
       el.setAttribute("data-highlight", isHighlighting ? dataHighlight : null)
+      const textEl = el.querySelector("span") as HTMLSpanElement
+      if (bar.label != null) {
+        textEl.innerText = bar.label
+      }
     }
   )
 
@@ -301,7 +445,10 @@ export const Bar = memo(function Bar({ barId }: BarProps) {
       <div className="relative w-full h-full">
         <div
           ref={barRef}
-          onMouseEnter={() => {
+          onMouseEnter={e => {
+            e.preventDefault()
+            e.stopPropagation()
+            hover(barId)
             waterfallStore.dispatch({
               type: "hover-transition-name",
               payload: {
@@ -309,7 +456,11 @@ export const Bar = memo(function Bar({ barId }: BarProps) {
               },
             })
           }}
-          onMouseLeave={() => {
+          onMouseLeave={e => {
+            e.preventDefault()
+            e.stopPropagation()
+
+            hover(null)
             waterfallStore.dispatch({
               type: "hover-out-transition-name",
               payload: {
@@ -317,17 +468,39 @@ export const Bar = memo(function Bar({ barId }: BarProps) {
               },
             })
           }}
-          className={cn(`
+          className={cn(
+            isHovering &&
+              `
+              ring-2
+            data-[status=running]:ring-sky-300
+            data-[status=fail]:ring-red-400
+            data-[status=success]:ring-green-400
+            data-[status=cancelled]:ring-amber-400
+            `,
+            `
+            flex items-center p-1
+            rounded-sm
+            truncate
+            min-w-0
+            
             absolute
             hover:cursor-pointer
-            data-[status=running]:bg-sky-500
-            data-[status=fail]:bg-red-500
-            data-[status=success]:bg-green-500
-            data-[status=cancelled]:bg-amber-500
+            data-[status=running]:bg-sky-600
+            data-[status=fail]:bg-red-600
+            data-[status=success]:bg-green-600
+            data-[status=cancelled]:bg-amber-600
+
+            data-[status=running]:text-sky-200
+            data-[status=fail]:text-red-100
+            data-[status=success]:text-green-100
+            data-[status=cancelled]:text-amber-300
 
             data-[highlight=mute]:opacity-30
-            `)}
-        />
+            `
+          )}
+        >
+          <span />
+        </div>
       </div>
     </div>
   )
@@ -587,4 +760,73 @@ export function TransitionNameWrapper({ barId }: TransitionNameWrapperProps) {
       <TransitionName barId={barId} />
     </span>
   )
+}
+
+import { useMouse } from "~/hooks/use-mouse"
+import { MutableRefObject } from "react"
+import { BarType } from "./types"
+import { error } from "console"
+import { extractErrorMessage } from "~/lib/extract-error-message"
+
+export const RefContext =
+  createContext<MutableRefObject<HTMLDivElement | null> | null>(null)
+
+type RefContextProviderProps = {
+  children: React.ReactNode
+}
+
+export function RefContextProvider({ children }: RefContextProviderProps) {
+  const ref = useRef<HTMLDivElement>(null)
+  return <RefContext.Provider value={ref}>{children}</RefContext.Provider>
+}
+
+type TooltipContentProps = {}
+
+export function TooltipContent({}: TooltipContentProps) {
+  return (
+    <div className="flex">
+      <div className="h-10 w-24 bg-red-500">vmarkis</div>
+    </div>
+  )
+}
+
+export const statusBadgeVariants = cva("", {
+  variants: {
+    variant: {
+      success: "bg-green-600 text-green-200 border-green-500",
+      fail: "bg-red-800 text-red-200 border-red-500",
+      cancelled: "bg-amber-600 text-amber-200 border-amber-500",
+      running: "bg-sky-600 text-sky-200 border-sky-500",
+    },
+  },
+})
+
+type StatusBadgeProps = {
+  children: React.ReactNode
+  className?: string
+} & VariantProps<typeof statusBadgeVariants>
+
+export function StatusBadge({
+  children,
+  variant,
+  className,
+}: StatusBadgeProps) {
+  return (
+    <div
+      className={cn(
+        "border px-2 rounded-md text-sm/none h-5 flex items-center gap-1",
+        statusBadgeVariants({ variant }),
+        className
+      )}
+    >
+      {children}
+    </div>
+  )
+}
+
+function isAbortError(error: unknown) {
+  if (typeof error !== "object") return false
+  if (error == null) return false
+  if ("code" in error && error.code === 20) return true
+  return false
 }

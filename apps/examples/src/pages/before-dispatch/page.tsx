@@ -16,14 +16,9 @@ import { noop } from "lodash"
 import { CSSProperties, ReactNode, Suspense, useState } from "react"
 import invariant from "tiny-invariant"
 import { createStoreUtils } from "saphyra/react"
-import { newStoreDef } from "saphyra"
+import { ClassicAction, newStoreDef } from "saphyra"
 import { runSuccessCallback } from "saphyra"
-import {
-  BaseAction,
-  BeforeDispatch,
-  GenericAction,
-  SomeStoreGeneric,
-} from "saphyra"
+import { BaseAction, BeforeDispatch, SomeStoreGeneric } from "saphyra"
 import { cn } from "~/lib/cn"
 import { formatScript } from "~/lib/prettify-code"
 import { Theme } from "~/theme"
@@ -56,33 +51,27 @@ const newTransitionsStore = newStoreDef<
     albums: [],
     todos: [],
   }),
-  reducer({ state, action, async }) {
+  reducer({ state, action, async, set }) {
     if (action.type === "fetch-albums") {
-      async
-        .promise(async ({ signal }) => {
-          const endpoint = "https://jsonplaceholder.typicode.com/albums"
-          const response = await fetch(endpoint, {
-            signal,
-          })
-          return await response.json()
+      async.promise(async ({ signal }) => {
+        const endpoint = "https://jsonplaceholder.typicode.com/albums"
+        const response = await fetch(endpoint, {
+          signal,
         })
-        .onSuccess((albums, actor) => {
-          actor.set({ albums })
-        })
+        const albums = await response.json()
+        set({ albums })
+      })
     }
 
     if (action.type === "fetch-todos") {
-      async
-        .promise(async ({ signal }) => {
-          const endpoint = "https://jsonplaceholder.typicode.com/todos"
-          const response = await fetch(endpoint, {
-            signal,
-          })
-          return await response.json()
+      async.promise(async ({ signal }) => {
+        const endpoint = "https://jsonplaceholder.typicode.com/todos"
+        const response = await fetch(endpoint, {
+          signal,
         })
-        .onSuccess((todos, actor) => {
-          actor.set({ todos })
-        })
+        const todos = await response.json()
+        set({ todos })
+      })
     }
 
     return state
@@ -110,12 +99,8 @@ type ExampleFactory = (store: SomeStoreGeneric) => {
   title: string
   description: string
   slug: string
-  action: GenericAction & {
-    beforeDispatch?: BeforeDispatch<BaseAction<{}>>
-  }
-  actionSupport?: GenericAction & {
-    beforeDispatch?: BeforeDispatch<BaseAction<{}>>
-  }
+  action: BaseAction<any, any, any>
+  actionSupport?: BaseAction<any, any, any>
   script: string
 }
 
@@ -127,38 +112,64 @@ const EXAMPLES_FACTORY: ExampleFactory[] = [
     action: {
       type: "fetch-albums",
       transition: ["albums"],
-      beforeDispatch(options) {
-        return options.action
-      },
-    },
-    script: `
-      beforeDispatch(options) {
-        return options.action
-      }
-    `,
-  }),
-  store => ({
-    title: "Cancellation",
-    slug: "cancellation",
-    description:
-      "It will cancel the current transition before starting a new one.",
-    action: {
-      type: "fetch-albums",
-      transition: ["albums"],
-      beforeDispatch({ action, transitionStore, transition }) {
-        if (transitionStore.isHappeningUnique(transition)) {
-          const controller = transitionStore.controllers.get(transition)
-          controller?.abort()
-        }
+      beforeDispatch({ action }) {
         return action
       },
     },
     script: `
-      beforeDispatch({ action, transitionStore, transition }) {
+      beforeDispatch({ action }) {
+        return action
+      }
+    `,
+  }),
+  store => ({
+    title: "Cancel Previous",
+    slug: "cancel-previous",
+    description: "It will cancel the current transition and dispatch a new one",
+    action: {
+      type: "fetch-albums",
+      transition: ["albums"],
+      beforeDispatch({ action, abort, transition, transitionStore }) {
         if (transitionStore.isHappeningUnique(transition)) {
-          const controller = transitionStore.controllers.get(transition)
-          controller?.abort()
+          abort(transition)
         }
+
+        return action
+      },
+    },
+    script: `
+      beforeDispatch({ action, abort, transition, transitionStore }) {
+        if (transitionStore.isHappeningUnique(transition)) {
+          abort(transition)
+        }
+
+        return action
+      }
+    `,
+  }),
+  store => ({
+    title: "Cancel Action",
+    slug: "cancel-action",
+    description: "It will just cancel the current transition.",
+    action: {
+      type: "fetch-albums",
+      transition: ["albums"],
+      beforeDispatch({ action, abort, transition, transitionStore }) {
+        if (transitionStore.isHappeningUnique(transition)) {
+          abort(transition)
+          return // early return
+        }
+
+        return action
+      },
+    },
+    script: `
+      beforeDispatch({ action, abort, transition, transitionStore }) {
+        if (transitionStore.isHappeningUnique(transition)) {
+          abort(transition)
+          return // early return
+        }
+
         return action
       }
     `,
@@ -184,6 +195,27 @@ const EXAMPLES_FACTORY: ExampleFactory[] = [
           return
         }
         return action
+      }
+    `,
+  }),
+  store => ({
+    title: "Debouncing",
+    slug: "debouncing",
+    description: "Delay an action",
+    action: {
+      type: "fetch-albums",
+      transition: ["albums"],
+      beforeDispatch({ action, transition, abort, createAsync, store }) {
+        const async = createAsync()
+        abort(transition)
+        async.timer(() => store.dispatch(action), 500)
+      },
+    },
+    script: `
+      beforeDispatch({ transition, abort, createAsync, store, action }) {
+        const async = createAsync()
+        abort(transition)
+        async.timer(() => store.dispatch(action), 500)
       }
     `,
   }),
@@ -264,7 +296,7 @@ const EXAMPLES_FACTORY: ExampleFactory[] = [
         }, 1000) // 1 second
         return {
           ...action,
-          onTransitionEnd(props) {
+          onTransitionEnd(props: any) {
             clearTimeout(timeoutId)
             return action.onTransitionEnd?.(props)
           },
@@ -272,11 +304,11 @@ const EXAMPLES_FACTORY: ExampleFactory[] = [
       },
     },
     script: `
-      beforeDispatch({ action, transitionStore, transition }) {
+      beforeDispatch({ action, abort, transition }) {
         const timeoutId = setTimeout(() => {
-          const controller = transitionStore.controllers.get(transition)
-          controller?.abort()
+          abort(transition)
         }, 1000) // 1 second
+
         return {
           ...action,
           onTransitionEnd(props) {
@@ -287,94 +319,94 @@ const EXAMPLES_FACTORY: ExampleFactory[] = [
       }
     `,
   }),
-  store => ({
-    title: "Wait for other",
-    slug: "wait-for-other",
-    description:
-      "Click the left button, then the right one quickly. The right transition should only starts once the left is done.",
-    action: {
-      type: "fetch-albums",
-      transition: ["albums"],
-      beforeDispatch({ action, transitionStore }) {
-        const fetchingTodos = transitionStore.isHappeningUnique(["todos"])
-        if (!fetchingTodos) return action
-        transitionStore.events.done.once(["todos"].join(":")).run(() => {
-          setTimeout(() => {
-            store.dispatch(action)
-          })
-        })
-      },
-    },
-    actionSupport: {
-      type: "fetch-todos",
-      transition: ["todos"],
-      beforeDispatch({ action, transitionStore, transition }) {
-        if (transitionStore.isHappeningUnique(transition)) {
-          return
-        }
-        return action
-      },
-    },
-    script: `
-      beforeDispatch({ action, transitionStore }) {
-        const fetchingTodos = transitionStore.isHappeningUnique(["todos"])
-        if (!fetchingTodos) return action
-        transitionStore.events.done.once(["todos"].join(":")).run(() => {
-          setTimeout(() => {
-            store.dispatch(action)
-          })
-        })
-      }
-    `,
-  }),
-  store => ({
-    title: "Wait for other (loading)",
-    slug: "wait-for-other-loading",
-    description:
-      "Same as the previous one, but let's display a loading indicator while the left transition is finishing.",
-    action: {
-      type: "fetch-albums",
-      transition: ["albums"],
-      beforeDispatch({ action, transitionStore, transition }) {
-        const fetchingTodos = transitionStore.isHappeningUnique(["todos"])
-        if (!fetchingTodos) return action
-        transitionStore.addKey(transition)
-        transitionStore.events.done.once(["todos"].join(":")).run(() => {
-          setTimeout(() => {
-            store.dispatch(action)
-            transitionStore.doneKey(transition, {
-              onFinishTransition: runSuccessCallback,
-            })
-          })
-        })
-      },
-    },
-    actionSupport: {
-      type: "fetch-todos",
-      transition: ["todos"],
-      beforeDispatch({ action, transitionStore, transition }) {
-        if (transitionStore.isHappeningUnique(transition)) {
-          return
-        }
-        return action
-      },
-    },
-    script: `
-      beforeDispatch({ action, transitionStore, transition }) {
-        const fetchingTodos = transitionStore.isHappeningUnique(["todos"])
-        if (!fetchingTodos) return action
-        transitionStore.addKey(transition)
-        transitionStore.events.done.once(["todos"].join(":")).run(() => {
-          setTimeout(() => {
-            store.dispatch(action)
-            transitionStore.doneKey(transition, {
-              onFinishTransition: runSuccessCallback,
-            })
-          })
-        })
-      }
-    `,
-  }),
+  // store => ({
+  //   title: "Wait for other",
+  //   slug: "wait-for-other",
+  //   description:
+  //     "Click the left button, then the right one quickly. The right transition should only starts once the left is done.",
+  //   action: {
+  //     type: "fetch-albums",
+  //     transition: ["albums"],
+  //     beforeDispatch({ action, transitionStore }) {
+  //       const fetchingTodos = transitionStore.isHappeningUnique(["todos"])
+  //       if (!fetchingTodos) return action
+  //       transitionStore.events.done.once(["todos"].join(":")).run(() => {
+  //         setTimeout(() => {
+  //           store.dispatch(action)
+  //         })
+  //       })
+  //     },
+  //   },
+  //   actionSupport: {
+  //     type: "fetch-todos",
+  //     transition: ["todos"],
+  //     beforeDispatch({ action, transitionStore, transition }) {
+  //       if (transitionStore.isHappeningUnique(transition)) {
+  //         return
+  //       }
+  //       return action
+  //     },
+  //   },
+  //   script: `
+  //     beforeDispatch({ action, transitionStore }) {
+  //       const fetchingTodos = transitionStore.isHappeningUnique(["todos"])
+  //       if (!fetchingTodos) return action
+  //       transitionStore.events.done.once(["todos"].join(":")).run(() => {
+  //         setTimeout(() => {
+  //           store.dispatch(action)
+  //         })
+  //       })
+  //     }
+  //   `,
+  // }),
+  // store => ({
+  //   title: "Wait for other (loading)",
+  //   slug: "wait-for-other-loading",
+  //   description:
+  //     "Same as the previous one, but let's display a loading indicator while the left transition is finishing.",
+  //   action: {
+  //     type: "fetch-albums",
+  //     transition: ["albums"],
+  //     beforeDispatch({ action, transitionStore, transition }) {
+  //       const fetchingTodos = transitionStore.isHappeningUnique(["todos"])
+  //       if (!fetchingTodos) return action
+  //       transitionStore.addKey(transition)
+  //       transitionStore.events.done.once(["todos"].join(":")).run(() => {
+  //         setTimeout(() => {
+  //           store.dispatch(action)
+  //           transitionStore.doneKey(transition, {
+  //             onFinishTransition: runSuccessCallback,
+  //           })
+  //         })
+  //       })
+  //     },
+  //   },
+  //   actionSupport: {
+  //     type: "fetch-todos",
+  //     transition: ["todos"],
+  //     beforeDispatch({ action, transitionStore, transition }) {
+  //       if (transitionStore.isHappeningUnique(transition)) {
+  //         return
+  //       }
+  //       return action
+  //     },
+  //   },
+  //   script: `
+  //     beforeDispatch({ action, transitionStore, transition }) {
+  //       const fetchingTodos = transitionStore.isHappeningUnique(["todos"])
+  //       if (!fetchingTodos) return action
+  //       transitionStore.addKey(transition)
+  //       transitionStore.events.done.once(["todos"].join(":")).run(() => {
+  //         setTimeout(() => {
+  //           store.dispatch(action)
+  //           transitionStore.doneKey(transition, {
+  //             onFinishTransition: runSuccessCallback,
+  //           })
+  //         })
+  //       })
+  //     }
+  //   `,
+  // }),
 ]
 
 export function BeforeDispatchView() {
@@ -430,9 +462,9 @@ export function Example({ createExample }: ExampleProps) {
   const theme = Theme.useStore(s => s.theme)
   const [store] = TransitionsStore.useUseState()
   const example = createExample(store)
-  const transition = [...example.action.transition]
+  const transition = [...example.action.transition!]
   const transitionSupport = example.actionSupport
-    ? [...example.actionSupport.transition]
+    ? [...example.actionSupport.transition!]
     : []
   const isPendingAction = TransitionsStore.useTransition(transition)
   const isPendingActionSupport =

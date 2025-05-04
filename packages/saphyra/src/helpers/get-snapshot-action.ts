@@ -1,10 +1,21 @@
-import type { GenericAction } from "~/types"
+import { EventsTuple } from "~/event-emitter"
+import type {
+  ActionRedispatch,
+  ActionShape,
+  BaseAction,
+  ClassicAction,
+  ClassicActionRedispatch,
+} from "~/types"
 
 export function getSnapshotAction<
-  const T extends {
-    type: string
-  } & Record<string, any>,
->(action: T): GenericAction {
+  TState extends Record<string, any>,
+  TEvents extends EventsTuple,
+  TActions extends ClassicAction<TState, ActionShape<TState, TEvents>, TEvents>,
+>(action: TActions): ClassicActionRedispatch<TState, TActions, TEvents> {
   const { beforeDispatch: __, ...beforeDispatchAction } = action
-  return beforeDispatchAction as GenericAction
+  return beforeDispatchAction as ClassicActionRedispatch<
+    TState,
+    TActions,
+    TEvents
+  >
 }

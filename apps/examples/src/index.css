@@ -9,6 +9,8 @@ select {
 
 body {
   @apply bg-white;
+  height: 100vh;
+  overflow: hidden;
 }
 
 fieldset {
@@ -20,10 +22,8 @@ button {
 }
 
 @media (prefers-color-scheme: dark) {
-  #root {
+  body {
     background-color: #000;
-    height: 100vh;
-    overflow: hidden;
   }
 
   .container-1 {

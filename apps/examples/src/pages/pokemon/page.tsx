@@ -10,6 +10,7 @@ import invariant from "tiny-invariant"
 import { TextChart } from "~/components/text-chart"
 import { Waterfall } from "~/devtools/waterfall"
 import { createStoreUtils, useBootstrapError } from "saphyra/react"
+import { sleep } from "~/lib/common"
 
 type PokemonState = {
   currentPokemonId: number
@@ -17,37 +18,35 @@ type PokemonState = {
   currentTransition: null
 }
 
-const newPokemonStore = newStoreDef<PokemonState, PokemonState>({
+const newPokemonStore = newStoreDef<
+  PokemonState,
+  PokemonState,
+  {
+    type: "fetch-pokemon"
+    pokemonId: number
+  }
+>({
   async onConstruct({ initialProps, signal, store }) {
     return {
       currentPokemonId: initialProps.currentPokemonId,
       currentTransition: null,
     }
   },
-  reducer({ prevState, state, action, diff, async, set, store }) {
-    if (action.type === "next") {
-      set(s => ({
-        currentPokemonId: s.currentPokemonId + 1,
-      }))
-    }
-
-    if (action.type === "previous") {
-      set(s => ({
-        currentPokemonId: s.currentPokemonId - 1,
-      }))
+  reducer({ prevState, state, action, diff, async, set, store, optimistic }) {
+    if (action.type === "fetch-pokemon") {
+      optimistic({ currentPokemonId: action.pokemonId })
+      set({ currentPokemonId: action.pokemonId })
     }
 
     if (diff(["currentPokemonId"])) {
-      async
-        .promise(async ({ signal }) => {
-          return await getPokemon({
-            id: state.currentPokemonId,
-            signal,
-          })
+      async.promise(async ({ signal }) => {
+        await sleep(1000, "", signal)
+        const pokemon = await getPokemon({
+          id: state.currentPokemonId,
+          signal,
         })
-        .onSuccess((pokemon, actor) => {
-          actor.set({ $pokemon: pokemon })
-        })
+        set({ $pokemon: pokemon })
+      })
     }
 
     return state
@@ -108,21 +107,16 @@ type PokemonPageContentProps = {}
 
 const beforeDispatch = ({
   action,
-  meta,
   transition,
-  transitionStore,
-}: BeforeDispatchOptions<any, any>) => {
-  if (transitionStore.isHappeningUnique(transition)) {
-    const controller = transitionStore.controllers.get(transition)
-    invariant(controller)
-    controller.abort()
-  }
+  abort,
+}: BeforeDispatchOptions<any, any, any, any, any>) => {
+  abort(transition)
   return action
 }
 
 export function PokemonPageContent({}: PokemonPageContentProps) {
   const [store] = Pokemon.useUseState()
-  const state = Pokemon.useStore()
+  const currentPokemonId = Pokemon.useOptimisticStore(s => s.currentPokemonId)
   const isLoadingNewPokemon = Pokemon.useTransition(["pokemon"])
 
   return (
@@ -179,21 +173,23 @@ export function PokemonPageContent({}: PokemonPageContentProps) {
         <button
           onClick={() =>
             store.dispatch({
-              type: "previous",
+              type: "fetch-pokemon",
+              pokemonId: currentPokemonId - 1,
               transition: ["pokemon"],
-              beforeDispatch,
+              beforeDispatch: beforeDispatch,
             })
           }
         >
           Prev
         </button>
-        {state.currentPokemonId}
+        {currentPokemonId}
         <button
           onClick={() =>
             store.dispatch({
-              type: "next",
+              type: "fetch-pokemon",
+              pokemonId: currentPokemonId + 1,
               transition: ["pokemon"],
-              beforeDispatch,
+              beforeDispatch: beforeDispatch,
             })
           }
         >

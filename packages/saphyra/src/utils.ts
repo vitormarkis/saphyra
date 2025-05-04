@@ -1,5 +1,3 @@
-import { BeforeDispatch, GenericAction } from "./types"
-
 export function isNewActionError(error: unknown) {
   if (typeof error !== "object") return false
   if (!error) return false
@@ -10,10 +8,10 @@ export function isNewActionError(error: unknown) {
   return false
 }
 
-export const createDefaultBeforeDispatch: <
-  TBaseAction extends GenericAction = GenericAction
->() => BeforeDispatch<TBaseAction> = () => {
-  return options => {
-    return options.action
-  }
+export function labelWhen(date: Date) {
+  const isoString = date.toISOString()
+  const [_hour, minute, secondWithDot] = isoString.split("T")[1].split(":")
+  const [second, milisecondWithZ] = secondWithDot.split(".")
+  const milisecond = milisecondWithZ.slice(0, -1)
+  return `${minute}m_${second}s_${milisecond}ms`
 }

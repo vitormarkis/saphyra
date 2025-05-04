@@ -5,6 +5,7 @@ import { MemoryGamePage } from "./pages/memory-game/page"
 import { ZustandLikePage } from "./pages/zustand-like/page"
 import { PokemonPage } from "~/pages/pokemon/page"
 import { BeforeDispatchPage } from "./pages/before-dispatch/page"
+import { DebouncedSearchPage } from "./pages/debounced-search/page"
 
 export const myRoutesManifest = [
   {
@@ -30,6 +31,10 @@ export const myRoutesManifest = [
   {
     path: "/before-dispatch",
     element: <BeforeDispatchPage />,
+  },
+  {
+    path: "/debounced-search",
+    element: <DebouncedSearchPage />,
   },
   {
     path: "/pokemon",

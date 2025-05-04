@@ -19,7 +19,7 @@ export function getCommentsLazyOptions({
   return Posts.createLazyOptions({
     select: s => s.commentsByPostId[postId],
     transition: ["comments", postId],
-    transitionFn: ({ actor, signal, transition }) => {
+    transitionFn: ({ signal }) => {
       return queryClient.ensureQueryData({
         ...getCommentsQueryOptions({ postId }, { signal }),
       })

@@ -1,11 +1,5 @@
 import { useEffect } from "react"
-import type {
-  BaseAction,
-  DefaultActions,
-  EventsTuple,
-  SomeStore,
-  StateContext,
-} from "saphyra"
+import type { ActionShape, EventsTuple, SomeStore } from "saphyra"
 
 type Eventable = {
   addEventListener(type: string, listener: (event: KeyboardEvent) => void): void
@@ -16,8 +10,8 @@ type Eventable = {
 }
 
 export function useHistory<
-  TState = StateContext,
-  TActions extends BaseAction<TState> = DefaultActions & BaseAction<TState>,
+  TState extends Record<string, any> = any,
+  TActions extends ActionShape<TState, TEvents> = ActionShape<TState, any>,
   TEvents extends EventsTuple = EventsTuple,
   TUncontrolledState extends Record<string, any> = Record<string, any>,
   TDeps = undefined,

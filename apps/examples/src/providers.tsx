@@ -28,6 +28,7 @@ export function Providers({ children }: ProvidersProps) {
       {displayGoToSourceButton && <GoToSourceButton />}
       <Analytics />
       <Toaster
+        position="bottom-left"
         toastOptions={{
           className: "border",
           classNames: {

@@ -1,4 +1,3 @@
-import invariant from "tiny-invariant"
 import {
   afterEach,
   beforeEach,
@@ -19,17 +18,8 @@ let store: TestCounterStore
 let spy_completeTransition: MockInstance<any>
 let spy_emitError: MockInstance<any>
 
-const cancelPrevious: BeforeDispatch = ({
-  action,
-  transition,
-  transitionStore,
-}) => {
-  if (transitionStore.isHappeningUnique(transition)) {
-    const controller = transitionStore.controllers.get(transition)
-    invariant(controller)
-    controller.abort()
-  }
-
+const cancelPrevious = ({ action, transition, abort }: any) => {
+  abort(transition)
   return action
 }
 
@@ -52,7 +42,10 @@ describe("before dispatch: cancel previous", () => {
     store.dispatch({
       type: "increment",
       transition: ["increment"],
-      beforeDispatch: cancelPrevious,
+      beforeDispatch({ action }) {
+        if (action.type === "increment") {
+        }
+      },
     })
 
     const info = getStoreTransitionInfoShallowCopy(store, transitionName)

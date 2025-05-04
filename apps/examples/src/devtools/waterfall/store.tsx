@@ -53,6 +53,7 @@ type WaterfallAction =
       payload: {
         transitionName: string
         id: string
+        label: string | null
       }
       callbacks?: {
         onCreate?(bar: BarType): void
@@ -63,6 +64,7 @@ type WaterfallAction =
       payload: {
         id: string
         status: "fail" | "success" | "cancelled"
+        error?: unknown
       }
     }
   | {
@@ -125,7 +127,7 @@ export const newWaterfallStore = newStoreDef<
     }
 
     if (action.type === "add-bar") {
-      const { transitionName, id } = action.payload
+      const { transitionName, id, label } = action.payload
       const { onCreate } = action.callbacks ?? {}
 
       if (state.state === "stale") {
@@ -142,6 +144,8 @@ export const newWaterfallStore = newStoreDef<
         endedAt: "running",
         status: "running",
         id,
+        durationMs: "running",
+        label,
       }
 
       state.bars = [...state.bars, newBar]
@@ -150,13 +154,14 @@ export const newWaterfallStore = newStoreDef<
     }
 
     if (action.type === "end-bar") {
-      const { id, status } = action.payload
+      const { id, status, error } = action.payload
       state.bars = state.bars.map(bar => {
         if (bar.id === id) {
           return {
             ...bar,
             endedAt: new Date(),
             status,
+            error,
           }
         }
 
