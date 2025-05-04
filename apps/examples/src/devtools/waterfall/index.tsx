@@ -316,7 +316,7 @@ export function WaterfallTooltip({
       className="absolute z-50 left-0 top-0 pointer-events-none"
       ref={tooltipRef}
     >
-      <div className="-translate-x-1/2 -translate-y-full dark:bg-gray-900 dark:text-white rounded-md border">
+      <div className="-translate-x-1/2 -translate-y-full bg-white text-black dark:bg-gray-900 dark:text-white rounded-md border">
         <div className="p-2">
           {barInfo.label != null ? (
             <>
@@ -329,17 +329,19 @@ export function WaterfallTooltip({
           <div className="flex items-center justify-between gap-1">
             <StatusBadge variant={barInfo.status}>{barInfo.status}</StatusBadge>
             <div className="border px-2 text-sm/none h-5 flex items-center gap-1">
-              <span className="text-xs">took</span>
+              {getDuration(barInfo) !== "running" && (
+                <span className="text-xs">took</span>
+              )}
               <strong>{getDuration(barInfo)}</strong>
             </div>
           </div>
           <div className="py-0.5" />
           <div className="flex items-center gap-1">
-            <ul className="flex items-center">
+            <ul className="flex items-center gap-0.5">
               {["[", ...barInfo.transitionName.split(":"), "]"].map(
                 subTransition => {
                   return (
-                    <span className="bg-gray-600 border border-gray-800 text-gray-200 px-1">
+                    <span className="bg-gray-100 border-gray-200 dark:bg-gray-600 border dark:border-gray-800 text-gray-600 dark:text-gray-200 px-1">
                       {subTransition}
                     </span>
                   )
@@ -357,7 +359,19 @@ export function WaterfallTooltip({
               <strong className="text-sm/none py-0.5 pb-2 block">
                 Reason:
               </strong>
-              <div className="bg-red-900/50 text-red-300 p-2 text-xs/none flex items-center gap-1 rounded-md border border-red-800">
+              <div
+                className={cn(
+                  "p-2 text-xs/none flex items-center gap-1 rounded-md border",
+                  `
+                dark:bg-red-900/50 
+                dark:border-red-800
+                dark:text-red-300
+                bg-red-100 
+                border-red-200/80
+                text-red-800/80
+                `
+                )}
+              >
                 <span className="max-w-[256px]">
                   {extractErrorMessageFn?.(barInfo.error) ??
                     extractErrorMessage(barInfo.error)}
@@ -485,15 +499,15 @@ export const Bar = forwardRef(function Bar({
             
             absolute
             hover:cursor-pointer
-            data-[status=running]:bg-sky-600
             data-[status=fail]:bg-red-600
-            data-[status=success]:bg-green-600
-            data-[status=cancelled]:bg-amber-600
-
-            data-[status=running]:text-sky-200
             data-[status=fail]:text-red-100
-            data-[status=success]:text-green-100
+            data-[status=cancelled]:bg-amber-600
             data-[status=cancelled]:text-amber-300
+            data-[status=running]:bg-sky-600
+            data-[status=running]:text-sky-200
+            data-[status=success]:bg-green-600
+            data-[status=success]:text-green-100
+            
 
             data-[highlight=mute]:opacity-30
             `
@@ -780,21 +794,14 @@ export function RefContextProvider({ children }: RefContextProviderProps) {
   return <RefContext.Provider value={ref}>{children}</RefContext.Provider>
 }
 
-type TooltipContentProps = {}
-
-export function TooltipContent({}: TooltipContentProps) {
-  return (
-    <div className="flex">
-      <div className="h-10 w-24 bg-red-500">vmarkis</div>
-    </div>
-  )
-}
-
 export const statusBadgeVariants = cva("", {
   variants: {
     variant: {
       success: "bg-green-600 text-green-200 border-green-500",
-      fail: "bg-red-800 text-red-200 border-red-500",
+      fail: cn(
+        "dark:bg-red-800 dark:text-red-200 dark:border-red-500",
+        "bg-red-100 text-red-800 border-red-200/80"
+      ),
       cancelled: "bg-amber-600 text-amber-200 border-amber-500",
       running: "bg-sky-600 text-sky-200 border-sky-500",
     },
