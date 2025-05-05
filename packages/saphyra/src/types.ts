@@ -172,10 +172,12 @@ export type GenericStoreMethods<
   >
   completeTransition(
     transition: any[],
+    action: TActions,
     onTransitionEnd?: OnTransitionEnd<TState, TEvents>
   ): void
   commitTransition(
     transition: any[] | null | undefined,
+    action: TActions,
     onTransitionEnd?: OnTransitionEnd<TState, TEvents>
   ): void
   handleAction(

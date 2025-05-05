@@ -170,6 +170,7 @@ type OnPushToHistoryProps<
   transition: any[] | null | undefined
   from: "dispatch" | "set" | "rerender"
   store: SomeStore<TState, TActions, TEvents, TUncontrolledState, TDeps>
+  action: TActions
 }
 
 type OnPushToHistory<
@@ -434,6 +435,7 @@ export function newStoreDef<
 
     const commitTransition: Met["commitTransition"] = (
       transition,
+      action,
       onTransitionEnd
     ) => {
       if (!transition) {
@@ -474,6 +476,7 @@ export function newStoreDef<
             transition,
             from: "dispatch",
             store,
+            action,
           }),
       })
       store.history = newHistory
@@ -492,6 +495,7 @@ export function newStoreDef<
 
     function completeTransition(
       transition: any[],
+      action: TActions,
       onTransitionEnd?: OnTransitionEnd<TState, TEvents>
     ) {
       const transitionString = transition.join(":")
@@ -500,7 +504,7 @@ export function newStoreDef<
         `%cTransition completed! [${transitionString}]`,
         "color: lightgreen"
       )
-      commitTransition(transition, onTransitionEnd)
+      commitTransition(transition, action, onTransitionEnd)
     }
 
     function getAbortController(transition?: any[] | null | undefined) {
@@ -589,7 +593,7 @@ export function newStoreDef<
 
       store.transitions.callbacks.done.set(transitionString, () => {
         console.log(`00) k done [${transitionString}]`, store.settersRegistry)
-        store.completeTransition(transition, action.onTransitionEnd)
+        store.completeTransition(transition, action, action.onTransitionEnd)
         // store.internal.events.emit("transition-completed", {
         //   id: internalTransitionId,
         //   status: "success",
@@ -811,6 +815,7 @@ export function newStoreDef<
               transition: null,
               from: "dispatch",
               store,
+              action: rootAction,
             }),
         })
 
@@ -854,7 +859,8 @@ export function newStoreDef<
 
     const rerender: Met["rerender"] = () => {
       const when = labelWhen(new Date())
-      const actionResult = handleAction({ type: "noop" } as TActions, {
+      const action = { type: "noop" } as TActions
+      const actionResult = handleAction(action, {
         when,
       })
       const [historyLatestState, newHistory] = handleNewStateToHistory({
@@ -866,6 +872,7 @@ export function newStoreDef<
             transition: null,
             from: "rerender",
             store,
+            action,
           }),
       })
 
@@ -1115,6 +1122,7 @@ export function newStoreDef<
               transition: null,
               from: "set",
               store,
+              action,
             }),
         })
 
