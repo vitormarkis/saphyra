@@ -102,7 +102,7 @@ export type GenericStoreValues<
   UncontrolledState<TUncontrolledState>
 
 type SetStateOptions = {
-  transition: any[]
+  transition?: any[] | null | undefined
 }
 
 export type InnerCreateAsync<

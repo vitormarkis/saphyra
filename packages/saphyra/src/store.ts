@@ -970,9 +970,9 @@ export function newStoreDef<
       )
       const { createAsync = defaultInnerCreateAsync } = props ?? {}
 
-      const transition = rootAction.transition ?? [GENERAL_TRANSITION]
+      const transition = rootAction.transition
       const controller = ensureAbortController({
-        transition,
+        transition: transition ?? [GENERAL_TRANSITION],
         controller: rootAction.controller,
       })
 
