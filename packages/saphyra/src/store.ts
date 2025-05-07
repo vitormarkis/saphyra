@@ -962,7 +962,7 @@ export function newStoreDef<
         TDeps
       >
     ): { newState: TState; prevState: TState; optimisticState: TState } => {
-      const { when } = props
+      const { when, optimisticStateSource } = props
       let newState = cloneObj(props?.state ?? store.state)
       let prevState = props?.prevState ?? store.state
       let optimisticState = cloneObj(
@@ -1083,7 +1083,7 @@ export function newStoreDef<
 
       isSync = false
 
-      notifyOptimistic(newState)
+      notifyOptimistic(optimisticStateSource ?? newState)
 
       return {
         newState,
@@ -1098,14 +1098,15 @@ export function newStoreDef<
         type: "noop",
         transition: options?.transition,
       } as Action
-      const actionResult = handleAction(action, {
-        when,
-        state: mergeObj(store.state, newPartialState),
-      })
-
       const transitionIsOngoing =
         options?.transition &&
         store.transitions.isHappeningUnique(options.transition)
+
+      const actionResult = handleAction(action, {
+        when,
+        state: mergeObj(store.state, newPartialState),
+        ...(transitionIsOngoing ? { optimisticStateSource: store.state } : {}),
+      })
 
       if (transitionIsOngoing) {
       } else {
