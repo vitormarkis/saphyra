@@ -1026,7 +1026,9 @@ export function newStoreDef<
               props?.onSet?.(setterOrPartialState)
             } else {
               const setter = ensureSetter(setterOrPartialState)
-              const stateFromSetter = setter(newState)
+              const stateFromSetter = setter(
+                transition ? newState : store.state
+              )
               store.setState(stateFromSetter, { transition })
             }
           },
