@@ -1003,19 +1003,15 @@ export function newStoreDef<
           async,
           optimistic: setterOrPartialState => {
             if (!transition) return
-            if (isSync) {
-              registerOnOptimisticSettersRegistry(
-                setterOrPartialState,
-                transition
-              )
-              applySetterOnCurrentState(
-                setterOrPartialState,
-                optimisticState,
-                optimisticState
-              )
-            } else {
-              // impossible case
-            }
+            registerOnOptimisticSettersRegistry(
+              setterOrPartialState,
+              transition
+            )
+            applySetterOnCurrentState(
+              setterOrPartialState,
+              optimisticState,
+              optimisticState
+            )
           },
           set: setterOrPartialState => {
             if (transition)
