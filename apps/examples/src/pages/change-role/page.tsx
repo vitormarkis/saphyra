@@ -1,17 +1,16 @@
 import { Spinner } from "@blueprintjs/core"
 import { fetchRole } from "./fn/fetch-role"
 import { newStoreDef } from "saphyra"
-import { useCallback, useEffect, useState } from "react"
-import { ErrorPage } from "~/components/error-page"
-import { fetchPermissions } from "~/pages/change-role/fn/get-permissions"
+import { Suspense, useEffect } from "react"
 import { Devtools } from "~/devtools/devtools"
 import { cn } from "~/lib/cn"
 import { TextChart } from "~/components/text-chart"
 import { CodeEditor } from "~/components/code-editor"
 import { removeCurrentToastsAndRegisterNewToasts } from "./fn/removeCurrentToastsAndRegisterNewToasts"
 import { toastWithResult } from "./fn/toast-with-result"
-import { createStoreUtils, useBootstrapError, useHistory } from "saphyra/react"
+import { createStoreUtils, useHistory } from "saphyra/react"
 import { Waterfall } from "~/devtools/waterfall"
+import { useSuspenseStore } from "saphyra/react"
 
 export type SelectedRole = "user" | "admin"
 
@@ -86,16 +85,17 @@ const newAuthStore = newStoreDef<
 export const Auth = createStoreUtils<typeof newAuthStore>()
 
 export function ChangeRolePage() {
-  const instantiateStore = useCallback(
-    () => newAuthStore({ role: "user", username: "" }, { name: "AuthStore" }),
-    []
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <ChangeRolePageInternal />
+    </Suspense>
   )
-  const authStoreState = useState(instantiateStore)
-  const [authStore] = authStoreState
-  const isBootstraping = Auth.useTransition(["bootstrap"], authStore)
-  const [error, tryAgain] = useBootstrapError(authStoreState, instantiateStore)
-
-  // Auth.useErrorHandlers(toastWithSonner, authStore)
+}
+function ChangeRolePageInternal() {
+  const authStore = useSuspenseStore(
+    () => newAuthStore({ role: "user", username: "" }),
+    "auth"
+  )
 
   useHistory(authStore)
 
@@ -103,28 +103,8 @@ export function ChangeRolePage() {
     Object.assign(window, { authStore })
   }, [authStore])
 
-  if (error != null) {
-    return (
-      <ErrorPage
-        error={error}
-        tryAgain={tryAgain}
-      />
-    )
-  }
-
-  if (isBootstraping)
-    return (
-      <div className="flex flex-col gap-4 h-full">
-        <div className="flex items-center gap-2 h-full">
-          <div className="w-full grid place-items-center">
-            <Spinner size={96} />
-          </div>
-        </div>
-      </div>
-    )
-
   return (
-    <Auth.Context.Provider value={authStoreState}>
+    <Auth.Context.Provider value={[authStore, () => {}]}>
       <ChangeRolePageContent />
     </Auth.Context.Provider>
   )

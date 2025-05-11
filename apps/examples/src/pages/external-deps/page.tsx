@@ -20,23 +20,22 @@ import { likePost } from "./fn/like-post"
 import { useHistory } from "saphyra/react"
 import { Waterfall } from "~/devtools/waterfall"
 import { X } from "lucide-react"
+import { useSuspenseStore } from "saphyra/react"
+import { IExternalDepsDependencies } from "./IStore"
+
+const deps: IExternalDepsDependencies = {
+  fetchLikedPosts,
+  fetchPosts,
+  placeComment,
+  likePost,
+}
 
 export function ExternalDepsPage() {
-  const [postsStore, setPostsStore] = useState(() =>
-    newPostsStore(
-      {},
-      {
-        deps: {
-          fetchLikedPosts,
-          fetchPosts,
-          placeComment,
-          likePost,
-        },
-      }
-    )
+  const postsStore = useSuspenseStore(
+    () => newPostsStore({}, { deps }),
+    "postsStore"
   )
 
-  const isBootstraping = Posts.useTransition(["bootstrap"], postsStore)
   const isCommentingPost = Posts.useCommittedSelector(
     s => s.commentingPostId != null,
     postsStore
@@ -45,16 +44,12 @@ export function ExternalDepsPage() {
 
   Posts.useErrorHandlers(toastWithSonner, postsStore)
 
-  useEffect(() => {}, [])
-
   useHistory(postsStore)
 
   /** [external-deps.react-query]
    * Use React Query as truth source for post comments
    */
   useEffect(() => {
-    if (isBootstraping) return
-
     return notifyOnChangeList(
       allPosts.map(post => ({
         ...getCommentsQueryOptions({
@@ -71,7 +66,7 @@ export function ExternalDepsPage() {
         })
       }
     )
-  }, [isBootstraping, allPosts, postsStore])
+  }, [allPosts, postsStore])
 
   useEffect(() => {
     Object.assign(window, { externalDeps: postsStore })
@@ -83,7 +78,7 @@ export function ExternalDepsPage() {
   }, [postsStore])
 
   return (
-    <Posts.Context.Provider value={[postsStore, setPostsStore]}>
+    <Posts.Context.Provider value={[postsStore, () => {}]}>
       <div className="h-full gap-4 flex flex-col @xl:flex-row overflow-hidden">
         <div
           className={cn(
@@ -91,15 +86,9 @@ export function ExternalDepsPage() {
             isCommentingPost && "overflow-hidden"
           )}
         >
-          {isBootstraping ? (
-            <div className="w-full h-full grid place-items-center">
-              <Spinner size={96} />
-            </div>
-          ) : (
-            <div className="mr-4 relative w-full">
-              <PostList />
-            </div>
-          )}
+          <div className="mr-4 relative w-full">
+            <PostList />
+          </div>
         </div>
         <div className="grid grid-rows-[1fr,1fr] min-h-0 min-w-0 w-1/2 h-full gap-4">
           <Devtools store={postsStore} />
