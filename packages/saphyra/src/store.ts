@@ -1012,6 +1012,8 @@ export function newStoreDef<
               optimisticState,
               optimisticState
             )
+
+            notifyOptimistic(optimisticStateSource ?? newState)
           },
           set: setterOrPartialState => {
             if (transition)
