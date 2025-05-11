@@ -24,10 +24,17 @@ export class Subject<T extends AnyFunction = AnyFunction> {
 export function createSubject<
   T extends AnyFunction = AnyFunction,
 >(): SubjectType<T> {
+  let isScheduled = false
   const observers = new Set<T>()
 
   function notify() {
-    observers.forEach(cb => cb())
+    if (isScheduled) return
+
+    isScheduled = true
+    setTimeout(function notifyFn() {
+      isScheduled = false
+      observers.forEach(cb => cb())
+    })
   }
 
   function subscribe(cb: T) {
