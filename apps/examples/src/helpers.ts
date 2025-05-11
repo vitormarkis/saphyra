@@ -12,7 +12,6 @@ export function createDebugableShallowCopy<T extends Record<string, any>>(
     Object.defineProperty(state, debugProp, {
       get: () => memory,
       set: newValue => {
-        console.log(state)
         memory = newValue
       },
       enumerable: true,
