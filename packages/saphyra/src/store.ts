@@ -48,6 +48,7 @@ import { defaultErrorHandler } from "./default-error-handler"
 import { setImmutable, setImmutableFn } from "./fn/common"
 import { mockAsync } from "./helpers/mock-async"
 import { mockEventEmitter } from "./helpers/mock-event-emitter"
+import { log, logDebug } from "./helpers/log"
 
 export type ExternalProps = Record<string, any> | null
 
@@ -445,11 +446,11 @@ export function newStoreDef<
       const transitionKey = transition.join(":")
       const setters = store.settersRegistry[transitionKey] ?? []
       if (!setters) {
-        console.log(
+        log(
           "No setters found for this transition. It's most likely you didn't use the `set` function in your reducer."
         )
       }
-      console.log("%c 00) k applying setters", "color: orange", setters)
+      logDebug("%c 00) k applying setters", "color: orange", setters)
       // if (setters.length > 0) {
       //   const has = setters.some(s => "name" in s)
       //   if (!has) debugger
@@ -500,7 +501,7 @@ export function newStoreDef<
     ) {
       const transitionString = transition.join(":")
       if (!transition) throw new Error("Impossible to reach this point")
-      console.log(
+      log(
         `%cTransition completed! [${transitionString}]`,
         "color: lightgreen"
       )
@@ -548,14 +549,14 @@ export function newStoreDef<
       //   store.state
       // )
       store.notify()
-      console.log("66- clearing optimistic")
+      logDebug("66- clearing optimistic")
 
       const newActionAbort = isNewActionError(error)
       if (!newActionAbort) {
         handleError(error, transition)
-        console.log(`%cTransition failed! [${transitionKey}]`, "color: red")
+        log(`%cTransition failed! [${transitionKey}]`, "color: red")
       } else {
-        console.log(
+        log(
           `%cPrevious transition canceled! [${transitionKey}], creating new one.`,
           "color: orange"
         )
@@ -592,7 +593,7 @@ export function newStoreDef<
       // } as { transitionName: string; id: string })
 
       store.transitions.callbacks.done.set(transitionString, () => {
-        console.log(`00) k done [${transitionString}]`, store.settersRegistry)
+        logDebug(`00) k done [${transitionString}]`, store.settersRegistry)
         store.completeTransition(transition, action, action.onTransitionEnd)
         // store.internal.events.emit("transition-completed", {
         //   id: internalTransitionId,
@@ -766,7 +767,7 @@ export function newStoreDef<
             newState,
             prevState: store.state,
           })
-          console.log("%c 44: done dispatching! (opt)", "color: coral")
+          logDebug("%c 44: done dispatching! (opt)", "color: coral")
         } else {
           // Returned no action and didn't even schedule a transition,
           // it means the action is done and there is no more computation to do
@@ -824,7 +825,7 @@ export function newStoreDef<
         defineState(newState)
         subject.notify()
       }
-      console.log("%c 44: done dispatching!", "color: coral")
+      logDebug("%c 44: done dispatching!", "color: coral")
     }
 
     const handleError: Met["handleError"] = (error, transition) => {

@@ -1,8 +1,9 @@
+import { log } from "./helpers/log"
 import type { StoreErrorHandler } from "./types"
 
 export const defaultErrorHandler: StoreErrorHandler = error => {
   function onError(error: string) {
-    console.log("Saphyra error:", error)
+    log("Saphyra error:", error)
   }
 
   if (!error) {
