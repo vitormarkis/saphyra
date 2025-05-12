@@ -1,9 +1,9 @@
 ---
 title: onConstruct
-description: A function that runs before the store is instantiated.
+description: A function that runs before the store is instantiated. Returns the first state of the store + derivations.
 ---
 
-### How it looks like:
+### How does it looks like:
 ```js
 const newAuthStore = newStoreDef({
   onConstruct({ initialProps }) {
