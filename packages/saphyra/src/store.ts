@@ -456,7 +456,6 @@ export function newStoreDef<
       //   if (!has) debugger
       // }
 
-      if (setters.length === 0 && transitionKey !== "bootstrap") debugger
       const newStateFromSetters = setters.reduce((acc: TState, setter) => {
         setter = mergeSetterWithState(ensureSetter(setter))
         const newState = setter(acc)
@@ -501,10 +500,7 @@ export function newStoreDef<
     ) {
       const transitionString = transition.join(":")
       if (!transition) throw new Error("Impossible to reach this point")
-      log(
-        `%cTransition completed! [${transitionString}]`,
-        "color: lightgreen"
-      )
+      log(`%cTransition completed! [${transitionString}]`, "color: lightgreen")
       commitTransition(transition, action, onTransitionEnd)
     }
 
