@@ -456,11 +456,14 @@ export function newStoreDef<
       // }
 
       if (setters.length === 0 && transitionKey !== "bootstrap") debugger
-      const newStateFromSetters = setters.reduce((acc: TState, setter) => {
-        setter = mergeSetterWithState(ensureSetter(setter))
-        const newState = setter(acc)
-        return mergeObj(acc, newState) as TState
-      }, cloneObj(store.state))
+      const newStateFromSetters = setters.reduce(
+        (acc: TState, stateOrSetter, _index) => {
+          const setter = mergeSetterWithState(ensureSetter(stateOrSetter))
+          const newState = setter(acc)
+          return mergeObj(acc, newState) as TState
+        },
+        cloneObj(store.state)
+      )
 
       store.settersRegistry = {
         ...store.settersRegistry,
