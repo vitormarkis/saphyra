@@ -1,0 +1,32 @@
+---
+title: reducer
+description: A function that defines how the store state changes in response to actions.
+---
+
+### `reducer`
+
+```js
+const newAuthStore = newStoreDef({
+  reducer({ prevState, state, action, set, async, diff, optimistic, store }) {
+    if (action.type === "set-name") {
+      optimistic({ name: action.name })
+      set({ name: action.name })
+    }
+
+    if (diff(["name"])) {
+      async
+        .promise(async ({ signal }) => {
+          const users = await listUsers(state.name, signal)
+          return users
+        })
+        .onSuccess((users, actor) => {
+          actor.set({ $users: users })
+        })
+    }
+
+    return state
+  },
+})
+```
+
+### Good to know:

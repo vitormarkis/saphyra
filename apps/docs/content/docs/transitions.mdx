@@ -1,0 +1,22 @@
+---
+title: Transitions
+description: Learn how to use transitions in Saphyra
+---
+
+### What is a transition?
+
+A transition is a safe mechanism for changing your application's state from one valid state to another valid state when those changes involve asynchronous operations. It ensures data consistency throughout the entire process.
+
+## How transitions work
+
+Transitions work similarly to database transactions: either all changes are applied successfully, or all changes are discarded if anything fails, preventing inconsistent states.
+
+Here's what happens when you fire a transition:
+
+1. When you dispatch an action with a transition property, Saphyra creates a "fork" of your current state
+2. All changes (`set` calls) are applied to this forked state
+3. Once all operations succeed (no errors or rejected promises), all changes are atomically merged back into the original state
+4. If any error occurs or any promise is rejected, all changes are discarded and no changes are applied to the original state
+
+> This design preserves the consistency of your application's state by ensuring that no intermediate states are committed and no inconsistent states are created.
+

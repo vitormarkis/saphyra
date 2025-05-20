@@ -2,6 +2,7 @@ import { DoneKeyOptions, OnFinishTransition } from "./types"
 import { EventEmitter } from "./event-emitter"
 import { Subject } from "./Subject"
 import { setImmutable } from "./fn/common"
+import { logDebug } from "./helpers/log"
 
 export type TransitionsStoreState = {
   transitions: Record<string, number>
@@ -132,7 +133,7 @@ export class TransitionsStore extends Subject {
   private setState(newState: TransitionsStoreState) {
     this.state = newState
     if (this.#shouldLog)
-      console.log(`${this.#prefix} transitions`, this.state.transitions)
+      logDebug(`${this.#prefix} transitions`, this.state.transitions)
     this.notify()
   }
 
@@ -168,7 +169,7 @@ export class TransitionsStore extends Subject {
     if (this.#shouldLog) {
       const key = transition?.join(":")
       const sub = this.state.transitions[key] ?? 0
-      console.log(
+      logDebug(
         `%c ${this.#prefix} k add: ${key} ${from} [${sub}]`,
         "color: steelblue"
       )
@@ -246,7 +247,7 @@ export class TransitionsStore extends Subject {
     if (this.#shouldLog) {
       const key = transition?.join(":")!
       const sub = this.state.transitions[key] ?? 0
-      console.log(
+      logDebug(
         `%c ${this.#prefix} k done: ${key} ${from} [${sub}]`,
         "color: turquoise"
       )

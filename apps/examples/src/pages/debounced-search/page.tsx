@@ -109,7 +109,6 @@ export function DebouncedSearchView({}: DebouncedSearchViewProps) {
     Object.assign(window, { debouncedSearch })
   }, [debouncedSearch])
 
-  const state = DebouncedSearch.useStore()
   const optimisticState = DebouncedSearch.useOptimisticStore()
   const query = DebouncedSearch.useOptimisticStore(s => s.name)
 
@@ -117,11 +116,7 @@ export function DebouncedSearchView({}: DebouncedSearchViewProps) {
     toast(extractErrorMessage(error))
   }, debouncedSearch)
 
-  const optimisticQuery = DebouncedSearch.useOptimisticStore(s => s.name)
   const isLoading = DebouncedSearch.useTransition(["debounced-search", "name"])
-  useEffect(() => {
-    console.log("11-", isLoading)
-  }, [isLoading])
 
   const action = useCallback(
     (newQuery: string) => {

@@ -22,7 +22,7 @@ export class Subject<T extends AnyFunction = AnyFunction> {
 }
 
 export function createSubject<
-  T extends AnyFunction = AnyFunction,
+  T extends AnyFunction = AnyFunction
 >(): SubjectType<T> {
   let isScheduled = false
   const observers = new Set<T>()
