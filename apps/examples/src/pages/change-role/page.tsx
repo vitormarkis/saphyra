@@ -38,7 +38,7 @@ const newAuthStore = newStoreDef<
 >({
   config: {
     onPushToHistory({ history, state, transition }) {
-      if (!!transition) return []
+      if (!!transition) return [state]
       return [...history, state]
     },
   },
@@ -253,13 +253,14 @@ function ChangeRolePageContent() {
           </div>
         ) : null}
       </div>
-      <div className="h-full grid grid-cols-1 gap-2 min-w-0">
+      <pre>{JSON.stringify(state, null, 2)}</pre>
+      {/* <div className="h-full grid grid-cols-1 gap-2 min-w-0">
         <Devtools
           store={authStore}
           allExpanded
         />
         <Waterfall store={authStore} />
-      </div>
+      </div> */}
       {/* </div> */}
     </div>
   )

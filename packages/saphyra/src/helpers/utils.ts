@@ -40,3 +40,11 @@ export function newSetter<TState>(
 ): Setter<TState> {
   return () => newPartialState
 }
+
+export function ensureSetter<TState>(
+  setterOrPartialStateList: SetterOrPartialState<TState>
+) {
+  return isSetter(setterOrPartialStateList)
+    ? setterOrPartialStateList
+    : newSetter(setterOrPartialStateList)
+}

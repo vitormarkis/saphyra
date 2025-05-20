@@ -32,7 +32,7 @@ import type {
 import { EventEmitter, EventsTuple } from "./event-emitter"
 import { noop } from "./fn/noop"
 import { ErrorsStore } from "./errors-store"
-import { isNewActionError, labelWhen } from "./utils"
+import { createAncestor, isNewActionError, labelWhen } from "./utils"
 import { getSnapshotAction } from "./helpers/get-snapshot-action"
 import { Rollback } from "./helpers/rollback"
 import invariant from "tiny-invariant"
@@ -40,6 +40,7 @@ import { GENERAL_TRANSITION } from "./const"
 import { assignObjValues, cloneObj, mergeObj } from "./helpers/obj-descriptors"
 import {
   createDebugableShallowCopy,
+  ensureSetter,
   isAsyncFunction,
   isSetter,
   newSetter,
@@ -49,6 +50,7 @@ import { setImmutable, setImmutableFn } from "./fn/common"
 import { mockAsync } from "./helpers/mock-async"
 import { mockEventEmitter } from "./helpers/mock-event-emitter"
 import { log, logDebug } from "./helpers/log"
+import { TransitionsStateStore } from "./transitions-state"
 
 export type ExternalProps = Record<string, any> | null
 
@@ -344,6 +346,7 @@ export function newStoreDef<
       state: {} as TState,
       optimisticState: {} as TState,
       uncontrolledState: {} as TUncontrolledState,
+      transitionsState: new TransitionsStateStore<TState>(),
     }
     let store = createDebugableShallowCopy(
       storeValues as unknown as SomeStore<
@@ -470,6 +473,8 @@ export function newStoreDef<
         ...store.settersRegistry,
         [transitionKey]: [],
       }
+      updateTransitionState(transition, null)
+
       store.optimisticRegistry.clear(transitionKey)
       const [newState, newHistory] = handleNewStateToHistory({
         state: newStateFromSetters,
@@ -542,6 +547,8 @@ export function newStoreDef<
         transitionKey,
         []
       )
+      updateTransitionState(transition, null)
+
       store.optimisticRegistry.clear(transitionKey)
       notifyOptimistic()
       // store.optimisticState = calculateOptimisticState(
@@ -921,20 +928,6 @@ export function newStoreDef<
       return createAsync(store, when, transition, signal, from)
     }
 
-    const registerOnSettersRegistry = (
-      setterOrPartialState: SetterOrPartialState<TState>,
-      transition: any[]
-    ) => {
-      const transitionKey = transition.join(":")
-      store.settersRegistry = {
-        ...store.settersRegistry,
-        [transitionKey]: [
-          ...(store.settersRegistry[transitionKey] ?? []),
-          setterOrPartialState,
-        ],
-      }
-    }
-
     const registerOnOptimisticSettersRegistry = (
       setterOrPartialState: SetterOrPartialState<TState>,
       transition: any[]
@@ -1017,22 +1010,19 @@ export function newStoreDef<
             notifyOptimistic(optimisticStateSource ?? newState)
           },
           set: setterOrPartialState => {
-            if (transition)
-              registerOnSettersRegistry(setterOrPartialState, transition)
-
+            props?.onSet?.(setterOrPartialState)
             if (isSync) {
+              if (transition) {
+                updateTransitionState(transition, setterOrPartialState)
+              }
+
               applySetterOnCurrentState(
                 setterOrPartialState,
                 newState,
                 newState
               )
-              props?.onSet?.(setterOrPartialState)
             } else {
-              const setter = ensureSetter(setterOrPartialState)
-              const stateFromSetter = setter(
-                transition ? newState : store.state
-              )
-              store.setState(stateFromSetter, { transition })
+              store.setState(setterOrPartialState, { transition })
             }
           },
           diff: createDiff(prevState, newState),
@@ -1097,41 +1087,185 @@ export function newStoreDef<
       }
     }
 
-    const setState: Met["setState"] = (newPartialState, options) => {
-      const when = labelWhen(new Date())
+    const updateTransitionState = (
+      transition: any[],
+      newSetterOrPartialState: SetterOrPartialState<TState> | null
+    ) => {
+      const transitionKey = transition.join(":")
+      const setter = newSetterOrPartialState
+        ? ensureSetter(newSetterOrPartialState)
+        : null
+
+      if (setter) {
+        store.settersRegistry = {
+          ...store.settersRegistry,
+          [transitionKey]: [
+            ...(store.settersRegistry[transitionKey] ?? []),
+            setter,
+          ],
+        }
+      }
+
+      function updateTransitionState(
+        setterOrPartialStateList: SetterOrPartialState<TState>[]
+      ) {
+        const newState = cloneObj(store.state)
+        setterOrPartialStateList.forEach(setterOrPartialState => {
+          applySetterOnCurrentState(setterOrPartialState, newState, newState)
+        })
+
+        return newState
+      }
+
+      function getAncestorSettersOfTransition(
+        transitionAncestor: any[]
+      ): SetterOrPartialState<TState>[] {
+        const transitionKey = transitionAncestor.join(":")
+        return Object.entries(store.settersRegistry)
+          .filter(([key]) => key.startsWith(transitionKey))
+          .flatMap(([, setters]) => setters)
+      }
+
+      createAncestor(transition).forEach(transitionAncestor => {
+        const allSetters = getAncestorSettersOfTransition(transitionAncestor)
+        const shouldClear = allSetters.length === 0
+        const transitionAncestorKey = transitionAncestor.join(":")
+
+        if (shouldClear) {
+          store.transitionsState.setState({
+            [transitionAncestorKey]: null,
+          })
+        } else {
+          const newState = updateTransitionState(allSetters)
+          /**
+           * Updates the transition state
+           */
+          store.transitionsState.setState({
+            [transitionAncestorKey]: newState,
+          })
+        }
+      })
+
+      log(
+        `%c [${transition.join(":")}]`,
+        "color: coral",
+        store.transitionsState.state
+      )
+    }
+
+    const handleSetStateTransitionOngoing = (
+      setterOrPartialState: SetterOrPartialState<TState>,
+      action: Action & { transition: any[] },
+      when: string
+    ) => {
+      const transitionString = action.transition.join(":")
+      const getTransitionState = () =>
+        store.transitionsState.state[transitionString] ?? store.state
+      const prevState = getTransitionState()
+
+      // Updates the store.transitionsState
+      updateTransitionState(action.transition, setterOrPartialState)
+
+      const state = getTransitionState()
+
+      handleAction(action, {
+        when,
+        state,
+        prevState,
+        optimisticStateSource: store.state,
+      })
+    }
+
+    const handleSetStateTransitionToStart = (
+      setterOrPartialState: SetterOrPartialState<TState>,
+      action: Action & { transition: any[] },
+      when: string
+    ) => {
+      const state = store.state
+
+      const setter = ensureSetter(setterOrPartialState)
+      const newPartialState = setter(state)
+
+      handleAction(action, {
+        when,
+        state: mergeObj(state, newPartialState),
+      })
+    }
+
+    const handleSetStateWithoutTransition = (
+      setterOrPartialState: SetterOrPartialState<TState>,
+      when: string
+    ) => {
+      const setter = ensureSetter(setterOrPartialState)
+      const state = store.state
+      const newPartialState = setter(state)
       const action = {
         type: "noop",
-        transition: options?.transition,
+        transition: null,
       } as Action
-      const transitionIsOngoing =
-        options?.transition &&
-        store.transitions.isHappeningUnique(options.transition)
 
       const actionResult = handleAction(action, {
         when,
-        state: mergeObj(store.state, newPartialState),
-        ...(transitionIsOngoing ? { optimisticStateSource: store.state } : {}),
+        state: mergeObj(state, newPartialState),
       })
 
+      const [historyLatestState, newHistory] = handleNewStateToHistory({
+        state: actionResult.newState,
+        getNewHistoryStack: state =>
+          onPushToHistory({
+            history: store.history,
+            state,
+            transition: null,
+            from: "set",
+            store,
+            action,
+          }),
+      })
+
+      store.history = newHistory
+      defineState(historyLatestState)
+
+      subject.notify()
+    }
+
+    const handleSetStateWithTransition = (
+      setterOrPartialState: SetterOrPartialState<TState>,
+      transition: any[],
+      when: string
+    ) => {
+      const transitionIsOngoing =
+        transition && store.transitions.isHappeningUnique(transition)
+
+      const action = {
+        type: "noop",
+        transition,
+      } as Action
+
       if (transitionIsOngoing) {
+        handleSetStateTransitionOngoing(
+          setterOrPartialState,
+          action as Action & { transition: any[] },
+          when
+        )
       } else {
-        const [historyLatestState, newHistory] = handleNewStateToHistory({
-          state: actionResult.newState,
-          getNewHistoryStack: state =>
-            onPushToHistory({
-              history: store.history,
-              state,
-              transition: null,
-              from: "set",
-              store,
-              action,
-            }),
-        })
+        handleSetStateTransitionToStart(
+          setterOrPartialState,
+          action as Action & { transition: any[] },
+          when
+        )
+      }
+    }
 
-        store.history = newHistory
-        defineState(historyLatestState)
-
-        subject.notify()
+    const setState: Met["setState"] = (setterOrPartialState, options) => {
+      const when = labelWhen(new Date())
+      if (options?.transition) {
+        handleSetStateWithTransition(
+          setterOrPartialState,
+          options.transition,
+          when
+        )
+      } else {
+        handleSetStateWithoutTransition(setterOrPartialState, when)
       }
     }
 
@@ -1225,6 +1359,8 @@ export function newStoreDef<
         async.promise(async ctx => {
           const pureState = await handleConstruction(ctx)
           const initialState = pureState as TState
+          updateTransitionState(BOOTSTRAP_TRANSITION, initialState)
+
           const handledDispatch = handleAction(
             {
               type: "noop",
@@ -1253,6 +1389,8 @@ export function newStoreDef<
             signal,
             deps,
           }) as TState
+
+          updateTransitionState(BOOTSTRAP_TRANSITION, initialState)
 
           const { newState: processedState } = handleAction(bootstrapAction, {
             when,
@@ -1316,14 +1454,6 @@ export function mergeSetterWithState<TState>(setter: Setter<TState>) {
     const newState = isSetter(setter) ? setter(currentState) : setter
     return mergeObj(currentState, newState)
   }
-}
-
-export function ensureSetter<TState>(
-  setterOrPartialStateList: SetterOrPartialState<TState>
-) {
-  return isSetter(setterOrPartialStateList)
-    ? setterOrPartialStateList
-    : newSetter(setterOrPartialStateList)
 }
 
 type HandleNewStateToHistoryProps<TState> = {

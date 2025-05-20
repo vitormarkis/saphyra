@@ -85,7 +85,7 @@ export default function App() {
       <div className="grid grid-rows-[auto_auto_1fr] gap-4 overflow-y-hidden">
         <Content />
         <div className="min-h-[160px]">
-          <Devtools store={homeStore} />
+          {/* <Devtools store={homeStore} /> */}
         </div>
         <div className="">
           <Waterfall store={homeStore} />
@@ -98,9 +98,12 @@ export default function App() {
 export function Content() {
   const [todosStore] = Todos.useUseState()
   const isTransitioning = Todos.useTransition(["increment"])
+  const state = Todos.useTransitionState(["increment"])
+  useEffect(() => console.log({ state }), [state])
 
   return (
     <div className="flex flex-col">
+      <pre>{JSON.stringify(state, null, 2)}</pre>
       <span className="bg-lime-50 dark:bg-lime-950 text-lime-800/80 border dark:border-lime-800 dark:text-lime-50 border-lime-300 rounded-sm px-2 py-1 text-xs/none h-fit mb-2 w-fit">
         Mess around and press CTRL Z and CTRL Y to undo and redo
       </span>

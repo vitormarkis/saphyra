@@ -73,6 +73,21 @@ export function createStoreUtils<
 
   const useStore = createUseStore(store => store.getState())
   const useOptimisticStore = createUseStore(store => store.getOptimisticState())
+  function useTransitionState<R = TState>(
+    transition: any[],
+    selector?: (data: TState) => R,
+    store = getDefaultStore()
+  ) {
+    const finalSelector = selector ?? (defaultSelector as (data: TState) => R)
+    return useSyncExternalStore(
+      cb => store.subscribe(cb),
+      () => {
+        const state =
+          store.transitionsState.state[transition.join(":")] ?? store.getState()
+        return finalSelector(state)
+      }
+    )
+  }
 
   function useLazyValue<TTransition extends any[], TPromiseResult, R = TState>(
     options: LazyValueOptions<TState, TTransition, TPromiseResult, R>
@@ -114,6 +129,7 @@ export function createStoreUtils<
     useErrorHandlers,
     useLazyValue,
     createLazyOptions: opts => opts,
+    useTransitionState,
   }
 
   return utils
@@ -151,4 +167,9 @@ export type StoreUtils<
   createLazyOptions: <const TTransition extends any[], TPromiseResult, R>(
     options: LazyValueOptions<TState, TTransition, TPromiseResult, R>
   ) => LazyValueOptions<TState, TTransition, TPromiseResult, R>
+  useTransitionState: <R = TState>(
+    transition: any[],
+    selector?: (data: TState) => R,
+    store?: TStore
+  ) => R
 }

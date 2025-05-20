@@ -308,9 +308,12 @@ export function WaterfallTooltip({
 }: ContentProps) {
   const { extractErrorMessage: extractErrorMessageFn } =
     useContext(WaterfallContext) ?? {}
-  if (!seeingBar) return null
-  const barInfo = WF.useStore(s => s.$barsByBarId[seeingBar])
+  const barInfo = WF.useStore(s =>
+    seeingBar ? s.$barsByBarId[seeingBar] : null
+  )
+  if (!seeingBar || barInfo === null) return null
   // const barInfo = MOCK
+
   return (
     <div
       className="absolute z-50 left-0 top-0 pointer-events-none"

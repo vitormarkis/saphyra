@@ -15,3 +15,11 @@ export function labelWhen(date: Date) {
   const milisecond = milisecondWithZ.slice(0, -1)
   return `${minute}m_${second}s_${milisecond}ms`
 }
+
+export function createAncestor<T>(head: any[]): T[][] {
+  return head.reduce((acc, _, idx, arr) => {
+    const items = arr.slice(0, ++idx)
+    acc.push(items)
+    return acc
+  }, [])
+}

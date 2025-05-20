@@ -7,7 +7,7 @@ type FetchRoleProps = {
 }
 
 // const { getLuck } = createLuck([1])
-const { getLuck } = createLuck([1, 0, 1, 1, 1])
+const { getLuck } = createLuck([1, 0, 1])
 
 export async function fetchRole({ roleName, signal }: FetchRoleProps) {
   await sleep(700, "fetching role", signal)

@@ -3,6 +3,7 @@ import { StoreConstructorConfig } from "./store"
 import { TransitionsStore } from "./transitions-store"
 import { ErrorsStore } from "./errors-store"
 import { SubjectType } from "./Subject"
+import { TransitionsStateStore } from "./transitions-state"
 
 export type TODO = any
 
@@ -96,6 +97,7 @@ export type GenericStoreValues<
   errorHandlers: Set<StoreErrorHandler>
   settersRegistry: SettersRegistry<TState>
   optimisticRegistry: OptimisticRegistry<TState>
+  transitionsState: TransitionsStateStore<TState>
   name?: string
 } & TransitionsExtension &
   HistoryExtension<TState> &
@@ -153,7 +155,10 @@ export type GenericStoreMethods<
   getState(): TState
   getOptimisticState(): TState
   dispatch: Dispatch<TState, TActions, TEvents>
-  setState(newState: Partial<TState>, options?: SetStateOptions): void
+  setState(
+    setterOrPartialState: SetterOrPartialState<TState>,
+    options?: SetStateOptions
+  ): void
   registerOptimistic: InnerReducerOptimistic<TState>
   createOptimisticScheduler(
     transition: any[] | null | undefined,

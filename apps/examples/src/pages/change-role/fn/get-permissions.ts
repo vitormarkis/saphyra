@@ -9,7 +9,7 @@ type FetchPermissionsProps = {
 }
 
 // const { getLuck } = createLuck([1])
-const { getLuck } = createLuck([1, 1, 1, 0, 1, 0])
+const { getLuck } = createLuck([1, 1, 1])
 
 export async function fetchPermissions({
   role,
