@@ -1,9 +1,9 @@
 export function log(...args: any[]) {
-  if (import.meta.env.MODE === "production") return
+  if (process.env.NODE_ENV === "production") return
   return console.log(...args)
 }
 
 export function logDebug(...args: any[]) {
-  if (import.meta.env.MODE !== "debug") return
+  if (process.env.DEBUG !== "true") return
   return console.log(...args)
 }
