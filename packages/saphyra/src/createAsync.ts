@@ -1,5 +1,6 @@
 import { EventsTuple } from "./event-emitter"
 import { noop } from "./fn/noop"
+import { PromiseWithResolvers } from "./polyfills/promise-with-resolvers"
 import { runSuccessCallback } from "./transitions-store"
 import {
   ActionShape,
@@ -78,7 +79,7 @@ export function createAsync<
 
     async function handlePromise(promise: Promise<T>) {
       if (!transition) throw errorNoTransition()
-      const racePromise = Promise.withResolvers<T>()
+      const racePromise = PromiseWithResolvers<T>()
 
       const finishBar = newBar(transitionString, labelWhen(new Date()), label)
 
