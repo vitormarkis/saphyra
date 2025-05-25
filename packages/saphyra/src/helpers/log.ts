@@ -1,9 +1,11 @@
+const isDev =
+  typeof process !== "undefined" && process.env.NODE_ENV !== "production"
+const isDebug = typeof process !== "undefined" && process.env.DEBUG === "true"
+
 export function log(...args: any[]) {
-  if (process.env.NODE_ENV === "production") return
-  return console.log(...args)
+  if (isDev) console.log(...args)
 }
 
 export function logDebug(...args: any[]) {
-  if (process.env.DEBUG !== "true") return
-  return console.log(...args)
+  if (isDev || isDebug) console.debug(...args)
 }
