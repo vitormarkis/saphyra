@@ -8,6 +8,7 @@ export function useBootstrapError<TStore extends SomeStoreGeneric>(
 ) {
   const error = useSyncExternalStore(
     cb => store.errors.subscribe(cb),
+    () => store.errors.state.bootstrap,
     () => store.errors.state.bootstrap
   )
 

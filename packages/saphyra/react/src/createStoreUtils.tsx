@@ -44,6 +44,7 @@ export function createStoreUtils<
   ): boolean {
     return useSyncExternalStore(
       cb => store.transitions.subscribe(cb),
+      () => store.transitions.get(transition) > 0,
       () => store.transitions.get(transition) > 0
     )
   }
@@ -66,6 +67,7 @@ export function createStoreUtils<
       const finalSelector = selector ?? (defaultSelector as (data: TState) => R)
       return useSyncExternalStore(
         cb => store.subscribe(cb),
+        () => finalSelector(getStoreState(store)),
         () => finalSelector(getStoreState(store))
       )
     }
@@ -81,6 +83,11 @@ export function createStoreUtils<
     const finalSelector = selector ?? (defaultSelector as (data: TState) => R)
     return useSyncExternalStore(
       cb => store.subscribe(cb),
+      () => {
+        const state =
+          store.transitionsState.state[transition.join(":")] ?? store.getState()
+        return finalSelector(state)
+      },
       () => {
         const state =
           store.transitionsState.state[transition.join(":")] ?? store.getState()
