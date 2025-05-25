@@ -9,6 +9,8 @@ type Eventable = {
   ): void
 }
 
+const isBrowser = typeof window !== "undefined"
+
 export function useHistory<
   TState extends Record<string, any> = any,
   TActions extends ActionShape<TState, TEvents> = ActionShape<TState, any>,
@@ -17,9 +19,11 @@ export function useHistory<
   TDeps = undefined,
 >(
   store: SomeStore<TState, TActions, TEvents, TUncontrolledState, TDeps>,
-  el: Eventable = document
+  el: Eventable | null = isBrowser ? document : null
 ) {
   useEffect(() => {
+    if (!el) return
+
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "z" && event.ctrlKey) {
         event.preventDefault()
@@ -36,5 +40,5 @@ export function useHistory<
     return () => {
       el.removeEventListener("keydown", handleKeyDown)
     }
-  }, [store])
+  }, [store, el])
 }
