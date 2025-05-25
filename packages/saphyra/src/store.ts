@@ -1308,7 +1308,6 @@ export function newStoreDef<
     ) {
       const when = labelWhen(new Date())
       const rollback = new Rollback()
-      Object.assign(window, { _store: store })
 
       store.errorHandlers = config.errorHandlers
         ? new Set(config.errorHandlers)
