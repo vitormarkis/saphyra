@@ -662,6 +662,12 @@ export function newStoreDef<
         deps,
       }
 
+      const transitionString = action.transition?.join(":")
+      const signal = transitionString
+        ? store.transitions.controllers.values[transitionString]?.signal
+        : null
+      if (signal?.aborted) return
+
       // I'm not using the returned state here because the only side effect that I want
       // is happening on the `scheduleOptimistic`, which is updating the optimistic state
       // immediately
@@ -969,6 +975,7 @@ export function newStoreDef<
         transition: transition ?? [GENERAL_TRANSITION],
         controller: rootAction.controller,
       })
+      const signal = controller.signal
 
       let isSync = true
       const actionsQueue: Action[] = [rootAction]
@@ -979,7 +986,7 @@ export function newStoreDef<
           when,
           store,
           transition: action.transition,
-          signal: controller.signal,
+          signal,
           from: "action",
         })
         const context: ReducerProps<
@@ -996,6 +1003,7 @@ export function newStoreDef<
           store,
           async,
           optimistic: setterOrPartialState => {
+            if (signal.aborted) return
             if (!transition) return
             registerOnOptimisticSettersRegistry(
               setterOrPartialState,
@@ -1010,6 +1018,7 @@ export function newStoreDef<
             notifyOptimistic(optimisticStateSource ?? newState)
           },
           set: setterOrPartialState => {
+            if (signal.aborted) return
             props?.onSet?.(setterOrPartialState)
             if (isSync) {
               if (transition) {
@@ -1027,6 +1036,7 @@ export function newStoreDef<
           },
           diff: createDiff(prevState, newState),
           dispatch: (action: Action) => {
+            if (signal.aborted) return
             const safeAction = {
               ...action,
               transition: rootAction.transition ?? null, // sobreescrevendo transition, deve agrupar varias TODO
@@ -1334,6 +1344,7 @@ export function newStoreDef<
       const isAsync = isAsyncFunction(onConstruct)
       if (isAsync) {
         async function handleConstruction(ctx: AsyncPromiseProps) {
+          if (ctx.signal.aborted) throw { code: 20 }
           const initialState = await onConstruct({
             initialProps,
             store,

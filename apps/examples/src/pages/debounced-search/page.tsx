@@ -203,11 +203,11 @@ export function DebouncedSearchView({}: DebouncedSearchViewProps) {
               setTimeout(() => void action("emil"), 1200)
               setTimeout(() => void action("emily"), 1500)
             }
-            dispatchingThenCancelling()
+            // dispatchingThenCancelling()
             // cancellingBeforeRedispatch()
             // abortTimerThenAbortRequest()
             // abortRequestThenAbortTimer()
-            // typingSlowly()
+            typingSlowly()
           }}
         >
           Test
