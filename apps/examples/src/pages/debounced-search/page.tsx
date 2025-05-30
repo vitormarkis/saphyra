@@ -127,6 +127,9 @@ export function DebouncedSearchView({}: DebouncedSearchViewProps) {
         beforeDispatch({ transition, createAsync, action, abort, store }) {
           // abort(transition)
           // return action
+          const async = createAsync()
+          abort(transition)
+
           const cachedUsers = queryClient.getQueryData<any[]>(
             getUserListQueryOptions({ name: action.name }).queryKey
           )
@@ -135,8 +138,6 @@ export function DebouncedSearchView({}: DebouncedSearchViewProps) {
             return action
           }
 
-          const async = createAsync()
-          abort(transition)
           async.timer(() => store.dispatch(action), 500, {
             label: `d [${action.name}]`,
           })
@@ -202,11 +203,11 @@ export function DebouncedSearchView({}: DebouncedSearchViewProps) {
               setTimeout(() => void action("emil"), 1200)
               setTimeout(() => void action("emily"), 1500)
             }
-            // dispatchingThenCancelling()
+            dispatchingThenCancelling()
             // cancellingBeforeRedispatch()
             // abortTimerThenAbortRequest()
             // abortRequestThenAbortTimer()
-            typingSlowly()
+            // typingSlowly()
           }}
         >
           Test
