@@ -1,4 +1,5 @@
 import { ExternalDepsPage } from "~/pages/external-deps/page"
+import { RevalidationListPage } from "~/pages/revalidation-list/page"
 import { ChangeRolePage } from "./pages/change-role/page"
 import { GithubProfilePage } from "./pages/github-profile/page"
 import { MemoryGamePage } from "./pages/memory-game/page"
@@ -28,6 +29,10 @@ export const myRoutesManifest = [
   {
     path: "/external-deps",
     element: <ExternalDepsPage />,
+  },
+  {
+    path: "/revalidation-list",
+    element: <RevalidationListPage />,
   },
   {
     path: "/before-dispatch",
