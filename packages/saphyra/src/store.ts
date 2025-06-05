@@ -455,12 +455,7 @@ export function newStoreDef<
         )
       }
       logDebug("%c 00) k applying setters", "color: orange", setters)
-      // if (setters.length > 0) {
-      //   const has = setters.some(s => "name" in s)
-      //   if (!has) debugger
-      // }
 
-      if (setters.length === 0 && transitionKey !== "bootstrap") debugger
       const newStateFromSetters = setters.reduce(
         (acc: TState, stateOrSetter, _index) => {
           const setter = mergeSetterWithState(ensureSetter(stateOrSetter))
@@ -499,6 +494,7 @@ export function newStoreDef<
         state: newState,
         transition,
         transitionStore: store.transitions,
+        aborted: false,
       })
       subject.notify()
     }
@@ -550,8 +546,11 @@ export function newStoreDef<
       )
       updateTransitionState(transition, null)
 
-      store.optimisticRegistry.clear(transitionKey)
-      notifyOptimistic()
+      if (isNewActionError(error)) {
+      } else {
+        store.optimisticRegistry.clear(transitionKey)
+        notifyOptimistic()
+      }
       // store.optimisticState = calculateOptimisticState(
       //   store.optimisticState,
       //   store.state
@@ -623,6 +622,7 @@ export function newStoreDef<
           state: store.state,
           transition,
           transitionStore: store.transitions,
+          aborted: false,
         })
       })
     }
@@ -688,6 +688,10 @@ export function newStoreDef<
       const controller = store.transitions.controllers.get(transition)
       // I would love to run `cleanUpTransition` as an event listener of the signal abortion
       cleanUpTransition(transition!, { code: 20 })
+      store.transitions.allEvents.emit(
+        "transition-aborted",
+        transition.join(":")
+      )
       const newController = new AbortController()
       controller?.signal.addEventListener("abort", () => {
         store.transitions.setController(transition, newController)
@@ -789,7 +793,20 @@ export function newStoreDef<
             when,
             transition ?? initialAction.transition,
             signal ?? initialController.signal,
-            "before-dispatch-async"
+            "before-dispatch-async",
+            () => {
+              const t = transition ?? initialAction.transition
+              if (!t) return
+              opts.action.onTransitionEnd?.({
+                events: store.events,
+                meta: store.transitions.meta.get(t),
+                state: store.state,
+                transition: t,
+                transitionStore: store.transitions,
+                error: { code: 20 },
+                aborted: true,
+              })
+            }
           ),
         abort,
         store,
@@ -951,6 +968,7 @@ export function newStoreDef<
       transition,
       signal,
       from,
+      onAbort,
     }: InnerCreateAsync<
       TState,
       TActions,
@@ -958,7 +976,7 @@ export function newStoreDef<
       TUncontrolledState,
       TDeps
     >) => {
-      return createAsync(store, when, transition, signal, from)
+      return createAsync(store, when, transition, signal, from, onAbort)
     }
 
     const registerOnOptimisticSettersRegistry = (
@@ -1015,6 +1033,18 @@ export function newStoreDef<
           transition: action.transition,
           signal,
           from: "action",
+          onAbort: () => {
+            if (!action.transition) return
+            action.onTransitionEnd?.({
+              events: store.events,
+              meta: store.transitions.meta.get(action.transition),
+              state: store.state,
+              transition: action.transition,
+              transitionStore: store.transitions,
+              error: { code: 20 },
+              aborted: true,
+            })
+          },
         })
         const context: ReducerProps<
           TState,
@@ -1066,8 +1096,7 @@ export function newStoreDef<
             if (signal.aborted) return
             const safeAction = {
               ...action,
-              transition: rootAction.transition ?? null, // sobreescrevendo transition, deve agrupar varias TODO
-              onTransitionEnd: () => {}, // it will become a mess if multiple of these run at the same time
+              transition: action.transition ?? rootAction.transition ?? null,
             }
             if (isSync) {
               actionsQueue.push(safeAction)

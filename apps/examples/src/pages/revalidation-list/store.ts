@@ -1,9 +1,11 @@
-import { newStoreDef } from "saphyra"
+import { newStoreDef, runSuccessCallback } from "saphyra"
 import { createStoreUtils } from "saphyra/react"
 import { TodoType } from "./types"
 import { reduceGroupById } from "./fn/reduce-group-by-user-id"
 import { groupByKey } from "~/lib/reduce-group-by"
 import { getTodosFromDb, toggleTodoInDb } from "./fn/fake-todos-db"
+import { cancelPrevious } from "./before-dispatches"
+import { PromiseWithResolvers } from "./polyfills/promise-with-resolvers"
 
 type RevalidationListState = {
   todos: TodoType[]
@@ -12,14 +14,11 @@ type RevalidationListState = {
 
 type RevalidationListInitialProps = {}
 
-type RevalidationListActions =
-  | {
-      type: "toggle-todo"
-      todoId: number
-    }
-  | {
-      type: "fetch-todos"
-    }
+type RevalidationListActions = {
+  type: "toggle-todo"
+  todoId: number
+  completed: boolean
+}
 
 export const newRevalidationListStore = newStoreDef<
   RevalidationListInitialProps,
@@ -43,45 +42,28 @@ export const newRevalidationListStore = newStoreDef<
     store,
     // optimisticState,
   }) {
-    if (action.type === "fetch-todos") {
-      const meta = store.transitions.meta.get(action.transition)
-      async.promise(
-        async ctx => {
-          const todos = await getTodosFromDb(ctx.signal)
-          set({ todos })
-          meta.revalidateTodos--
-        },
-        { label: "fetch" }
-      )
-    }
-
     if (action.type === "toggle-todo") {
-      optimistic(s => ({
-        todos: s.todos.map(todo =>
-          todo.id === action.todoId
-            ? { ...todo, completed: !todo.completed }
-            : todo
-        ),
-      }))
       async.promise(
         async ctx => {
           await toggleTodoInDb(action.todoId, ctx.signal)
-          console.log(
-            JSON.parse(
-              JSON.stringify(store.transitions.state.transitions, null, 2)
-            )
-          )
-          const transitionString = action.transition?.join(":") ?? ""
-          const subtransitionsCount =
-            store.transitions.state.transitions[transitionString]
-          debugger
-          if (subtransitionsCount === 1) {
-            dispatch({
-              type: "fetch-todos",
-            })
-          }
         },
-        { label: "toggle" }
+        {
+          label: "toggle",
+          onSuccess: {
+            id: "fetch",
+            fn: () => {
+              async.promise(
+                async ctx => {
+                  const todos = await getTodosFromDb(ctx.signal)
+                  set({ todos })
+                },
+                {
+                  label: "fetch",
+                }
+              )
+            },
+          },
+        }
       )
     }
 
