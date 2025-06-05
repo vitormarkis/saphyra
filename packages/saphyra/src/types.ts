@@ -119,6 +119,7 @@ export type InnerCreateAsync<
   transition: any[] | null | undefined
   signal: AbortSignal
   from?: string
+  onAbort?: () => void
 }
 
 export type HandleActionProps<
@@ -333,6 +334,7 @@ export type OnTransitionEndProps<TState, TEvents extends EventsTuple> = {
   meta: Record<string, any>
   events: EventEmitter<TEvents>
   error?: unknown
+  aborted?: boolean
 }
 
 export type OnTransitionEnd<TState, TEvents extends EventsTuple> = (
@@ -351,10 +353,15 @@ export type PromiseResult<T> = {
 
 export type AsyncPromiseConfig = {
   label?: string
+  onSuccess?: {
+    id: string
+    fn: () => void
+  }
 }
 
 export type AsyncTimerConfig = {
   label?: string
+  onSuccess?: () => void
 }
 
 export type Async = {

@@ -86,7 +86,7 @@ export let FAKE_TODOS_DB: TodoType[] = [
 
 export async function getTodosFromDb(signal: AbortSignal): Promise<TodoType[]> {
   const snapshot = JSON.parse(JSON.stringify(FAKE_TODOS_DB))
-  await new Promise(resolve => setTimeout(resolve, range(300, 1500)))
+  await new Promise(resolve => setTimeout(resolve, range(1000, 1500)))
 
   if (signal.aborted) {
     throw new Error("Operation aborted")
@@ -96,7 +96,7 @@ export async function getTodosFromDb(signal: AbortSignal): Promise<TodoType[]> {
 }
 
 export async function toggleTodoInDb(todoId: number, signal: AbortSignal) {
-  await new Promise(resolve => setTimeout(resolve, range(300, 700)))
+  await new Promise(resolve => setTimeout(resolve, range(1000, 1000)))
 
   if (signal.aborted) {
     throw new Error("Aborted")

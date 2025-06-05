@@ -31,7 +31,8 @@ export function createAsync<
   _whenProp: string,
   transition: any[] | null | undefined,
   signal: AbortSignal,
-  from?: string
+  from?: string,
+  onAbort?: () => void
 ): Async {
   const completeBar = (
     id: string,
@@ -65,7 +66,7 @@ export function createAsync<
     promise: (props: AsyncPromiseProps) => Promise<T>,
     config?: AsyncPromiseConfig
   ) => {
-    const { label = null } = config ?? {}
+    const { label = null, onSuccess } = config ?? {}
     if (!transition) throw errorNoTransition()
     store.transitions.addKey(transition, `async-promise/${from}`)
     const transitionString = transition.join(":")
@@ -79,11 +80,28 @@ export function createAsync<
 
     async function handlePromise(promise: Promise<T>) {
       if (!transition) throw errorNoTransition()
+
+      store.transitions.allEvents.once("subtransition-done").run(id => {
+        if (label !== id) return
+        if (onSuccess) {
+          store.transitions.finishCallbacks.success.set(
+            onSuccess.id,
+            function listener() {
+              onSuccess.fn()
+              store.transitions.finishCallbacks.success.delete(onSuccess.id)
+            }
+          )
+        }
+      })
+
       const racePromise = PromiseWithResolvers<T>()
 
       const finishBar = newBar(transitionString, labelWhen(new Date()), label)
 
       const cleanUp = (error: unknown) => {
+        // if (onSuccess) {
+        //   store.transitions.finishCallbacks.success.delete(onSuccess.id)
+        // }
         cleanUpList.delete(cleanUp)
 
         const aborted = isNewActionError(error)
@@ -102,7 +120,9 @@ export function createAsync<
       if (!transition) throw errorNoTransition()
       try {
         if (!transition) throw errorNoTransition()
+        if (label) store.transitions.addSubtransition(label)
         await Promise.race<T>([promise, racePromise.promise])
+        if (label) store.transitions.doneSubtransition(label)
         finishBar("success")
         cleanUpList.delete(cleanUp)
         store.transitions.doneKey(
@@ -112,7 +132,10 @@ export function createAsync<
         )
       } catch (error) {
         const aborted = isNewActionError(error)
-        if (aborted) return
+        if (aborted) {
+          onAbort?.()
+          return
+        }
         store.transitions.emitError(transition, error)
       }
     }
@@ -151,6 +174,9 @@ export function createAsync<
       clearTimeout(timerId)
 
       const aborted = isNewActionError(error)
+      if (aborted) {
+        onAbort?.()
+      }
       finishBar(aborted ? "cancelled" : "fail", error)
 
       store.transitions.doneKey(

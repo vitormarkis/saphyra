@@ -3,9 +3,11 @@ import { EventEmitter } from "./event-emitter"
 import { Subject } from "./Subject"
 import { setImmutable } from "./fn/common"
 import { logDebug } from "./helpers/log"
+import { createAncestor } from "./utils"
 
 export type TransitionsStoreState = {
   transitions: Record<string, number>
+  subtransitions: Record<string, number>
 }
 
 export const runSuccessCallback: OnFinishTransition = ({
@@ -13,6 +15,21 @@ export const runSuccessCallback: OnFinishTransition = ({
   transitionStore,
 }) => {
   const doneCallback = transitionStore.callbacks.done.get(transitionName)
+
+  if (!doneCallback) {
+    return
+  }
+
+  const successFnList = transitionStore.finishCallbacks.success
+  const transition = transitionName.split(":")
+  if (successFnList.size > 0) {
+    transitionStore.addKey(transition)
+    successFnList.forEach(fn => fn?.())
+    transitionStore.doneKey(transition, {
+      onFinishTransition: runSuccessCallback,
+    })
+    return
+  }
   doneCallback?.()
   transitionStore.callbacks.done.set(transitionName, null)
   transitionStore.callbacks.error.set(transitionName, null)
@@ -36,6 +53,12 @@ export class TransitionsStore extends Subject {
     done: new EventEmitter(),
     error: new EventEmitter(),
   }
+  allEvents = new EventEmitter<{
+    "start-transition": [transitionName: string]
+    "transition-aborted": [transitionName: string]
+    "transition-done": [transitionName: string]
+    "subtransition-done": [id: string]
+  }>()
   meta: {
     get: (transition: any[] | null | undefined) => Record<string, any>
     values: Record<string, any>
@@ -45,6 +68,12 @@ export class TransitionsStore extends Subject {
     done: new Map<string, (() => void) | null>(),
     error: new Map<string, ((error: unknown) => void) | null>(),
   }
+
+  finishCallbacks = {
+    success: new Map<string, (() => void) | null>(),
+    error: new Map<string, ((error: unknown) => void) | null>(),
+  }
+
   cleanUpList: Record<string, Set<(error: unknown | null) => void>> = {}
 
   #shouldLog = true
@@ -56,6 +85,7 @@ export class TransitionsStore extends Subject {
     }
     this.state = {
       transitions: {},
+      subtransitions: {},
     }
 
     this.meta = {
@@ -146,6 +176,9 @@ export class TransitionsStore extends Subject {
     if (!transitionName) return
     state.transitions[transitionName] ??= 0
     state.transitions[transitionName]++
+    if (state.transitions[transitionName] === 1) {
+      this.allEvents.emit("start-transition", transitionName)
+    }
     return state
   }
 
@@ -157,12 +190,15 @@ export class TransitionsStore extends Subject {
       transitions: { ...this.state.transitions },
     }
 
-    let meta = ""
-    const newState = transition.reduce((acc, key) => {
-      if (meta !== "") key = `${meta}:${key}`
-      meta = key
-      return this.add(acc, key)
-    }, state)
+    const ancestors = createAncestor<string>(transition)
+    const newState = ancestors.reduce(
+      (acc: TransitionsStoreState, ancestor: string[]) => {
+        const key = ancestor.join(":")
+        const result = this.add(acc, key)
+        return result ?? acc
+      },
+      state
+    )
 
     this.setState(newState)
 
@@ -200,6 +236,7 @@ export class TransitionsStore extends Subject {
       if (transitionName !== null) {
         functionsToRun[transitionName] ??= []
         functionsToRun[transitionName].push(() => {
+          this.allEvents.emit("transition-done", transitionName)
           this.events.done.emit(transitionName)
           options.onFinishTransition({
             transitionName,
@@ -255,6 +292,30 @@ export class TransitionsStore extends Subject {
     Object.values(functionsToRun)
       .flat()
       .forEach(fn => fn())
+  }
+
+  setSubtransitions(subtransitions: Record<string, number>) {
+    this.state.subtransitions = subtransitions
+    this.notify()
+  }
+
+  addSubtransition(id: string) {
+    const subtransitions = { ...this.state.subtransitions }
+    subtransitions[id] ??= 0
+    subtransitions[id]++
+    this.setSubtransitions(subtransitions)
+  }
+
+  doneSubtransition(id: string) {
+    if (!(id in this.state.subtransitions)) {
+      throw new Error(`Subtransition ${id} not found`)
+    }
+    const subtransitions = { ...this.state.subtransitions }
+    subtransitions[id]--
+    this.setSubtransitions(subtransitions)
+    if (subtransitions[id] === 0) {
+      this.allEvents.emit("subtransition-done", id)
+    }
   }
 
   isHappeningUnique(transition: any[] | null | undefined) {
