@@ -1,5 +1,5 @@
 import { Spinner } from "@blueprintjs/core"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useSyncExternalStore } from "react"
 import { Devtools } from "~/devtools/devtools"
 import { cn } from "~/lib/cn"
 import { toastWithSonner } from "~/sonner-error-handler"
@@ -9,6 +9,7 @@ import { Waterfall } from "~/devtools/waterfall"
 import { newRevalidationListStore, RevalidationList } from "./store"
 import { INITIAL_TODOS } from "./consts"
 import { toast } from "sonner"
+import { cancelPrevious } from "./before-dispatches"
 
 export function RevalidationListPage() {
   const [revalidationListStore, setRevalidationListStore] = useState(() =>
@@ -33,6 +34,11 @@ export function RevalidationListPage() {
     Object.assign(window, { revalidationList: revalidationListStore })
   }, [revalidationListStore])
 
+  const subtransitions = useSyncExternalStore(
+    cb => revalidationListStore.transitions.subscribe(cb),
+    () => revalidationListStore.transitions.state.subtransitions
+  )
+
   return (
     <RevalidationList.Provider
       value={[revalidationListStore, setRevalidationListStore]}
@@ -54,7 +60,9 @@ export function RevalidationListPage() {
           )}
         </div>
         <div className="grid grid-rows-[1fr,1fr] min-h-0 min-w-0 w-1/2 h-full gap-4">
-          <Devtools store={revalidationListStore} />
+          <div className="size-full p-4">
+            <pre>{JSON.stringify(subtransitions, null, 2)}</pre>
+          </div>
           <Waterfall store={revalidationListStore} />
         </div>
       </div>
@@ -95,7 +103,7 @@ export function Todo({ todoId }: TodoProps) {
   return (
     <li
       className={cn(
-        "flex items-center gap-3 p-3 relative border rounded-md",
+        "flex items-center gap-3 p-1 relative border rounded-md",
         "border-gray-200 bg-gray-50",
         "dark:border-gray-800 dark:bg-gray-950",
         todo.completed && "opacity-60"
@@ -108,18 +116,21 @@ export function Todo({ todoId }: TodoProps) {
             revalidationStore.dispatch({
               type: "toggle-todo",
               todoId: todo.id,
-              transition: ["todo", "toggle"],
-              onTransitionEnd({ error, transition }) {
-                if (error) {
-                  return toastWithSonner(error, transition)
-                }
+              completed: !todo.completed,
+              transition: ["todo", "toggle", todo.id],
+              beforeDispatch: cancelPrevious,
+              onTransitionEnd({ error, transition, aborted }) {
+                if (aborted)
+                  if (error) {
+                    return toastWithSonner(error, transition)
+                  }
 
                 toast.success("Todo toggled")
               },
             })
           }}
           className={cn(
-            "w-5 h-5 rounded border-2 flex items-center justify-center",
+            "w-8 h-8 rounded border-2 flex items-center justify-center",
             "border-gray-300 dark:border-gray-700",
             todo.completed && "bg-blue-500 border-blue-500"
           )}
