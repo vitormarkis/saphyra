@@ -19,7 +19,7 @@ const newStore = newStoreDef<
 >({
   reducer({ prevState, state, action, set, async, optimistic }) {
     if (action.type === "fire") {
-      async.promise(async () => {
+      async().promise(async () => {
         const finalCount = await new Promise<number>(async resolve => {
           let i = 0
           for (let _; i < 7; i++) {

@@ -39,7 +39,7 @@ const newPokemonStore = newStoreDef<
     }
 
     if (diff(["currentPokemonId"])) {
-      async.promise(async ({ signal }) => {
+      async().promise(async ({ signal }) => {
         await sleep(1000, "", signal)
         const pokemon = await getPokemon({
           id: state.currentPokemonId,

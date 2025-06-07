@@ -17,7 +17,7 @@ const newStore = newStoreDef<State>({
     }
 
     if (action.type === "update-state") {
-      async.promise(async () => {
+      async().promise(async () => {
         set(action.state)
       })
     }
@@ -34,7 +34,7 @@ const newStore = newStoreDef<State>({
       if (!state.name.charAt(0).match(/[A-Z]/)) {
         dispatch({ type: "capitalize-first-name" })
       }
-      async.promise(async () => {
+      async().promise(async () => {
         dispatch({ type: "derive-fullname" })
       })
     }

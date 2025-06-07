@@ -1,10 +1,14 @@
-import { Async } from "../types"
+import { AsyncBuilder } from "../types"
 
-export const mockAsync: () => Async = () => ({
-  promise() {
-    return
-  },
-  timer() {
-    return () => {}
-  },
+export const mockAsync: () => AsyncBuilder = () => () => ({
+  promise: () => ({
+    onFinish: () => () => {},
+  }),
+  timer: () => {},
+  setName: () => ({
+    promise: () => ({
+      onFinish: () => () => {},
+    }),
+    timer: () => {},
+  }),
 })
