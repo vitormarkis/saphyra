@@ -11,7 +11,7 @@ export type Dispatch<
   TState extends Record<string, any>,
   TActions extends ActionShape<TState, TEvents>,
   TEvents extends EventsTuple,
-> = (action: ClassicAction<TState, TActions, TEvents>) => void
+> = (action: ClassicAction<TState, TActions, TEvents>) => () => void
 
 export type DispatchAsync<
   TState extends Record<string, any>,
@@ -150,7 +150,7 @@ export type HandleActionProps<
       TUncontrolledState,
       TDeps
     >
-  ) => Async
+  ) => AsyncBuilder
   onSet?: (setterOrPartialState: SetterOrPartialState<TState>) => void
   optimisticStateSource?: TState
 }
@@ -312,7 +312,7 @@ export type BeforeDispatchOptions<
   createAsync: (
     transition?: any[] | null | undefined,
     signal?: AbortSignal
-  ) => Async
+  ) => AsyncBuilder
   /**
    * Used to abort an ongoing transition
    *
@@ -363,10 +363,6 @@ export type PromiseResult<T> = {
 
 export type AsyncPromiseConfig = {
   label?: string
-  onSuccess?: {
-    id: string
-    fn: () => void
-  }
 }
 
 export type AsyncTimerConfig = {
@@ -374,13 +370,41 @@ export type AsyncTimerConfig = {
   onSuccess?: () => void
 }
 
-export type Async = {
-  promise<T>(
-    promise: (props: AsyncPromiseProps) => Promise<T>,
-    config?: AsyncPromiseConfig
-  ): void
-  timer(callback: () => void, time?: number, config?: AsyncTimerConfig): void
+// export type AsyncBuilder = {
+//   promise<T>(
+//     promise: (props: AsyncPromiseProps) => Promise<T>,
+//     config?: AsyncPromiseConfig
+//   ): void
+//   timer(callback: () => void, time?: number, config?: AsyncTimerConfig): void
+// }
+
+export type OnFinishId = string | string[]
+export type OnFinishCallback = (
+  isLast: boolean,
+  resolve: (value: any) => void,
+  reject: (error: any) => void
+) => void
+
+export type AsyncPromiseOnFinishProps = {
+  id: OnFinishId
+  fn: OnFinishCallback
 }
+
+export type AsyncModule = {
+  setName: (
+    name: string | StringSerializable[]
+  ) => Pick<AsyncModule, "promise" | "timer">
+  promise: <T>(promiseFn: (props: AsyncPromiseProps) => Promise<T>) => {
+    onFinish: (props: AsyncPromiseOnFinishProps) => () => void
+  }
+  timer: (
+    callback: () => void,
+    time?: number,
+    config?: AsyncTimerConfig
+  ) => void
+}
+
+export type AsyncBuilder = () => AsyncModule
 
 export type Diff<TState> = (keys: (keyof TState)[]) => boolean
 
@@ -472,6 +496,6 @@ export type RequireKeys<T extends object, K extends keyof T> = Required<
   ? { [P in keyof O]: O[P] }
   : never
 
-type StringSerializable = string | number | boolean | null | undefined
+export type StringSerializable = string | number | boolean | null | undefined
 export type Transition = StringSerializable[]
 export type TransitionNullable = StringSerializable[] | null | undefined

@@ -24,7 +24,7 @@ function App() {
 Toda ação assíncrona executada dentro do reducer precisa ser feita através do módulo 'async' se você quiser que ela faça parte da transition vigente. O módulo 'async' passa o abort controller da action para o módulo 'async', o qual você pode acessar dentro dos métodos 'promise' e 'timer' para cancelar efeitos colaterais que você aplicou.
 ```js
 reducer({ async }) {
-  async.promise(async (abortController) => {
+  async().promise(async (abortController) => {
     const response = await fetch(..., {
       signal: abortController?.signal
     })
@@ -37,7 +37,7 @@ reducer({ async }) {
 Se você quiser aproveitar o abort controller do 'async' para cancelar efeitos colaterais que não fazem parte da transition vigente, apenas não retorne a promise.
 ```js
 reducer({ async }) {
-  async.promise((abortController) => {
+  async().promise((abortController) => {
     // don't return the promise below
     runAnotherPromise(abortController?.signal)
   }, () => {})

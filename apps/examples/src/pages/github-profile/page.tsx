@@ -18,7 +18,7 @@ async function fetchUser(username: string, signal: AbortSignal) {
 const newUserStore = newStoreDef<UserStoreInitialProps>({
   reducer({ state, action, async, set }) {
     if (action.type === "fetch-user") {
-      async.promise(async ctx => {
+      async().promise(async ctx => {
         const profile = await fetchUser(state.username, ctx.signal)
         set({ profile })
       })

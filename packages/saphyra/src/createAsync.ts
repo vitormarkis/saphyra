@@ -4,13 +4,18 @@ import { PromiseWithResolvers } from "./polyfills/promise-with-resolvers"
 import { runSuccessCallback } from "./transitions-store"
 import {
   ActionShape,
-  Async,
+  AsyncBuilder,
+  AsyncModule,
   AsyncPromiseConfig,
+  AsyncPromiseOnFinishProps,
   AsyncPromiseProps,
   AsyncTimerConfig,
   BaseAction,
   DefaultActions,
+  OnFinishCallback,
+  OnFinishId,
   SomeStore,
+  SomeStoreGeneric,
 } from "./types"
 import { isNewActionError, labelWhen } from "./utils"
 
@@ -33,7 +38,7 @@ export function createAsync<
   signal: AbortSignal,
   from?: string,
   onAbort?: () => void
-): Async {
+): AsyncBuilder {
   const completeBar = (
     id: string,
     status: "cancelled" | "fail" | "success",
@@ -62,11 +67,11 @@ export function createAsync<
       completeBar(id, status, error)
   }
 
-  const promise: Async["promise"] = <T>(
-    promise: (props: AsyncPromiseProps) => Promise<T>,
+  const promiseInternal = <T>(
+    promiseFn: (props: AsyncPromiseProps) => Promise<T>,
     config?: AsyncPromiseConfig
   ) => {
-    const { label = null, onSuccess } = config ?? {}
+    const { label = null } = config ?? {}
     if (!transition) throw errorNoTransition()
     store.transitions.addKey(transition, `async-promise/${from}`)
     const transitionString = transition.join(":")
@@ -86,15 +91,6 @@ export function createAsync<
         id => {
           if (label !== id) return
           cleanSubtransitionDoneEvent()
-          if (onSuccess) {
-            store.transitions.finishCallbacks.success.set(
-              onSuccess.id,
-              function listener() {
-                onSuccess.fn()
-                store.transitions.finishCallbacks.success.delete(onSuccess.id)
-              }
-            )
-          }
         }
       )
 
@@ -144,10 +140,14 @@ export function createAsync<
         store.transitions.emitError(transition, error)
       }
     }
-    handlePromise(promise({ signal }))
+    handlePromise(promiseFn({ signal }))
   }
 
-  const timer = (callback: () => void, time = 0, config?: AsyncTimerConfig) => {
+  const timerInternal = (
+    callback: () => void,
+    time = 0,
+    config?: AsyncTimerConfig
+  ) => {
     const { label = null } = config ?? {}
     if (!transition) throw errorNoTransition()
     const transitionString = transition.join(":")
@@ -192,8 +192,49 @@ export function createAsync<
     }
   }
 
-  return {
-    promise,
-    timer,
+  return () => {
+    let _name: string | null = null
+
+    const promise = <T>(
+      promiseFn: (props: AsyncPromiseProps) => Promise<T>
+    ) => {
+      promiseInternal(promiseFn, {
+        label: _name ?? undefined,
+      })
+
+      return {
+        onFinish: ({ fn, id }: AsyncPromiseOnFinishProps) => {
+          if (!_name)
+            throw new Error(
+              "Name is required when using async().promise.onFinish, call .setName before .promise"
+            )
+
+          return () => fn(true, noop, noop)
+        },
+      }
+    }
+
+    const timer = (
+      callback: () => void,
+      time?: number,
+      config?: AsyncTimerConfig
+    ) => {
+      timerInternal(callback, time, config)
+    }
+
+    const setName: AsyncModule["setName"] = name => {
+      _name = Array.isArray(name) ? name.join(":") : name
+
+      return {
+        promise,
+        timer,
+      }
+    }
+
+    return {
+      promise,
+      timer,
+      setName,
+    }
   }
 }
