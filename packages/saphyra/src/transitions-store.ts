@@ -30,6 +30,7 @@ export const runSuccessCallback: OnFinishTransition = ({
     })
     return
   }
+  transitionStore.allEvents.emit("transition-done-successfully", transitionName)
   doneCallback?.()
   transitionStore.callbacks.done.set(transitionName, null)
   transitionStore.callbacks.error.set(transitionName, null)
@@ -58,6 +59,7 @@ export class TransitionsStore extends Subject {
     "transition-aborted": [transitionName: string]
     "transition-done": [transitionName: string]
     "subtransition-done": [id: string]
+    "transition-done-successfully": [transitionName: string]
   }>()
   meta: {
     get: (transition: any[] | null | undefined) => Record<string, any>

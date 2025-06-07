@@ -81,18 +81,22 @@ export function createAsync<
     async function handlePromise(promise: Promise<T>) {
       if (!transition) throw errorNoTransition()
 
-      store.transitions.allEvents.once("subtransition-done").run(id => {
-        if (label !== id) return
-        if (onSuccess) {
-          store.transitions.finishCallbacks.success.set(
-            onSuccess.id,
-            function listener() {
-              onSuccess.fn()
-              store.transitions.finishCallbacks.success.delete(onSuccess.id)
-            }
-          )
+      const cleanSubtransitionDoneEvent = store.transitions.allEvents.on(
+        "subtransition-done",
+        id => {
+          if (label !== id) return
+          cleanSubtransitionDoneEvent()
+          if (onSuccess) {
+            store.transitions.finishCallbacks.success.set(
+              onSuccess.id,
+              function listener() {
+                onSuccess.fn()
+                store.transitions.finishCallbacks.success.delete(onSuccess.id)
+              }
+            )
+          }
         }
-      })
+      )
 
       const racePromise = PromiseWithResolvers<T>()
 
@@ -131,6 +135,7 @@ export function createAsync<
           "async-promise/on-success"
         )
       } catch (error) {
+        if (label) store.transitions.doneSubtransition(label)
         const aborted = isNewActionError(error)
         if (aborted) {
           onAbort?.()
