@@ -102,7 +102,7 @@ export const newSocialMedia = newStoreDef({
       async
         .promise(ctx => deps.placeComment(newComment, action.postId, ctx.signal))
         .onSuccess(() => {
-          async.promise(() =>
+          async().promise(() =>
             queryClient.refetchQueries({
               ...getCommentsQueryOptions({
                 postId: action.postId,

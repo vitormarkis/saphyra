@@ -44,14 +44,14 @@ export const newStore = newStoreDef<
     }
 
     if (action.type === "increment-async") {
-      async.promise(async ctx => {
+      async().promise(async ctx => {
         await sleep(1000, undefined, ctx.signal)
         set(s => ({ count: s.count + 1 }))
       })
     }
 
     if (action.type === "increment-async-error") {
-      async.promise(async ctx => {
+      async().promise(async ctx => {
         await sleep(1000, undefined, ctx.signal)
         throw new Error("Error while incrementing")
       })

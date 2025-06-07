@@ -22,7 +22,7 @@ type RevalidationListActions =
       completed: boolean
     }
   | {
-      type: "fetch"
+      type: "revalidate-todos"
     }
 
 export const newRevalidationListStore = newStoreDef<
@@ -47,81 +47,41 @@ export const newRevalidationListStore = newStoreDef<
     store,
     // optimisticState,
   }) {
-    if (action.type === "fetch") {
-      async.promise(
-        async ctx => {
+    if (action.type === "revalidate-todos") {
+      async()
+        .setName("revalidate-todos")
+        .promise(async ctx => {
           const todos = await getTodosFromDb(ctx.signal)
           set({ todos })
-        },
-        {
-          label: "fetch",
-        }
-      )
+        })
     }
 
     if (action.type === "toggle-todo") {
-      async.promise(
-        async ctx => {
+      async()
+        .setName("toggle")
+        .promise(async ctx => {
           store.abort(["fetch", "todos"])
           await toggleTodoInDb(action.todoId, ctx.signal)
-        },
-        {
-          label: "toggle",
-          onSuccess: {
-            id: "fetch",
-            fn: () => {
-              async.promise(
-                async ctx => {
-                  const { promise, resolve } = PromiseWithResolvers()
-                  dispatch({
-                    type: "fetch",
-                    // usar uma transition unica para o fetch porque consigo cancelar
-                    // de forma arbitraria, mas ele comita um state intermediário no historico
-                    transition: ["fetch", "todos"],
-                    beforeDispatch: ({
-                      transition,
-                      transitionStore,
-                      createAsync,
-                      action,
-                    }) => {
-                      const async = createAsync()
-                      if (transitionStore.isHappeningUnique(transition)) {
-                        store.abort(transition)
-                      }
-                      return action
-                      // async.timer(() => store.dispatch(action), 100, {
-                      //   label: "d",
-                      // })
-                    },
-                    onTransitionEnd: ({
-                      aborted,
-                      transition,
-                      transitionStore,
-                    }) => {
-                      if (aborted) {
-                        transitionStore.allEvents.on(
-                          "transition-done-successfully",
-                          transitionNameDone => {
-                            const transitionString = transition.join(":")
-                            if (transitionString !== transitionNameDone) return
-                            resolve(true)
-                          }
-                        )
-                        return
-                      }
-                      resolve(true)
-                    },
-                  })
-                  await promise
-                },
-                {
-                  label: "revalidate",
-                }
-              )
-            },
+        })
+        .onFinish({
+          id: ["revalidate-todo-list"],
+          fn: (isLast, resolve, reject) => {
+            const cleanUp = dispatch({
+              type: "revalidate-todos",
+              transition: ["revalidate-todo-list"],
+              beforeDispatch: ({ action }) => {
+                if (isLast) return action
+              },
+              onTransitionEnd: ({ aborted, error }) => {
+                if (aborted) return
+                if (error) return reject(error)
+                return resolve(true)
+              },
+            })
+
+            return () => cleanUp()
           },
-        }
-      )
+        })
     }
 
     if (diff(["todos"])) {
@@ -143,123 +103,123 @@ export const newRevalidationListStore = newStoreDef<
 export const RevalidationList =
   createStoreUtils<typeof newRevalidationListStore>()
 
-function reducer({ prevState, state, action, set, diff, async, dispatch }) {
-  if (action.type === "toggle-todo") {
-    async.promise(
-      async ctx => {
-        await toggleTodoInDb(action.todoId, ctx.signal)
-      },
-      {
-        label: "fetch",
-        onFinish: {
-          id: ["revalidate-todo-list", action.pageId],
-          fn: (isLast, resolve, reject) => {
-            store.transitionStore.on(
-              "transition-done",
-              (transitionName, status) => {
-                if (status === "aborted") return
-                cleanUp()
-                if (status === "error") return reject(true)
-                return resolve(true)
-              }
-            )
-            if (isLast) {
-              dispatch({
-                type: "revalidate-todos",
-                transition: ["revalidate-todo-list"],
-              })
-            }
+// function reducer({ prevState, state, action, set, diff, async, dispatch }) {
+//   if (action.type === "toggle-todo") {
+//     async().promise(
+//       async ctx => {
+//         await toggleTodoInDb(action.todoId, ctx.signal)
+//       },
+//       {
+//         label: "fetch",
+//         onFinish: {
+//           id: ["revalidate-todo-list", action.pageId],
+//           fn: (isLast, resolve, reject) => {
+//             store.transitionStore.on(
+//               "transition-done",
+//               (transitionName, status) => {
+//                 if (status === "aborted") return
+//                 cleanUp()
+//                 if (status === "error") return reject(true)
+//                 return resolve(true)
+//               }
+//             )
+//             if (isLast) {
+//               dispatch({
+//                 type: "revalidate-todos",
+//                 transition: ["revalidate-todo-list"],
+//               })
+//             }
 
-            return () => {
-              cleanUp()
-              if (isLast) {
-                store.abort(["revalidate-todo-list"])
-              }
-            }
-          },
-        },
-      }
-    )
+//             return () => {
+//               cleanUp()
+//               if (isLast) {
+//                 store.abort(["revalidate-todo-list"])
+//               }
+//             }
+//           },
+//         },
+//       }
+//     )
 
-    async()
-      .setName("toggle-todo")
-      .promise(async ctx => {
-        await toggleTodoInDb(action.todoId, ctx.signal)
-      })
-      .onFinish(
-        ["revalidate-todo-list", action.pageId],
-        (isLast, resolve, reject) => {
-          const cleanUp = dispatch({
-            type: "revalidate-todos",
-            transition: ["revalidate-todo-list"],
-            pageId: action.pageId,
-            beforeDispatch: ({ action }) => {
-              if (isLast) return action
-            },
-            onTransitionEnd: ({ aborted, error }) => {
-              if (aborted) return
-              if (error) return reject(error)
-              return resolve(true)
-            },
-          })
+//     async()
+//       .setName("toggle-todo")
+//       .promise(async ctx => {
+//         await toggleTodoInDb(action.todoId, ctx.signal)
+//       })
+//       .onFinish(
+//         ["revalidate-todo-list", action.pageId],
+//         (isLast, resolve, reject) => {
+//           const cleanUp = dispatch({
+//             type: "revalidate-todos",
+//             transition: ["revalidate-todo-list"],
+//             pageId: action.pageId,
+//             beforeDispatch: ({ action }) => {
+//               if (isLast) return action
+//             },
+//             onTransitionEnd: ({ aborted, error }) => {
+//               if (aborted) return
+//               if (error) return reject(error)
+//               return resolve(true)
+//             },
+//           })
 
-          return () => cleanUp()
-        }
-      )
+//           return () => cleanUp()
+//         }
+//       )
 
-    async.promise(
-      async ctx => {
-        await toggleTodoInDb(action.todoId, ctx.signal)
-      },
-      {
-        label: "fetch",
-        onFinish: {
-          id: ["revalidate-todo-list", action.pageId],
-          fn: (isLast, resolve, reject) =>
-            dispatch({
-              type: "revalidate-todos",
-              transition: ["revalidate-todo-list"],
-              pageId: action.pageId,
-              beforeDispatch: ({ action }) => {
-                if (isLast) return action
-              },
-              onTransitionEnd: ({ aborted, error }) => {
-                if (aborted) return
-                if (error) return reject(error)
-                return resolve(true)
-              },
-            }),
-        },
-      }
-    )
-  }
+//     async().promise(
+//       async ctx => {
+//         await toggleTodoInDb(action.todoId, ctx.signal)
+//       },
+//       {
+//         label: "fetch",
+//         onFinish: {
+//           id: ["revalidate-todo-list", action.pageId],
+//           fn: (isLast, resolve, reject) =>
+//             dispatch({
+//               type: "revalidate-todos",
+//               transition: ["revalidate-todo-list"],
+//               pageId: action.pageId,
+//               beforeDispatch: ({ action }) => {
+//                 if (isLast) return action
+//               },
+//               onTransitionEnd: ({ aborted, error }) => {
+//                 if (aborted) return
+//                 if (error) return reject(error)
+//                 return resolve(true)
+//               },
+//             }),
+//         },
+//       }
+//     )
+//   }
 
-  if (action.type === "change-todo-title") {
-    async.promise(
-      async ctx => {
-        await changeTodoTitleInDb(action.todoId, ctx.signal)
-      },
-      {
-        label: "fetch",
-        onFinish: {
-          id: ["revalidate-todo-list"],
-          fn: (resolve, reject) => {
-            dispatch({
-              type: "revalidate-todos",
-              transition: ["revalidate-todo-list"],
-              onTransitionEnd: ({ aborted, error }) => {
-                if (aborted) return
-                if (error) return reject(error)
-                return resolve(true)
-              },
-            })
+//   if (action.type === "change-todo-title") {
+//     async().promise(
+//       async ctx => {
+//         await changeTodoTitleInDb(action.todoId, ctx.signal)
+//       },
+//       {
+//         label: "fetch",
+//         onFinish: {
+//           id: ["revalidate-todo-list"],
+//           fn: (resolve, reject) => {
+//             dispatch({
+//               type: "revalidate-todos",
+//               transition: ["revalidate-todo-list"],
+//               onTransitionEnd: ({ aborted, error }) => {
+//                 if (aborted) return
+//                 if (error) return reject(error)
+//                 return resolve(true)
+//               },
+//             })
 
-            return () => {
-              store.abort(["revalidate-todo-list"])
-            }
-          },
-        },
-      }
-    )
-  }
-}
+//             return () => {
+//               store.abort(["revalidate-todo-list"])
+//             }
+//           },
+//         },
+//       }
+//     )
+//   }
+// }

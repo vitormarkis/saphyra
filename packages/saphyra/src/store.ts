@@ -4,7 +4,7 @@ import { OptimisticRegistry, RemoveDollarSignProps } from "./types"
 import { createAsync, errorNoTransition } from "./createAsync"
 import { runSuccessCallback, TransitionsStore } from "./transitions-store"
 import type {
-  Async,
+  AsyncBuilder,
   AsyncPromiseProps,
   DefaultActions,
   Diff,
@@ -128,7 +128,7 @@ type ReducerProps<
   prevState: TState
   state: TState
   action: ClassicAction<TState, TActions, TEvents>
-  async: Async
+  async: AsyncBuilder
   store: SomeStore<TState, TActions, TEvents, TUncontrolledState, TDeps>
   events: EventEmitter<TEvents>
   set: ReducerSet<TState>
@@ -414,7 +414,7 @@ export function newStoreDef<
             optimistic: () => {}, // allow only one level of optimistic updates per dispatch
             events: mockEventEmitter<TEvents>(),
             store,
-            dispatch: () => {},
+            dispatch: () => noop,
             deps,
           }) as TState
           const derivedStatePlusDerivations = applySettersListToState({
@@ -659,7 +659,7 @@ export function newStoreDef<
         set: () => {},
         optimistic: scheduleOptimistic,
         diff: createDiff(prevState, newState),
-        dispatch: () => {},
+        dispatch: () => noop,
         deps,
       }
 
@@ -734,10 +734,11 @@ export function newStoreDef<
       } catch (error) {
         if (error instanceof Rollback) {
           error.rollback()
-          return
+          return () => {}
         }
 
         handleError(error, initialAction.transition)
+        return () => {}
       }
     }
 
@@ -745,7 +746,7 @@ export function newStoreDef<
       initialAction: Action,
       rollback: Rollback,
       when: string
-    ) => {
+    ): (() => void) => {
       let newState = cloneObj(store.state)
 
       const defaultBeforeDispatch = (
@@ -829,7 +830,10 @@ export function newStoreDef<
           // Returned no action and didn't even schedule a transition,
           // it means the action is done and there is no more computation to do
         }
-        return
+        return () => {}
+      }
+      const cleanUp = () => {
+        abort(rootAction.transition)
       }
 
       rootAction
@@ -882,6 +886,7 @@ export function newStoreDef<
         defineState(newState)
         subject.notify()
       }
+      return cleanUp
       logDebug("%c 44: done dispatching!", "color: coral")
     }
 
@@ -1027,7 +1032,7 @@ export function newStoreDef<
 
       for (const action of actionsQueue) {
         const futurePrevState = cloneObj(newState)
-        const async: Async = createAsync({
+        const async: AsyncBuilder = createAsync({
           when,
           store,
           transition: action.transition,
@@ -1093,7 +1098,7 @@ export function newStoreDef<
           },
           diff: createDiff(prevState, newState),
           dispatch: (action: Action) => {
-            if (signal.aborted) return
+            if (signal.aborted) return noop
             const safeAction = {
               ...action,
               transition: action.transition ?? rootAction.transition ?? null,
@@ -1102,6 +1107,9 @@ export function newStoreDef<
               actionsQueue.push(safeAction)
             } else {
               store.dispatch(safeAction)
+            }
+            return () => {
+              abort(safeAction.transition)
             }
           },
           deps,
@@ -1122,7 +1130,7 @@ export function newStoreDef<
           >
         ) => {
           if (props.action.type === "$$lazy-value") {
-            props.async.promise(ctx => {
+            props.async().promise(ctx => {
               const action = props.action as unknown as {
                 transitionFn: (
                   options: TransitionFunctionOptions
@@ -1423,7 +1431,7 @@ export function newStoreDef<
           "on-construct-async"
         )
 
-        async.promise(async ctx => {
+        async().promise(async ctx => {
           const pureState = await handleConstruction(ctx)
           const initialState = pureState as TState
           updateTransitionState(BOOTSTRAP_TRANSITION, initialState)
