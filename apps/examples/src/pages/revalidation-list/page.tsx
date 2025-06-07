@@ -120,10 +120,10 @@ export function Todo({ todoId }: TodoProps) {
               transition: ["todo", "toggle", todo.id],
               beforeDispatch: cancelPrevious,
               onTransitionEnd({ error, transition, aborted }) {
-                if (aborted)
-                  if (error) {
-                    return toastWithSonner(error, transition)
-                  }
+                if (aborted) return
+                if (error) {
+                  return toastWithSonner(error, transition)
+                }
 
                 toast.success("Todo toggled")
               },

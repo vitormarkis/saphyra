@@ -346,7 +346,10 @@ export function WaterfallTooltip({
               {["[", ...barInfo.transitionName.split(":"), "]"].map(
                 subTransition => {
                   return (
-                    <span className="bg-gray-100 border-gray-200 dark:bg-gray-600 border dark:border-gray-800 text-gray-600 dark:text-gray-200 px-1">
+                    <span
+                      key={`${barInfo.transitionName}-${subTransition}`}
+                      className="bg-gray-100 border-gray-200 dark:bg-gray-600 border dark:border-gray-800 text-gray-600 dark:text-gray-200 px-1"
+                    >
                       {subTransition}
                     </span>
                   )

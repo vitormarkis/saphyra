@@ -10,7 +10,7 @@ export let FAKE_TODOS_DB: TodoType[] = [
   {
     id: 2,
     title: "Finish project documentation",
-    completed: true,
+    completed: false,
   },
   {
     id: 3,
@@ -25,7 +25,7 @@ export let FAKE_TODOS_DB: TodoType[] = [
   {
     id: 5,
     title: "Pay monthly bills",
-    completed: true,
+    completed: false,
   },
   {
     id: 6,
@@ -40,7 +40,7 @@ export let FAKE_TODOS_DB: TodoType[] = [
   {
     id: 8,
     title: "Call mom",
-    completed: true,
+    completed: false,
   },
   {
     id: 9,
@@ -55,7 +55,7 @@ export let FAKE_TODOS_DB: TodoType[] = [
   {
     id: 11,
     title: "Fix broken laptop",
-    completed: true,
+    completed: false,
   },
   {
     id: 12,
@@ -70,7 +70,7 @@ export let FAKE_TODOS_DB: TodoType[] = [
   {
     id: 14,
     title: "Buy birthday gift",
-    completed: true,
+    completed: false,
   },
   {
     id: 15,
