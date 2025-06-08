@@ -15,7 +15,6 @@ import { newWaterfallStore, WaterfallState, WaterfallStore, WF } from "./store"
 import { cn } from "~/lib/cn"
 import { SomeStoreGeneric } from "saphyra"
 import { BarSorters } from "./sorters"
-import { ChevronUp } from "lucide-react"
 import React from "react"
 import ReactDOM from "react-dom"
 import { cva, type VariantProps } from "class-variance-authority"
@@ -795,6 +794,7 @@ import { MutableRefObject } from "react"
 import { BarType } from "./types"
 import { error } from "console"
 import { extractErrorMessage } from "~/lib/extract-error-message"
+import { ChevronUp } from "lucide-react"
 
 export const RefContext =
   createContext<MutableRefObject<HTMLDivElement | null> | null>(null)
