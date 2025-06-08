@@ -67,11 +67,16 @@ export function createAsync<
       completeBar(id, status, error)
   }
 
-  const promiseInternal = <T>(
+  const wrapPromise = <T>(
     promiseFn: (props: AsyncPromiseProps) => Promise<T>,
-    config?: AsyncPromiseConfig
+    config?: AsyncPromiseConfig,
+    onFinish?: AsyncPromiseOnFinishProps
   ) => {
     const { label = null } = config ?? {}
+    const onFinishId = Array.isArray(onFinish?.id)
+      ? onFinish.id.join(":")
+      : onFinish?.id
+    const onFinishFn = onFinish?.fn
     if (!transition) throw errorNoTransition()
     store.transitions.addKey(transition, `async-promise/${from}`)
     const transitionString = transition.join(":")
@@ -86,11 +91,11 @@ export function createAsync<
     async function handlePromise(promise: Promise<T>) {
       if (!transition) throw errorNoTransition()
 
-      const cleanSubtransitionDoneEvent = store.transitions.allEvents.on(
+      const clearSubtransitionDoneEvent = store.transitions.allEvents.on(
         "subtransition-done",
         id => {
           if (label !== id) return
-          cleanSubtransitionDoneEvent()
+          clearSubtransitionDoneEvent()
         }
       )
 
@@ -120,9 +125,49 @@ export function createAsync<
       if (!transition) throw errorNoTransition()
       try {
         if (!transition) throw errorNoTransition()
+        if (onFinishId) {
+          const cleanUpList =
+            store.transitions.finishCallbacks.cleanUps[onFinishId]
+
+          cleanUpList?.forEach(cleanUp => cleanUp())
+        }
+
         if (label) store.transitions.addSubtransition(label)
+        if (onFinishId) store.transitions.addFinish(onFinishId)
         await Promise.race<T>([promise, racePromise.promise])
         if (label) store.transitions.doneSubtransition(label)
+        if (onFinishId) store.transitions.doneFinish(onFinishId)
+        if (onFinishFn) {
+          if (!onFinishId) throw new Error("onFinishId is required")
+          const getFinishesCount = () =>
+            store.transitions.state.finishes[onFinishId]
+          const isLast = () => getFinishesCount() === 0
+          const resolver = PromiseWithResolvers<void>()
+          const finishCleanUp = onFinishFn?.(
+            isLast,
+            () => resolver.resolve(),
+            () => resolver.reject()
+          )
+          store.transitions.finishCallbacks.cleanUps[onFinishId] ??= new Set()
+          store.transitions.finishCallbacks.cleanUps[onFinishId].add(
+            function listener() {
+              finishCleanUp?.()
+              cleanUpList.delete(listener)
+            }
+          )
+          wrapPromise(
+            async ctx => {
+              if (ctx.signal.aborted) return
+              ctx.signal.addEventListener("abort", () => {
+                resolver.reject()
+              })
+              await resolver.promise
+            },
+            {
+              label: onFinishId,
+            }
+          )
+        }
         finishBar("success")
         cleanUpList.delete(cleanUp)
         store.transitions.doneKey(
@@ -132,6 +177,7 @@ export function createAsync<
         )
       } catch (error) {
         if (label) store.transitions.doneSubtransition(label)
+        if (onFinishId) store.transitions.doneFinish(onFinishId)
         const aborted = isNewActionError(error)
         if (aborted) {
           onAbort?.()
@@ -143,7 +189,7 @@ export function createAsync<
     handlePromise(promiseFn({ signal }))
   }
 
-  const timerInternal = (
+  const wrapTimeout = (
     callback: () => void,
     time = 0,
     config?: AsyncTimerConfig
@@ -194,24 +240,33 @@ export function createAsync<
 
   return () => {
     let _name: string | null = null
+    let onFinishObj: undefined | AsyncPromiseOnFinishProps
+
+    const onFinish: AsyncModule["onFinish"] = _onFinishObj => {
+      if (!_name)
+        throw new Error(
+          "Name is required when using async().promise.onFinish, call .setName before .promise"
+        )
+      onFinishObj = _onFinishObj
+
+      return {
+        promise,
+        timer,
+      }
+    }
 
     const promise = <T>(
       promiseFn: (props: AsyncPromiseProps) => Promise<T>
     ) => {
-      promiseInternal(promiseFn, {
-        label: _name ?? undefined,
-      })
-
-      return {
-        onFinish: ({ fn, id }: AsyncPromiseOnFinishProps) => {
-          if (!_name)
-            throw new Error(
-              "Name is required when using async().promise.onFinish, call .setName before .promise"
-            )
-
-          return () => fn(true, noop, noop)
+      wrapPromise(
+        promiseFn,
+        {
+          label: _name ?? undefined,
         },
-      }
+        onFinishObj
+      )
+
+      return {}
     }
 
     const timer = (
@@ -219,7 +274,9 @@ export function createAsync<
       time?: number,
       config?: AsyncTimerConfig
     ) => {
-      timerInternal(callback, time, config)
+      wrapTimeout(callback, time, {
+        label: _name ?? undefined,
+      })
     }
 
     const setName: AsyncModule["setName"] = name => {
@@ -228,10 +285,12 @@ export function createAsync<
       return {
         promise,
         timer,
+        onFinish,
       }
     }
 
     return {
+      onFinish,
       promise,
       timer,
       setName,

@@ -108,6 +108,10 @@ export type GenericStoreValues<
   optimisticRegistry: OptimisticRegistry<TState>
   transitionsState: TransitionsStateStore<TState>
   name?: string
+  onTransitionEndCallbacks: Record<
+    string,
+    Set<OnTransitionEnd<TState, TEvents>>
+  >
 } & TransitionsExtension &
   HistoryExtension<TState> &
   UncontrolledState<TUncontrolledState>
@@ -187,16 +191,8 @@ export type GenericStoreMethods<
     TUncontrolledState,
     TDeps
   >
-  completeTransition(
-    transition: any[],
-    action: TActions,
-    onTransitionEnd?: OnTransitionEnd<TState, TEvents>
-  ): void
-  commitTransition(
-    transition: any[] | null | undefined,
-    action: TActions,
-    onTransitionEnd?: OnTransitionEnd<TState, TEvents>
-  ): void
+  completeTransition(transition: any[], action: TActions): void
+  commitTransition(transition: any[] | null | undefined, action: TActions): void
   handleAction(
     action: TActions,
     props: HandleActionProps<
@@ -378,12 +374,12 @@ export type AsyncTimerConfig = {
 //   timer(callback: () => void, time?: number, config?: AsyncTimerConfig): void
 // }
 
-export type OnFinishId = string | string[]
+export type OnFinishId = string | StringSerializable[]
 export type OnFinishCallback = (
-  isLast: boolean,
+  isLast: () => boolean,
   resolve: (value: any) => void,
   reject: (error: any) => void
-) => void
+) => () => void
 
 export type AsyncPromiseOnFinishProps = {
   id: OnFinishId
@@ -391,17 +387,16 @@ export type AsyncPromiseOnFinishProps = {
 }
 
 export type AsyncModule = {
-  setName: (
-    name: string | StringSerializable[]
+  setName: (name: string | StringSerializable[]) => Omit<AsyncModule, "setName">
+  onFinish: (
+    props: AsyncPromiseOnFinishProps
   ) => Pick<AsyncModule, "promise" | "timer">
-  promise: <T>(promiseFn: (props: AsyncPromiseProps) => Promise<T>) => {
-    onFinish: (props: AsyncPromiseOnFinishProps) => () => void
-  }
   timer: (
     callback: () => void,
     time?: number,
     config?: AsyncTimerConfig
   ) => void
+  promise: <T>(promiseFn: (props: AsyncPromiseProps) => Promise<T>) => void
 }
 
 export type AsyncBuilder = () => AsyncModule
