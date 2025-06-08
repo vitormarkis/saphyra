@@ -4,7 +4,7 @@
 
 input,
 select {
-  @apply border border-slate-400 h-9 text-black px-2 rounded-sm;
+  @apply border border-slate-400 h-9 text-black px-2 rounded-sm ring-2 ring-red-500;
 }
 
 body {
@@ -36,7 +36,7 @@ button {
 
   input,
   select {
-    @apply border border-slate-600 h-9 text-white bg-gray-700 outline-none focus:ring-0 ring-0;
+    @apply border border-slate-600 h-9 text-white bg-gray-700 ring-0 focus:ring-1 outline-none focus:outline-none ring-blue-600;
   }
 
   ::-webkit-scrollbar-corner {
@@ -193,7 +193,6 @@ html body[data-scroll-locked] {
   --removed-body-scroll-bar-size: 0 !important;
   margin-right: 0 !important;
 }
-
 
 :root {
   --color-fd-background: #f00;

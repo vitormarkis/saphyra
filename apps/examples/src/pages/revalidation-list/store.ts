@@ -3,23 +3,15 @@ import {
   Dispatch,
   EventsTuple,
   newStoreDef,
-  OnFinishId,
-  Reducer,
-  ReducerProps,
-  runSuccessCallback,
 } from "saphyra"
 import { createStoreUtils } from "saphyra/react"
 import { TodoType } from "./types"
-import { reduceGroupById } from "./fn/reduce-group-by-user-id"
 import { groupByKey } from "~/lib/reduce-group-by"
 import {
   getTodosFromDb,
   toggleTodoInDb,
   toggleTodoDisabledInDb,
 } from "./fn/fake-todos-db"
-import { cancelPrevious } from "./before-dispatches"
-import { PromiseWithResolvers } from "./polyfills/promise-with-resolvers"
-import { randomString } from "~/lib/utils"
 
 type RevalidationListState = {
   todos: TodoType[]
@@ -55,6 +47,10 @@ async function revalidateTodoList(
     dispatch({
       type: "revalidate-todos",
       transition: ["revalidate-todo-list"],
+      beforeDispatch: ({ action, store, transition }) => {
+        store.abort(transition)
+        return action
+      },
       onTransitionEnd: ({ aborted, error }) => {
         if (aborted) return
         if (error) return reject(error)
@@ -109,7 +105,6 @@ export const newRevalidationListStore = newStoreDef<
         .setName("complete")
         .onFinish(revalidateList(dispatch))
         .promise(async ctx => {
-          // store.abort(["revalidate-todo-list"])
           await toggleTodoInDb(action.todoId, ctx.signal)
           // await revalidateTodoList(dispatch)
         })
@@ -131,7 +126,6 @@ export const newRevalidationListStore = newStoreDef<
         .setName("disable")
         .onFinish(revalidateList(dispatch))
         .promise(async ctx => {
-          // store.abort(["revalidate-todo-list"])
           await toggleTodoDisabledInDb(action.todoId, ctx.signal)
           // await revalidateTodoList(dispatch)
         })
@@ -161,7 +155,7 @@ function revalidateList(
   >
 ): AsyncPromiseOnFinishProps {
   return {
-    id: ["revalidating", "board"],
+    id: ["revalidating"],
     fn: (isLast, resolve, reject) => {
       return dispatch({
         type: "revalidate-todos",
