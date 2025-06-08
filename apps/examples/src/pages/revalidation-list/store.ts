@@ -1,11 +1,25 @@
-import { newStoreDef, runSuccessCallback } from "saphyra"
+import {
+  AsyncPromiseOnFinishProps,
+  Dispatch,
+  EventsTuple,
+  newStoreDef,
+  OnFinishId,
+  Reducer,
+  ReducerProps,
+  runSuccessCallback,
+} from "saphyra"
 import { createStoreUtils } from "saphyra/react"
 import { TodoType } from "./types"
 import { reduceGroupById } from "./fn/reduce-group-by-user-id"
 import { groupByKey } from "~/lib/reduce-group-by"
-import { getTodosFromDb, toggleTodoInDb } from "./fn/fake-todos-db"
+import {
+  getTodosFromDb,
+  toggleTodoInDb,
+  toggleTodoDisabledInDb,
+} from "./fn/fake-todos-db"
 import { cancelPrevious } from "./before-dispatches"
 import { PromiseWithResolvers } from "./polyfills/promise-with-resolvers"
+import { randomString } from "~/lib/utils"
 
 type RevalidationListState = {
   todos: TodoType[]
@@ -22,8 +36,33 @@ type RevalidationListActions =
       completed: boolean
     }
   | {
+      type: "toggle-disabled"
+      todoId: number
+      disabled: boolean
+    }
+  | {
       type: "revalidate-todos"
     }
+
+async function revalidateTodoList(
+  dispatch: Dispatch<
+    RevalidationListState,
+    RevalidationListActions,
+    EventsTuple
+  >
+) {
+  return new Promise((resolve, reject) => {
+    dispatch({
+      type: "revalidate-todos",
+      transition: ["revalidate-todo-list"],
+      onTransitionEnd: ({ aborted, error }) => {
+        if (aborted) return
+        if (error) return reject(error)
+        return resolve(true)
+      },
+    })
+  })
+}
 
 export const newRevalidationListStore = newStoreDef<
   RevalidationListInitialProps,
@@ -57,30 +96,44 @@ export const newRevalidationListStore = newStoreDef<
     }
 
     if (action.type === "toggle-todo") {
-      async()
-        .setName("toggle")
-        .promise(async ctx => {
-          store.abort(["fetch", "todos"])
-          await toggleTodoInDb(action.todoId, ctx.signal)
-        })
-        .onFinish({
-          id: ["revalidate-todo-list"],
-          fn: (isLast, resolve, reject) => {
-            const cleanUp = dispatch({
-              type: "revalidate-todos",
-              transition: ["revalidate-todo-list"],
-              beforeDispatch: ({ action }) => {
-                if (isLast) return action
-              },
-              onTransitionEnd: ({ aborted, error }) => {
-                if (aborted) return
-                if (error) return reject(error)
-                return resolve(true)
-              },
-            })
+      const optimisticCompleted = !state.$completedTodos.includes(action.todoId)
+      optimistic(s => ({
+        todos: s.todos.map(todo =>
+          todo.id === action.todoId
+            ? { ...todo, completed: optimisticCompleted }
+            : todo
+        ),
+      }))
 
-            return () => cleanUp()
-          },
+      async()
+        .setName("complete")
+        .onFinish(revalidateList(dispatch))
+        .promise(async ctx => {
+          // store.abort(["revalidate-todo-list"])
+          await toggleTodoInDb(action.todoId, ctx.signal)
+          // await revalidateTodoList(dispatch)
+        })
+    }
+
+    if (action.type === "toggle-disabled") {
+      const optimisticDisabled = !state.todos.find(
+        todo => todo.id === action.todoId
+      )?.disabled
+
+      optimistic(s => ({
+        todos: s.todos.map(todo =>
+          todo.id === action.todoId
+            ? { ...todo, disabled: optimisticDisabled }
+            : todo
+        ),
+      }))
+      async()
+        .setName("disable")
+        .onFinish(revalidateList(dispatch))
+        .promise(async ctx => {
+          // store.abort(["revalidate-todo-list"])
+          await toggleTodoDisabledInDb(action.todoId, ctx.signal)
+          // await revalidateTodoList(dispatch)
         })
     }
 
@@ -99,6 +152,36 @@ export const newRevalidationListStore = newStoreDef<
     return state
   },
 })
+
+function revalidateList(
+  dispatch: Dispatch<
+    RevalidationListState,
+    RevalidationListActions,
+    EventsTuple
+  >
+): AsyncPromiseOnFinishProps {
+  return {
+    id: ["revalidating", "board"],
+    fn: (isLast, resolve, reject) => {
+      return dispatch({
+        type: "revalidate-todos",
+        transition: ["revalidate-todo-list"],
+        beforeDispatch: ({ action, createAsync, store }) => {
+          if (!isLast()) return
+          const async = createAsync()
+          async()
+            .setName("d")
+            .timer(() => (isLast() ? store.dispatch(action) : {}), 300)
+        },
+        onTransitionEnd: ({ aborted, error }) => {
+          if (aborted) return
+          if (error) return reject(error)
+          return resolve(true)
+        },
+      })
+    },
+  }
+}
 
 export const RevalidationList =
   createStoreUtils<typeof newRevalidationListStore>()

@@ -12,6 +12,7 @@ import { toast } from "sonner"
 import { cancelPrevious } from "./before-dispatches"
 
 export function RevalidationListPage() {
+  const [displayingContent, setDisplayingContent] = useState(true)
   const [revalidationListStore, setRevalidationListStore] = useState(() =>
     newRevalidationListStore(
       {
@@ -34,19 +35,25 @@ export function RevalidationListPage() {
     Object.assign(window, { revalidationList: revalidationListStore })
   }, [revalidationListStore])
 
-  const subtransitions = useSyncExternalStore(
-    cb => revalidationListStore.transitions.subscribe(cb),
-    () => revalidationListStore.transitions.state.subtransitions
-  )
-
   return (
     <RevalidationList.Provider
       value={[revalidationListStore, setRevalidationListStore]}
     >
-      <div className="h-full gap-4 flex flex-col @xl:flex-row overflow-hidden">
+      <button
+        className="w-fit absolute top-6 left-1/2 -translate-x-1/2"
+        onClick={() => setDisplayingContent(prev => !prev)}
+      >
+        Toggle content visibility
+      </button>
+      <div
+        className={cn(
+          "h-full gap-4 flex flex-col @xl:flex-row overflow-hidden mt-6"
+        )}
+      >
         <div
           className={cn(
-            "flex-1 flex justify-between min-h-0 min-w-0 h-full overflow-auto"
+            "flex-1 flex justify-between min-h-0 min-w-0 h-full overflow-auto w-1/2",
+            !displayingContent && "hidden"
           )}
         >
           {isBootstraping ? (
@@ -59,10 +66,10 @@ export function RevalidationListPage() {
             </div>
           )}
         </div>
-        <div className="grid grid-rows-[1fr,1fr] min-h-0 min-w-0 w-1/2 h-full gap-4">
-          <div className="size-full p-4">
+        <div className="flex-1 grid min-h-0 min-w-0 h-full gap-4 w-full">
+          {/* <div className="size-full p-4">
             <pre>{JSON.stringify(subtransitions, null, 2)}</pre>
-          </div>
+          </div> */}
           <Waterfall store={revalidationListStore} />
         </div>
       </div>
@@ -80,7 +87,7 @@ export function PostList({}: PostListProps) {
       <div className="flex justify-between mb-4">
         <div className="h-full flex [&>*]:border-r [&>*]:border-r-gray-800 [&>*:last-child]:border-r-0 "></div>
       </div>
-      <ul className="grid grid-cols-2 gap-2">
+      <ul className="grid grid-cols-1 gap-2">
         {todos.map(todo => (
           <Todo
             key={todo.id}
@@ -99,6 +106,7 @@ type TodoProps = {
 export function Todo({ todoId }: TodoProps) {
   const [revalidationStore] = RevalidationList.useUseState()
   const todo = RevalidationList.useOptimisticStore(s => s.$todosById[todoId])
+  const isPending = RevalidationList.useTransition(["todo", todoId])
 
   return (
     <li
@@ -106,18 +114,20 @@ export function Todo({ todoId }: TodoProps) {
         "flex items-center gap-3 p-1 relative border rounded-md",
         "border-gray-200 bg-gray-50",
         "dark:border-gray-800 dark:bg-gray-950",
-        todo.completed && "opacity-60"
+        todo.disabled && "opacity-40"
       )}
     >
       <div className="flex-shrink-0">
         <div
           role="button"
           onClick={() => {
+            if (todo.disabled) return
+
             revalidationStore.dispatch({
               type: "toggle-todo",
               todoId: todo.id,
               completed: !todo.completed,
-              transition: ["todo", "toggle", todo.id],
+              transition: ["todo", todo.id, "toggle"],
               beforeDispatch: cancelPrevious,
               onTransitionEnd({ error, transition, aborted }) {
                 if (aborted) return
@@ -125,14 +135,15 @@ export function Todo({ todoId }: TodoProps) {
                   return toastWithSonner(error, transition)
                 }
 
-                toast.success("Todo toggled")
+                // toast.success("Todo toggled")
               },
             })
           }}
           className={cn(
             "w-8 h-8 rounded border-2 flex items-center justify-center",
             "border-gray-300 dark:border-gray-700",
-            todo.completed && "bg-blue-500 border-blue-500"
+            todo.completed && "bg-blue-500 border-blue-500",
+            todo.disabled && "cursor-not-allowed opacity-50"
           )}
         >
           {todo.completed && (
@@ -162,6 +173,40 @@ export function Todo({ todoId }: TodoProps) {
         >
           {todo.title}
         </p>
+      </div>
+      <div className="flex-shrink-0 flex gap-2">
+        {/* {isPending && <Spinner size={16} />} */}
+        <div
+          role="button"
+          onClick={() => {
+            revalidationStore.dispatch({
+              type: "toggle-disabled",
+              todoId: todo.id,
+              disabled: !todo.disabled,
+              transition: ["todo", todo.id, "toggle-disabled"],
+              beforeDispatch: cancelPrevious,
+              onTransitionEnd({ error, transition, aborted }) {
+                if (aborted) return
+                if (error) {
+                  return toastWithSonner(error, transition)
+                }
+
+                // toast.success(todo.disabled ? "Todo enabled" : "Todo disabled")
+              },
+            })
+          }}
+          className={cn(
+            "px-2 py-1 text-xs rounded border",
+            "border-gray-300 dark:border-gray-600",
+            "hover:bg-gray-100 dark:hover:bg-gray-800",
+            "transition-colors duration-200",
+            todo.disabled
+              ? "text-green-600 dark:text-green-400"
+              : "text-red-600 dark:text-red-400"
+          )}
+        >
+          {todo.disabled ? "Enable" : "Disable"}
+        </div>
       </div>
     </li>
   )

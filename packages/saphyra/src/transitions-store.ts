@@ -8,6 +8,7 @@ import { createAncestor } from "./utils"
 export type TransitionsStoreState = {
   transitions: Record<string, number>
   subtransitions: Record<string, number>
+  finishes: Record<string, number>
 }
 
 export const runSuccessCallback: OnFinishTransition = ({
@@ -20,16 +21,6 @@ export const runSuccessCallback: OnFinishTransition = ({
     return
   }
 
-  const successFnList = transitionStore.finishCallbacks.success
-  const transition = transitionName.split(":")
-  if (successFnList.size > 0) {
-    transitionStore.addKey(transition)
-    successFnList.forEach(fn => fn?.())
-    transitionStore.doneKey(transition, {
-      onFinishTransition: runSuccessCallback,
-    })
-    return
-  }
   transitionStore.allEvents.emit("transition-done-successfully", transitionName)
   doneCallback?.()
   transitionStore.callbacks.done.set(transitionName, null)
@@ -59,6 +50,7 @@ export class TransitionsStore extends Subject {
     "transition-aborted": [transitionName: string]
     "transition-done": [transitionName: string]
     "subtransition-done": [id: string]
+    "finish-done": [id: string]
     "transition-done-successfully": [transitionName: string]
   }>()
   meta: {
@@ -73,6 +65,7 @@ export class TransitionsStore extends Subject {
 
   finishCallbacks = {
     success: new Map<string, (() => void) | null>(),
+    cleanUps: {} as Record<string, Set<() => void>>,
     error: new Map<string, ((error: unknown) => void) | null>(),
   }
 
@@ -88,6 +81,7 @@ export class TransitionsStore extends Subject {
     this.state = {
       transitions: {},
       subtransitions: {},
+      finishes: {},
     }
 
     this.meta = {
@@ -294,6 +288,30 @@ export class TransitionsStore extends Subject {
     Object.values(functionsToRun)
       .flat()
       .forEach(fn => fn())
+  }
+
+  setFinishes(finishes: Record<string, number>) {
+    this.state.finishes = finishes
+    this.notify()
+  }
+
+  addFinish(id: string) {
+    const finishes = { ...this.state.finishes }
+    finishes[id] ??= 0
+    finishes[id]++
+    this.setFinishes(finishes)
+  }
+
+  doneFinish(id: string) {
+    if (!(id in this.state.finishes)) {
+      throw new Error(`Finish ${id} not found`)
+    }
+    const finishes = { ...this.state.finishes }
+    finishes[id]--
+    this.setFinishes(finishes)
+    if (finishes[id] === 0) {
+      this.allEvents.emit("finish-done", id)
+    }
   }
 
   setSubtransitions(subtransitions: Record<string, number>) {
