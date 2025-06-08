@@ -118,7 +118,7 @@ function defaultOnConstruct<
 /**
  * Reducer
  */
-type ReducerProps<
+export type ReducerProps<
   TState extends Record<string, any>,
   TActions extends ActionShape<TState, TEvents> & DefaultActions,
   TEvents extends EventsTuple,
@@ -348,6 +348,7 @@ export function newStoreDef<
       optimisticState: {} as TState,
       uncontrolledState: {} as TUncontrolledState,
       transitionsState: new TransitionsStateStore<TState>(),
+      onTransitionEndCallbacks: {},
     }
     let store = createDebugableShallowCopy(
       storeValues as unknown as SomeStore<
@@ -438,11 +439,7 @@ export function newStoreDef<
       noop()
     }
 
-    const commitTransition: Met["commitTransition"] = (
-      transition,
-      action,
-      onTransitionEnd
-    ) => {
+    const commitTransition: Met["commitTransition"] = (transition, action) => {
       if (!transition) {
         debugger
         throw errorNoTransition()
@@ -488,32 +485,34 @@ export function newStoreDef<
       defineState(newState)
 
       store.historyRedo = []
-      onTransitionEnd?.({
-        events: store.events,
-        meta: store.transitions.meta.get(transition),
-        state: newState,
-        transition,
-        transitionStore: store.transitions,
-        aborted: false,
+
+      const onTransitionEndCallbacks =
+        store.onTransitionEndCallbacks[transitionKey] ?? new Set()
+      onTransitionEndCallbacks.forEach(onTransitionEnd => {
+        onTransitionEndCallbacks.delete(onTransitionEnd)
+        onTransitionEnd({
+          events: store.events,
+          meta: store.transitions.meta.get(transition),
+          state: newState,
+          transition,
+          transitionStore: store.transitions,
+          aborted: false,
+        })
       })
       subject.notify()
     }
 
-    function completeTransition(
-      transition: any[],
-      action: TActions,
-      onTransitionEnd?: OnTransitionEnd<TState, TEvents>
-    ) {
+    function completeTransition(transition: any[], action: TActions) {
       const transitionString = transition.join(":")
       if (!transition) throw new Error("Impossible to reach this point")
       log(`%cTransition completed! [${transitionString}]`, "color: lightgreen")
-      commitTransition(transition, action, onTransitionEnd)
+      commitTransition(transition, action)
     }
 
     function getAbortController(transition?: any[] | null | undefined) {
       if (!transition)
         return {
-          controller: undefined,
+          controller: undefined as AbortController | undefined,
           rollback: noop,
         }
       const key = transition.join(":")
@@ -532,8 +531,8 @@ export function newStoreDef<
 
     const cleanUpTransition = (transition: any[], error: unknown | null) => {
       const transitionKey = transition.join(":")
-      const cleanUpList = store.transitions.cleanUpList[transitionKey] ?? []
-      cleanUpList.forEach(fn => fn(error))
+      const cleanUpList = store.transitions.cleanUpList[transitionKey]
+      cleanUpList?.forEach(fn => fn(error))
       store.transitions.cleanup(transitionKey)
 
       if (transitionKey === "bootstrap") {
@@ -601,7 +600,7 @@ export function newStoreDef<
 
       store.transitions.callbacks.done.set(transitionString, () => {
         logDebug(`00) k done [${transitionString}]`, store.settersRegistry)
-        store.completeTransition(transition, action, action.onTransitionEnd)
+        store.completeTransition(transition, action)
         // store.internal.events.emit("transition-completed", {
         //   id: internalTransitionId,
         //   status: "success",
@@ -815,7 +814,15 @@ export function newStoreDef<
 
       let rootAction = beforeDispatch(opts as any)
 
-      if (rootAction == null) {
+      const transitionKey = initialAction?.transition?.join(":")
+      if (transitionKey && initialAction?.onTransitionEnd) {
+        store.onTransitionEndCallbacks[transitionKey] ??= new Set()
+        store.onTransitionEndCallbacks[transitionKey].add(
+          initialAction.onTransitionEnd
+        )
+      }
+
+      if (!rootAction) {
         const scheduledTransition = store.transitions.isHappeningUnique(
           initialAction.transition
         )
@@ -826,17 +833,17 @@ export function newStoreDef<
             prevState: store.state,
           })
           logDebug("%c 44: done dispatching! (opt)", "color: coral")
+          return () => {}
         } else {
           // Returned no action and didn't even schedule a transition,
           // it means the action is done and there is no more computation to do
+          return () => {}
         }
-        return () => {}
       }
       const cleanUp = () => {
         abort(rootAction.transition)
       }
 
-      rootAction
       store.transitions.addKey(rootAction.transition, "dispatch/new-transition")
       handleRegisterTransition(rootAction, store, when)
 
