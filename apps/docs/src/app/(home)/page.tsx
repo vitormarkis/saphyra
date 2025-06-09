@@ -49,10 +49,7 @@ function EnhanceText({ className, ...props }: EnhanceTextProps) {
 
 type InterrogationLightProps = ComponentProps<"div">
 
-export function InterrogationLight({
-  className,
-  ...props
-}: InterrogationLightProps) {
+function InterrogationLight({ className, ...props }: InterrogationLightProps) {
   return (
     <div
       className={cn(
