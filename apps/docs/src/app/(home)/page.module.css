@@ -1,0 +1,11 @@
+.enhance-text {
+  background: #230ccf;
+  background: repeating-linear-gradient(
+    256deg,
+    #a26fff 0,
+    #d400ff 50%,
+    #ff7fa7
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
