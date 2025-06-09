@@ -59,10 +59,10 @@ function InterrogationLight({ className, ...props }: InterrogationLightProps) {
       {...props}
     >
       <div className="relative flex w-full flex-col items-center">
-        <div className="absolute left-1/2 bottom-0 h-[7rem] w-[13rem] -translate-x-1/2 translate-y-1/2 rounded-full bg-slate-500/20 dark:bg-yellow-600/10 blur-[60px]"></div>
+        <div className="absolute left-1/2 bottom-0 h-[7rem] w-[13rem] -translate-x-1/2 translate-y-1/2 rounded-full bg-slate-500/20 dark:bg-slate-400/10 blur-[60px]"></div>
         <div className="relative mb-4 h-[9rem] w-[7rem]"></div>
       </div>
-      <div className="h-[1px] w-[90%] bg-gradient-to-r from-transparent via-slate-300/70 dark:via-yellow-800/10 to-transparent"></div>
+      <div className="h-[1px] w-[90%] bg-gradient-to-r from-transparent via-slate-300/70 dark:via-slate-800/10 to-transparent"></div>
     </div>
   )
 }

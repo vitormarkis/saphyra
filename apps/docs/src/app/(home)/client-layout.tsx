@@ -42,7 +42,7 @@ function ThemeLayout({ children }: { children: ReactNode }) {
         {
           background:
             theme === "dark"
-              ? "linear-gradient(20deg, rgb(0, 0, 0) 20%, #262b004a 50%, rgb(0, 0, 0) 80%)"
+              ? "linear-gradient(20deg, rgb(0, 0, 0) 20%, rgb(0 5 33 / 29%) 50%, rgb(0, 0, 0) 80%)"
               : "linear-gradient(to bottom right,#e4e6ff,#fff 40%,#e4ebff)",
         } as React.CSSProperties
       }
