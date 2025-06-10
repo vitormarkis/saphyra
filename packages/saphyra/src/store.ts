@@ -51,6 +51,7 @@ import { mockAsync } from "./helpers/mock-async"
 import { mockEventEmitter } from "./helpers/mock-event-emitter"
 import { log, logDebug } from "./helpers/log"
 import { TransitionsStateStore } from "./transitions-state"
+import { PromiseWithResolvers } from "./polyfills/promise-with-resolvers"
 
 export type ExternalProps = Record<string, any> | null
 
@@ -695,6 +696,32 @@ export function newStoreDef<
       controller?.abort()
     }
 
+    const dispatchAsync: Met["dispatchAsync"] = async (
+      initialAction,
+      signal
+    ) => {
+      const resolver = PromiseWithResolvers<TState>()
+      if (signal?.aborted) {
+        throw { code: 20, reason: "Signal is already aborted" }
+      }
+      const unsub = dispatch({
+        ...initialAction,
+        onTransitionEnd(props) {
+          if (signal?.aborted) {
+            return resolver.reject({ code: 20 })
+          }
+          if (props.error) {
+            resolver.reject(props.error)
+          } else {
+            resolver.resolve(props.state)
+          }
+          return initialAction.onTransitionEnd?.(props)
+        },
+      })
+      signal?.addEventListener("abort", () => unsub())
+      return resolver.promise
+    }
+
     const dispatch: Met["dispatch"] = (initialAction: Action) => {
       const when = labelWhen(new Date())
       try {
@@ -1294,6 +1321,7 @@ export function newStoreDef<
       getState,
       getOptimisticState,
       dispatch,
+      dispatchAsync,
       setState,
       registerOptimistic,
       registerErrorHandler,

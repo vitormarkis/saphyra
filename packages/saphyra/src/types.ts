@@ -13,6 +13,15 @@ export type Dispatch<
   TEvents extends EventsTuple,
 > = (action: ClassicAction<TState, TActions, TEvents>) => void
 
+export type DispatchAsync<
+  TState extends Record<string, any>,
+  TActions extends ActionShape<TState, TEvents>,
+  TEvents extends EventsTuple,
+> = (
+  action: ClassicAction<TState, TActions, TEvents>,
+  signal?: AbortSignal
+) => Promise<TState>
+
 export type ClassicAction<
   TState extends Record<string, any>,
   TActions extends ActionShape<TState, TEvents>,
@@ -155,6 +164,7 @@ export type GenericStoreMethods<
   getState(): TState
   getOptimisticState(): TState
   dispatch: Dispatch<TState, TActions, TEvents>
+  dispatchAsync: DispatchAsync<TState, TActions, TEvents>
   setState(
     setterOrPartialState: SetterOrPartialState<TState>,
     options?: SetStateOptions
