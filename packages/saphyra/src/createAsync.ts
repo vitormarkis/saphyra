@@ -186,7 +186,10 @@ export function createAsync<
         store.transitions.emitError(transition, error)
       }
     }
-    handlePromise(promiseFn({ signal }))
+    // Set timeout here just to prevent sync reads/writes
+    setTimeout(() => {
+      handlePromise(promiseFn({ signal }))
+    })
   }
 
   const wrapTimeout = (

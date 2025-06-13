@@ -28,6 +28,7 @@ import type {
   ClassicAction,
   ClassicActionRedispatch,
   TransitionFunctionOptions,
+  DispatchAsync,
 } from "./types"
 import { EventEmitter, EventsTuple } from "./event-emitter"
 import { noop } from "./fn/noop"
@@ -135,6 +136,7 @@ export type ReducerProps<
   optimistic: ReducerOptimistic<TState>
   diff: Diff<TState>
   dispatch: Dispatch<TState, TActions, TEvents>
+  dispatchAsync: DispatchAsync<TState, TActions, TEvents>
   deps: TDeps
 }
 
@@ -416,6 +418,7 @@ export function newStoreDef<
             events: mockEventEmitter<TEvents>(),
             store,
             dispatch: () => noop,
+            dispatchAsync: () => Promise.resolve(newState),
             deps,
           }) as TState
           const derivedStatePlusDerivations = applySettersListToState({
@@ -659,6 +662,7 @@ export function newStoreDef<
         optimistic: scheduleOptimistic,
         diff: createDiff(prevState, newState),
         dispatch: () => noop,
+        dispatchAsync: () => Promise.resolve(newState),
         deps,
       }
 
@@ -713,7 +717,9 @@ export function newStoreDef<
           if (signal?.aborted) {
             return resolver.reject({ code: 20 })
           }
-          if (props.error) {
+          // RESOLVENDO A PROMISE QUANDO ELE ABORTA, TA FUNCIONANDO, MAS NAO DEVERIA
+          // @ts-ignore
+          if (props.error && props.error.code !== 20) {
             resolver.reject(props.error)
           } else {
             resolver.resolve(props.state)
@@ -1117,6 +1123,20 @@ export function newStoreDef<
             }
             return () => {
               abort(safeAction.transition)
+            }
+          },
+          dispatchAsync: async (action: Action) => {
+            if (signal.aborted) throw { error: 20, reason: "aborted" }
+            const safeAction = {
+              ...action,
+              transition: action.transition ?? rootAction.transition ?? null,
+            }
+            if (isSync) {
+              throw new Error(
+                "DispatchAsync called synchronously, wrap it in a async().promise() module."
+              )
+            } else {
+              return store.dispatchAsync(safeAction)
             }
           },
           deps,

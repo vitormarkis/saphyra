@@ -117,6 +117,40 @@ export function Todo({ todoId }: TodoProps) {
         todo.disabled && "opacity-40"
       )}
     >
+      <div className="flex-shrink-0 flex gap-2">
+        {/* {isPending && <Spinner size={16} />} */}
+        <div
+          role="button"
+          onClick={() => {
+            revalidationStore.dispatch({
+              type: "toggle-disabled",
+              todoId: todo.id,
+              disabled: !todo.disabled,
+              transition: ["todo", todo.id, "toggle-disabled"],
+              beforeDispatch: cancelPrevious,
+              onTransitionEnd({ error, transition, aborted }) {
+                if (aborted) return
+                if (error) {
+                  return toastWithSonner(error, transition)
+                }
+
+                // toast.success(todo.disabled ? "Todo enabled" : "Todo disabled")
+              },
+            })
+          }}
+          className={cn(
+            "px-2 py-1 text-xs rounded border",
+            "border-gray-300 dark:border-gray-600",
+            "hover:bg-gray-100 dark:hover:bg-gray-800",
+            "transition-colors duration-200",
+            todo.disabled
+              ? "text-green-600 dark:text-green-400"
+              : "text-red-600 dark:text-red-400"
+          )}
+        >
+          {todo.disabled ? "Enable" : "Disable"}
+        </div>
+      </div>
       <div className="flex-shrink-0">
         <div
           role="button"
@@ -163,6 +197,7 @@ export function Todo({ todoId }: TodoProps) {
           )}
         </div>
       </div>
+
       <div className="flex-1 min-w-0">
         <p
           className={cn(
@@ -173,40 +208,6 @@ export function Todo({ todoId }: TodoProps) {
         >
           {todo.title}
         </p>
-      </div>
-      <div className="flex-shrink-0 flex gap-2">
-        {/* {isPending && <Spinner size={16} />} */}
-        <div
-          role="button"
-          onClick={() => {
-            revalidationStore.dispatch({
-              type: "toggle-disabled",
-              todoId: todo.id,
-              disabled: !todo.disabled,
-              transition: ["todo", todo.id, "toggle-disabled"],
-              beforeDispatch: cancelPrevious,
-              onTransitionEnd({ error, transition, aborted }) {
-                if (aborted) return
-                if (error) {
-                  return toastWithSonner(error, transition)
-                }
-
-                // toast.success(todo.disabled ? "Todo enabled" : "Todo disabled")
-              },
-            })
-          }}
-          className={cn(
-            "px-2 py-1 text-xs rounded border",
-            "border-gray-300 dark:border-gray-600",
-            "hover:bg-gray-100 dark:hover:bg-gray-800",
-            "transition-colors duration-200",
-            todo.disabled
-              ? "text-green-600 dark:text-green-400"
-              : "text-red-600 dark:text-red-400"
-          )}
-        >
-          {todo.disabled ? "Enable" : "Disable"}
-        </div>
       </div>
     </li>
   )

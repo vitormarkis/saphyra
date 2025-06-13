@@ -7,7 +7,7 @@ import { MobileNavigation } from "./MobileNavigation"
 type RootLayoutWrapperProps = {} & PropsWithChildren
 
 export function RootLayoutWrapper({ children }: RootLayoutWrapperProps) {
-  const [isSidebarVisible, setIsSidebarVisible] = useState(false)
+  const [isSidebarVisible, setIsSidebarVisible] = useState(true)
 
   useEffect(() => {
     Object.assign(window, {
