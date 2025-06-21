@@ -89,6 +89,9 @@ export function ExternalDepsPage() {
           <div className="mr-4 relative w-full">
             <PostList />
           </div>
+          <div className="mr-4 relative w-full">
+            <PostList />
+          </div>
         </div>
         <div className="grid grid-rows-[1fr,1fr] min-h-0 min-w-0 w-1/2 h-full gap-4">
           <Devtools store={postsStore} />
