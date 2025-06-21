@@ -1,9 +1,9 @@
 ### v0.7.0
 Renamed hooks and some other properties in the `createStoreUtils` function:
-`useOptimisticStore` -> `useSelector`
-`useStore` -> `useCommittedSelector`
-`useTransitionState` -> `useTransitionSelector`
-`useUseState` -> `useStore`
+- `useOptimisticStore` -> `useSelector`
+- `useStore` -> `useCommittedSelector`
+- `useTransitionState` -> `useTransitionSelector`
+- `useUseState` -> `useStore`
 
 Reason: I wanted to make reading from the optimistic state the default behavior, instead of requiring developers to opt into it manually. Now, by default, you read from the optimistic state and manually opt into the committed state if needed.
 
