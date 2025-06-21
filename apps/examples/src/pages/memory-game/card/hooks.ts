@@ -10,7 +10,7 @@ function defaultSelector<T>(data: T) {
 export function useMemoryCard<R = MemoryCard>(
   selector?: (data: MemoryCard) => R
 ) {
-  const [store] = Game.useUseState()
+  const [store] = Game.useStore()
   const cardId = useMemoryCardId()
   const finalSelector = selector ?? (defaultSelector as (data: MemoryCard) => R)
   return useSyncExternalStore(

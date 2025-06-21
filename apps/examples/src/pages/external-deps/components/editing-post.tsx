@@ -16,7 +16,7 @@ import {
 type EditingPostProps = {}
 
 export function EditingPost({}: EditingPostProps) {
-  const [postsStore] = Posts.useUseState()
+  const [postsStore] = Posts.useStore()
 
   const commentingPostId = Posts.useCommittedSelector(s => s.commentingPostId)
   if (!commentingPostId) throw new Error("No commenting post id") // this will be solved with states in v2

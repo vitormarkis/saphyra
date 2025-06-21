@@ -27,7 +27,7 @@ export function createStoreUtils<
 
   const Context = createContext<StateTuple<TStore> | null>(null)
 
-  function useUseState() {
+  function useStore() {
     const ctx = useContext(Context)
     if (!ctx) throw new Error(`[Context] No context provided.`)
     return ctx
@@ -35,7 +35,7 @@ export function createStoreUtils<
 
   const getDefaultStore: () => TStore = store
     ? () => store
-    : () => useUseState()[0]
+    : () => useStore()[0]
 
   function useTransition(
     transition: any[],
@@ -137,7 +137,7 @@ export function createStoreUtils<
     useSelector,
     useCommittedSelector,
     useTransitionSelector,
-    useUseState,
+    useStore,
     useTransition,
     useErrorHandlers,
     useLazyValue,
@@ -175,7 +175,7 @@ export type StoreUtils<
     selector?: (data: TState) => R,
     store?: TStore
   ) => R
-  useUseState: () => StateTuple<TStore>
+  useStore: () => StateTuple<TStore>
   useTransition: (transition: any[], store?: TStore) => boolean
   useErrorHandlers: (handler: StoreErrorHandler, store?: TStore) => void
   useLazyValue: <const TTransition extends any[], TPromiseResult, R>(

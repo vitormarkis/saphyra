@@ -155,7 +155,7 @@ function App() {
 <Step>  
 ### Providing with Context
 
-In case you stick with local (recommended), the `CountStore` module exposes a `Provider` component that you can use to provide the store state to children. It also provides a hook called `useUseState` to consume the context.
+In case you stick with local (recommended), the `CountStore` module exposes a `Provider` component that you can use to provide the store state to children. It also provides a hook called `useStore` to consume the context.
 
 ```js
 import { newStoreDef } from "saphyra"
@@ -178,7 +178,7 @@ function CountProvider({ initialCount, children }) {
 }
 
 function Children() {
-  const [countStore] = CountStore.useUseState()
+  const [countStore] = CountStore.useStore()
   const count = CountStore.useCommittedSelector(s => s.count)
 
   // ...

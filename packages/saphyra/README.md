@@ -177,7 +177,7 @@ export function SimpleFormPage() {
 }
 
 export function SimpleFormView({ onGetToken }) {
-  const [simpleForm] = SimpleForm.useUseState()
+  const [simpleForm] = SimpleForm.useStore()
   const isSubmitting = SimpleForm.useTransition(["submit"])
 
   const name = SimpleForm.useCommittedSelector(s => s.name)

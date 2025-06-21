@@ -108,7 +108,7 @@ export function VideoPage() {
 type TransitionsShowcaseViewProps = {}
 
 export function TransitionsShowcaseView({}: TransitionsShowcaseViewProps) {
-  const [transitionsStore] = TransitionsStore.useUseState()
+  const [transitionsStore] = TransitionsStore.useStore()
 
   const isLoading = TransitionsStore.useTransition(["fetch"])
 

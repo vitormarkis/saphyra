@@ -101,7 +101,7 @@ export function WaterfallController({}: WaterfallControllerProps) {
     clearTimeout
   )
 
-  const [waterfallStore] = WF.useUseState()
+  const [waterfallStore] = WF.useStore()
 
   return (
     <div className="flex justify-between gap-2">
@@ -181,7 +181,7 @@ export function WaterfallController({}: WaterfallControllerProps) {
 }
 
 function WaterfallContent() {
-  const [waterfallStore] = WF.useUseState()
+  const [waterfallStore] = WF.useStore()
   const displayingBarsIdList = WF.useCommittedSelector(
     s => s.$displayingBarsIdList
   )
@@ -409,7 +409,7 @@ export const Bar = forwardRef(function Bar({
   hover,
   seeingElement,
 }: BarProps) {
-  const [waterfallStore] = WF.useUseState()
+  const [waterfallStore] = WF.useStore()
   const barRef = useContext(RefContext)
   const transitionName = WF.useCommittedSelector(
     s => s.$barsByBarId[barId].transitionName
@@ -599,7 +599,7 @@ const LineView = memo(function LineView({
 }: LineViewProps) {
   const lineViewRef = useRef<HTMLDivElement>(null)
   const lineViewContentRef = useRef<HTMLSpanElement>(null)
-  const [waterfallStore] = WF.useUseState()
+  const [waterfallStore] = WF.useStore()
   useSyncExternalStore(
     cb => waterfallStore.subscribe(cb),
     () =>
@@ -669,7 +669,7 @@ type SorterHeaderProps = {
 }
 
 export function SorterHeader({ children, property }: SorterHeaderProps) {
-  const [waterfallStore] = WF.useUseState()
+  const [waterfallStore] = WF.useStore()
 
   const currentSorter = WF.useCommittedSelector(
     s => s.$currentSorters[property]
@@ -757,7 +757,7 @@ type TransitionNameWrapperProps = {
 }
 
 export function TransitionNameWrapper({ barId }: TransitionNameWrapperProps) {
-  const [waterfallStore] = WF.useUseState()
+  const [waterfallStore] = WF.useStore()
   const transitionName = WF.useCommittedSelector(
     s => s.$barsByBarId[barId].transitionName
   )

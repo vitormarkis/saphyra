@@ -171,7 +171,7 @@ type PostProps = {
 }
 
 export function Post({ post }: PostProps) {
-  const [posts] = Posts.useUseState()
+  const [posts] = Posts.useStore()
   const isLiked = Posts.useSelector(s => s.likedPosts.includes(post.id))
   const isPostPending = Posts.useTransition(["post", post.id, "like"])
 

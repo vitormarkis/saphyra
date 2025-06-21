@@ -72,7 +72,7 @@ type SimpleFormViewProps = {
 }
 
 export function SimpleFormView({ onGetToken }: SimpleFormViewProps) {
-  const [simpleForm] = SimpleForm.useUseState()
+  const [simpleForm] = SimpleForm.useStore()
   const name = SimpleForm.useCommittedSelector(s => s.name)
   const surname = SimpleForm.useCommittedSelector(s => s.surname)
   const email = SimpleForm.useCommittedSelector(s => s.email)

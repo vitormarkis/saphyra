@@ -131,7 +131,7 @@ export function ChangeRolePage() {
 }
 
 function ChangeRolePageContent() {
-  const [authStore] = Auth.useUseState()
+  const [authStore] = Auth.useStore()
   const state = Auth.useCommittedSelector()
   const optimisticRole = Auth.useSelector(s => s.role)
 

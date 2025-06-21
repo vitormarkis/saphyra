@@ -115,7 +115,7 @@ const beforeDispatch = ({
 }
 
 export function PokemonPageContent({}: PokemonPageContentProps) {
-  const [store] = Pokemon.useUseState()
+  const [store] = Pokemon.useStore()
   const currentPokemonId = Pokemon.useSelector(s => s.currentPokemonId)
   const isLoadingNewPokemon = Pokemon.useTransition(["pokemon"])
 
