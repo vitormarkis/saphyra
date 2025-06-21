@@ -1,3 +1,21 @@
+### v0.7.0
+Renamed hooks and some other properties in the `createStoreUtils` function:
+`useOptimisticStore` -> `useSelector`
+`useStore` -> `useCommittedSelector`
+`useTransitionState` -> `useTransitionSelector`
+`useUseState` -> `useStore`
+
+Reason: I wanted to make reading from the optimistic state the default behavior, instead of requiring developers to opt into it manually. Now, by default, you read from the optimistic state and manually opt into the committed state if needed.
+
+I used the `Selector` suffix to align with common community conventions and improve cold onboarding.
+
+Provided a `Context` instead of a `Provider`, so you can use the traditional `useContext` API to conditionally access the store, avoiding hacks with `useStore` and `try/catch` blocks.
+```javascript
+const [yourStore] = useContext(YourStore.Context) ?? []
+if (!yourStore) return defaultValue
+```
+
+
 ### v0.5.0
 Changes in state triggered by transitions happen in background states, which aren't displayed on the screen until the transition finishes. However, you might want to display some values immediately to improve the user experience.
 
