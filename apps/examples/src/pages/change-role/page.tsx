@@ -55,16 +55,14 @@ const newAuthStore = newStoreDef<
     }
 
     if (prevState.role !== state.role) {
-      async()
-        .setName("fetch-permissions")
-        .promise(async ({ signal }) => {
-          const permissions = await fetchPermissions({
-            role: state.role,
-            signal,
-          })
-          events.emit("got-permissions", permissions)
-          set({ $permissions: permissions })
+      async().promise(async ({ signal }) => {
+        const permissions = await fetchPermissions({
+          role: state.role,
+          signal,
         })
+        events.emit("got-permissions", permissions)
+        set({ $permissions: permissions })
+      })
     }
 
     set(s =>
