@@ -51,15 +51,15 @@ export function MultipleOptimisticUpdatesPage() {
   )
 
   return (
-    <Store.Provider value={[store, setStore]}>
+    <Store.Context.Provider value={[store, setStore]}>
       <Content />
-    </Store.Provider>
+    </Store.Context.Provider>
   )
 }
 
 function Content() {
   const [store] = Store.useUseState()
-  const state = Store.useOptimisticStore()
+  const state = Store.useSelector()
   const loading = Store.useTransition(["fire"])
   return (
     <div className="flex flex-col">

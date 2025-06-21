@@ -15,7 +15,7 @@ const simpleForm = newSimpleForm({
   password: "",
 })
 const SimpleForm = createStoreUtils<typeof newSimpleForm>(simpleForm)
-const useSimpleForm = SimpleForm.useStore
+const useSimpleForm = SimpleForm.useCommittedSelector
 
 export function ZustandLikePage() {
   return (

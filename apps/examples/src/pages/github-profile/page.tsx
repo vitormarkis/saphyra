@@ -37,7 +37,7 @@ const userStore = newUserStore({
 export const User = createStoreUtils<typeof newUserStore>(userStore)
 
 export function GithubProfilePage() {
-  const username = User.useStore(s => s.username)
+  const username = User.useCommittedSelector(s => s.username)
   const isFetchingUser = User.useTransition(["user", "fetch"])
 
   return (

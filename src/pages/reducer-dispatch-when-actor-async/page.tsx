@@ -51,7 +51,7 @@ const store = newStore({
 export const Store = createStoreUtils<typeof newStore>(store)
 
 export function ReducerDispatchWhenActorAsync() {
-  const state = Store.useStore()
+  const state = Store.useCommittedSelector()
   const isBootstraping = Store.useTransition(["bootstrap"])
   const updating = Store.useTransition(["update-state"])
 

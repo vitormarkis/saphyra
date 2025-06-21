@@ -87,11 +87,11 @@ export function BeforeDispatchPage() {
   const transitionsStoreState = useState(() => newTransitionsStore({}))
 
   return (
-    <TransitionsStore.Provider value={transitionsStoreState}>
+    <TransitionsStore.Context.Provider value={transitionsStoreState}>
       <div className="flex flex-col gap-4 h-full overflow-auto">
         <BeforeDispatchView />
       </div>
-    </TransitionsStore.Provider>
+    </TransitionsStore.Context.Provider>
   )
 }
 
@@ -448,9 +448,9 @@ export function StoreProvider({ children }: StoreProviderProps) {
   const storeState = useState(() => newTransitionsStore({}))
 
   return (
-    <TransitionsStore.Provider value={storeState}>
+    <TransitionsStore.Context.Provider value={storeState}>
       {children}
-    </TransitionsStore.Provider>
+    </TransitionsStore.Context.Provider>
   )
 }
 
@@ -459,7 +459,7 @@ type ExampleProps = {
 }
 
 export function Example({ createExample }: ExampleProps) {
-  const theme = Theme.useStore(s => s.theme)
+  const theme = Theme.useCommittedSelector(s => s.theme)
   const [store] = TransitionsStore.useUseState()
   const example = createExample(store)
   const transition = [...example.action.transition!]
@@ -536,7 +536,7 @@ type CodeBlockProps = {
 }
 
 export function CodeBlock({ example }: CodeBlockProps) {
-  const theme = Theme.useStore(s => s.theme)
+  const theme = Theme.useCommittedSelector(s => s.theme)
   const { data } = useSuspenseQuery({
     queryKey: ["code", example.script, example.slug],
     queryFn: async () => {

@@ -37,11 +37,11 @@ export function ExternalDepsPage() {
   )
 
   const isBootstraping = Posts.useTransition(["bootstrap"], postsStore)
-  const isCommentingPost = Posts.useStore(
+  const isCommentingPost = Posts.useCommittedSelector(
     s => s.commentingPostId != null,
     postsStore
   )
-  const allPosts = Posts.useStore(s => s.posts, postsStore)
+  const allPosts = Posts.useCommittedSelector(s => s.posts, postsStore)
 
   Posts.useErrorHandlers(toastWithSonner, postsStore)
 
@@ -83,7 +83,7 @@ export function ExternalDepsPage() {
   }, [postsStore])
 
   return (
-    <Posts.Provider value={[postsStore, setPostsStore]}>
+    <Posts.Context.Provider value={[postsStore, setPostsStore]}>
       <div className="h-full gap-4 flex flex-col @xl:flex-row overflow-hidden">
         <div
           className={cn(
@@ -106,16 +106,18 @@ export function ExternalDepsPage() {
           <Waterfall store={postsStore} />
         </div>
       </div>
-    </Posts.Provider>
+    </Posts.Context.Provider>
   )
 }
 
 type PostListProps = {}
 
 export function PostList({}: PostListProps) {
-  const posts = Posts.useStore(s => s.posts)
-  const likedPostsAmount = Posts.useStore(s => s.likedPosts.length)
-  const isCommentingPost = Posts.useStore(s => s.commentingPostId != null)
+  const posts = Posts.useCommittedSelector(s => s.posts)
+  const likedPostsAmount = Posts.useCommittedSelector(s => s.likedPosts.length)
+  const isCommentingPost = Posts.useCommittedSelector(
+    s => s.commentingPostId != null
+  )
   // const isPending = Posts.useTransition(["post"])
 
   return (
@@ -139,7 +141,7 @@ export function PostList({}: PostListProps) {
             </span>
             <input
               type="checkbox"
-              checked={PostsController.useStore(
+              checked={PostsController.useCommittedSelector(
                 s => s.batchLikes
               )}
               onChange={e => {
@@ -170,7 +172,7 @@ type PostProps = {
 
 export function Post({ post }: PostProps) {
   const [posts] = Posts.useUseState()
-  const isLiked = Posts.useOptimisticStore(s => s.likedPosts.includes(post.id))
+  const isLiked = Posts.useSelector(s => s.likedPosts.includes(post.id))
   const isPostPending = Posts.useTransition(["post", post.id, "like"])
 
   return (

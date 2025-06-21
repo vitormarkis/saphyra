@@ -57,13 +57,13 @@ export function SimpleFormPage() {
   )
 
   return (
-    <SimpleForm.Provider value={simpleFormState}>
+    <SimpleForm.Context.Provider value={simpleFormState}>
       <SimpleFormView
         onGetToken={token => {
           console.log("New token! ", JSON.stringify(token))
         }}
       />
-    </SimpleForm.Provider>
+    </SimpleForm.Context.Provider>
   )
 }
 
@@ -73,9 +73,9 @@ type SimpleFormViewProps = {
 
 export function SimpleFormView({ onGetToken }: SimpleFormViewProps) {
   const [simpleForm] = SimpleForm.useUseState()
-  const name = SimpleForm.useStore(s => s.name)
-  const surname = SimpleForm.useStore(s => s.surname)
-  const email = SimpleForm.useStore(s => s.email)
+  const name = SimpleForm.useCommittedSelector(s => s.name)
+  const surname = SimpleForm.useCommittedSelector(s => s.surname)
+  const email = SimpleForm.useCommittedSelector(s => s.email)
 
   useEffect(() => {
     const unsub = simpleForm.events.on("got-token", token => {

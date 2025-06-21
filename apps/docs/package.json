@@ -6,20 +6,21 @@
     "build": "next build",
     "dev": "next dev --turbo",
     "start": "next start",
-    "postinstall": "fumadocs-mdx"
+    "postinstall": "fumadocs-mdx",
+    "check": "tsc --noEmit"
   },
   "dependencies": {
     "next": "15.2.4",
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
     "fumadocs-ui": "15.2.6",
     "fumadocs-core": "15.2.6",
     "fumadocs-mdx": "11.5.8"
   },
   "devDependencies": {
     "@types/node": "22.14.0",
-    "@types/react": "^19.1.0",
-    "@types/react-dom": "^19.1.1",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
     "typescript": "^5.8.3",
     "@types/mdx": "^2.0.13",
     "@tailwindcss/postcss": "^4.1.3",

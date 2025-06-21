@@ -73,7 +73,7 @@ function App() {
   const [countStore, setCountStore] = useState(() =>
     newCountStore({ count: 0 })
   )
-  const count = CountStore.useStore(s => s.count, countStore) // [!code ++]
+  const count = CountStore.useCommittedSelector(s => s.count, countStore) // [!code ++]
 
   return <span>{count}</span> // [!code ++]
 }
@@ -88,7 +88,7 @@ const countStore = newCountStore({ count: 0 })
 const CountStore = createStoreUtils(countStore)
 
 function App() {
-  const count = CountStore.useStore(s => s.count, countStore) // [!code ++]
+  const count = CountStore.useCommittedSelector(s => s.count, countStore) // [!code ++]
 
   return <span>{count}</span> // [!code ++]
 }
@@ -119,7 +119,7 @@ function App() {
   const [countStore, setCountStore] = useState(() =>
     newCountStore({ count: 0 })
   )
-  const count = CountStore.useStore(s => s.count, countStore)
+  const count = CountStore.useCommittedSelector(s => s.count, countStore)
   const setToTen = () => countStore.setState({ count: 10 }) // [!code ++]
 
   return (
@@ -139,7 +139,7 @@ const countStore = newCountStore({ count: 0 })
 const CountStore = createStoreUtils(countStore)
 
 function App() {
-  const count = CountStore.useStore(s => s.count, countStore)
+  const count = CountStore.useCommittedSelector(s => s.count, countStore)
   const setToTen = () => countStore.setState({ count: 10 }) // [!code ++]
 
   return (
@@ -169,17 +169,17 @@ function CountProvider({ initialCount, children }) {
   )
 
   return (
-    <CountStore.Provider value={[countStore, setCountStore]}>
+    <CountStore.Context.Provider value={[countStore, setCountStore]}>
       {" "}
       // [!code ++]
       {children}
-    </CountStore.Provider> // [!code ++]
+    </CountStore.Context.Provider> // [!code ++]
   )
 }
 
 function Children() {
   const [countStore] = CountStore.useUseState()
-  const count = CountStore.useStore(s => s.count)
+  const count = CountStore.useCommittedSelector(s => s.count)
 
   // ...
 }

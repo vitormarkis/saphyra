@@ -99,9 +99,9 @@ export function VideoPage() {
   const transitionsStoreState = useState(() => newTransitionsStore({}))
 
   return (
-    <TransitionsStore.Provider value={transitionsStoreState}>
+    <TransitionsStore.Context.Provider value={transitionsStoreState}>
       <TransitionsShowcaseView />
-    </TransitionsStore.Provider>
+    </TransitionsStore.Context.Provider>
   )
 }
 

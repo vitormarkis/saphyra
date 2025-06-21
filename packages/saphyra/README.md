@@ -169,10 +169,10 @@ export function SimpleFormPage() {
   )
 
   return (
-    <SimpleForm.Provider value={simpleFormState}>
+    <SimpleForm.Context.Provider value={simpleFormState}>
       <SimpleFormView onGetToken={console.log} />
       <SimpleForm.Devtools />
-    </SimpleForm.Provider>
+    </SimpleForm.Context.Provider>
   )
 }
 
@@ -180,11 +180,11 @@ export function SimpleFormView({ onGetToken }) {
   const [simpleForm] = SimpleForm.useUseState()
   const isSubmitting = SimpleForm.useTransition(["submit"])
 
-  const name = SimpleForm.useStore(s => s.name)
-  const surname = SimpleForm.useStore(s => s.surname)
-  const email = SimpleForm.useStore(s => s.email)
+  const name = SimpleForm.useCommittedSelector(s => s.name)
+  const surname = SimpleForm.useCommittedSelector(s => s.surname)
+  const email = SimpleForm.useCommittedSelector(s => s.email)
 
-  const fullName = SimpleForm.useStore(s => s.$fullName)
+  const fullName = SimpleForm.useCommittedSelector(s => s.$fullName)
 
   useEffect(() => {
     const unsub = simpleForm.events.on("got-token", onGetToken)

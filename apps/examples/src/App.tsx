@@ -81,7 +81,7 @@ export default function App() {
   }, [homeStore])
 
   return (
-    <Todos.Provider value={countStoreState}>
+    <Todos.Context.Provider value={countStoreState}>
       <div className="grid grid-rows-[auto_auto_1fr] gap-4 overflow-y-hidden">
         <Content />
         <div className="min-h-[160px]">
@@ -91,14 +91,14 @@ export default function App() {
           <Waterfall store={homeStore} />
         </div>
       </div>
-    </Todos.Provider>
+    </Todos.Context.Provider>
   )
 }
 
 export function Content() {
   const [todosStore] = Todos.useUseState()
   const isTransitioning = Todos.useTransition(["increment"])
-  const state = Todos.useTransitionState(["increment"])
+  const state = Todos.useTransitionSelector(["increment"])
   useEffect(() => console.log({ state }), [state])
 
   return (

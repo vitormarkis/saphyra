@@ -9,8 +9,8 @@ A quick overview of the hooks and utilities provided by `createStoreUtils`:
 
 | Hook/Helper          | Description                                                                          |
 | -------------------- | ------------------------------------------------------------------------------------ |
-| `useStore`           | Pass a selector to get a slice of the store state                                    |
-| `useOptimisticStore` | Pass a selector to get a slice of the optimistic state                               |
+| `useCommittedSelector`           | Pass a selector to get a slice of the store state                                    |
+| `useSelector` | Pass a selector to get a slice of the optimistic state                               |
 | `Provider`           | A `Context.Provider` to provide the store state to children                          |
 | `useUseState`        | Access the `[store, setStore]` tuple provided by the context                         |
 | `useErrorHandler`    | Pass an error handler that runs whenever an error is caught                           |

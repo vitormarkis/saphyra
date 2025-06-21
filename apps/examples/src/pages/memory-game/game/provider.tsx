@@ -149,13 +149,13 @@ export function MemoryGame({
   useHistory(memoryGame)
 
   return (
-    <Game.Provider value={memoryGameState}>
+    <Game.Context.Provider value={memoryGameState}>
       {children}
       <Devtools
         store={memoryGame}
         expandedNodes={expandedNodes}
         onExpandNode={handleExpandNode(setExpandedNodes)}
       />
-    </Game.Provider>
+    </Game.Context.Provider>
   )
 }

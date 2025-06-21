@@ -65,12 +65,12 @@ export function Waterfall({ store, extractErrorMessage }: WaterfallProps) {
 
   return (
     <WaterfallContext.Provider value={{ extractErrorMessage }}>
-      <WF.Provider value={waterfallState}>
+      <WF.Context.Provider value={waterfallState}>
         <div className="grid grid-rows-[auto_1fr] gap-1 h-full">
           <WaterfallController />
           <WaterfallContent />
         </div>
-      </WF.Provider>
+      </WF.Context.Provider>
     </WaterfallContext.Provider>
   )
 }
@@ -78,8 +78,8 @@ export function Waterfall({ store, extractErrorMessage }: WaterfallProps) {
 type WaterfallControllerProps = {}
 
 export function WaterfallController({}: WaterfallControllerProps) {
-  const distance = WF.useStore(s => s.distance)
-  const query = WF.useStore(s => s.query)
+  const distance = WF.useCommittedSelector(s => s.distance)
+  const query = WF.useCommittedSelector(s => s.query)
   const [localDistance, setLocalDistance] = useReducer(
     (distance: number, newDistance: number) => {
       if (isNaN(newDistance)) return distance
@@ -90,7 +90,7 @@ export function WaterfallController({}: WaterfallControllerProps) {
     distance
   )
 
-  const clearTimeout = WF.useStore(s => s.clearTimeout)
+  const clearTimeout = WF.useCommittedSelector(s => s.clearTimeout)
   const [localClearTimeout, setLocalClearTimeout] = useReducer(
     (clearTimeout: number, newClearTimeout: number) => {
       if (isNaN(newClearTimeout)) return clearTimeout
@@ -182,7 +182,9 @@ export function WaterfallController({}: WaterfallControllerProps) {
 
 function WaterfallContent() {
   const [waterfallStore] = WF.useUseState()
-  const displayingBarsIdList = WF.useStore(s => s.$displayingBarsIdList)
+  const displayingBarsIdList = WF.useCommittedSelector(
+    s => s.$displayingBarsIdList
+  )
 
   const [seeingElement, hover] = useState<string | null>(null)
 
@@ -211,7 +213,7 @@ function WaterfallContent() {
     }
   }, [waterfallStore])
 
-  const lines = WF.useStore(s => s.$lines)
+  const lines = WF.useCommittedSelector(s => s.$lines)
 
   const rowsAmount =
     displayingBarsIdList.length > 0 ? displayingBarsIdList.length + 2 : 0
@@ -308,7 +310,7 @@ export function WaterfallTooltip({
 }: ContentProps) {
   const { extractErrorMessage: extractErrorMessageFn } =
     useContext(WaterfallContext) ?? {}
-  const barInfo = WF.useStore(s =>
+  const barInfo = WF.useCommittedSelector(s =>
     seeingBar ? s.$barsByBarId[seeingBar] : null
   )
   if (!seeingBar || barInfo === null) return null
@@ -409,7 +411,9 @@ export const Bar = forwardRef(function Bar({
 }: BarProps) {
   const [waterfallStore] = WF.useUseState()
   const barRef = useContext(RefContext)
-  const transitionName = WF.useStore(s => s.$barsByBarId[barId].transitionName)
+  const transitionName = WF.useCommittedSelector(
+    s => s.$barsByBarId[barId].transitionName
+  )
   const isHovering = barId === seeingElement
 
   useSyncExternalStore(
@@ -667,7 +671,9 @@ type SorterHeaderProps = {
 export function SorterHeader({ children, property }: SorterHeaderProps) {
   const [waterfallStore] = WF.useUseState()
 
-  const currentSorter = WF.useStore(s => s.$currentSorters[property])
+  const currentSorter = WF.useCommittedSelector(
+    s => s.$currentSorters[property]
+  )
 
   return (
     <div
@@ -726,7 +732,7 @@ type TransitionNameProps = {
 }
 
 export function TransitionName({ barId }: TransitionNameProps) {
-  const transitionName = WF.useStore(
+  const transitionName = WF.useCommittedSelector(
     s => s.$displayingBars.find(bar => bar.id === barId)?.transitionName
   )
   return transitionName
@@ -752,7 +758,9 @@ type TransitionNameWrapperProps = {
 
 export function TransitionNameWrapper({ barId }: TransitionNameWrapperProps) {
   const [waterfallStore] = WF.useUseState()
-  const transitionName = WF.useStore(s => s.$barsByBarId[barId].transitionName)
+  const transitionName = WF.useCommittedSelector(
+    s => s.$barsByBarId[barId].transitionName
+  )
 
   return (
     <span

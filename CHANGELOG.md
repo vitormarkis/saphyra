@@ -19,9 +19,9 @@ const store = newStoreDef({
 
 // Component
 function App({ post }) {
-  // You can read from useStore to read the valid state
-  // Or you can read from the optimistic state using useOptimisticStore
-  const isLiked = Posts.useOptimisticStore(s => s.likedPosts.includes(post.id))
+  // You can read from useCommittedSelector to read the valid state
+  // Or you can read from the optimistic state using useSelector
+  const isLiked = Posts.useSelector(s => s.likedPosts.includes(post.id))
 
   // ...
 }

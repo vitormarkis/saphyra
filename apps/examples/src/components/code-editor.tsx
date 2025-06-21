@@ -46,7 +46,7 @@ export const CodeEditor = React.forwardRef<
   ref
 ) {
   longestLineLength ??= props.value.split("").length
-  const theme = Theme.useStore(s => s.theme)
+  const theme = Theme.useCommittedSelector(s => s.theme)
   return (
     <div
       className={cn(

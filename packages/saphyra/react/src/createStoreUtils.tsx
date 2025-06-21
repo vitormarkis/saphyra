@@ -11,6 +11,7 @@ import type {
   TransitionFunctionOptions,
 } from "saphyra"
 import { exact } from "~/fn/common"
+import { StateTuple } from "./types"
 
 function defaultSelector<T>(data: T) {
   return data
@@ -24,9 +25,7 @@ export function createStoreUtils<
 >(store?: TStore) {
   type TState = TStore["state"]
 
-  const Context = createContext<
-    [TStore, React.Dispatch<React.SetStateAction<TStore>>] | null
-  >(null)
+  const Context = createContext<StateTuple<TStore> | null>(null)
 
   function useUseState() {
     const ctx = useContext(Context)
@@ -59,8 +58,10 @@ export function createStoreUtils<
     }, [store])
   }
 
-  function createUseStore(getStoreState: (store: TStore) => TState) {
-    return function useStore<R = TState>(
+  function createuseCommittedSelector(
+    getStoreState: (store: TStore) => TState
+  ) {
+    return function useCommittedSelector<R = TState>(
       selector?: (data: TState) => R,
       store = getDefaultStore()
     ) {
@@ -73,9 +74,13 @@ export function createStoreUtils<
     }
   }
 
-  const useStore = createUseStore(store => store.getState())
-  const useOptimisticStore = createUseStore(store => store.getOptimisticState())
-  function useTransitionState<R = TState>(
+  const useCommittedSelector = createuseCommittedSelector(store =>
+    store.getState()
+  )
+  const useSelector = createuseCommittedSelector(store =>
+    store.getOptimisticState()
+  )
+  function useTransitionSelector<R = TState>(
     transition: any[],
     selector?: (data: TState) => R,
     store = getDefaultStore()
@@ -102,7 +107,7 @@ export function createStoreUtils<
     const hasFetched = useRef(false)
     const store = getDefaultStore()
 
-    const watchValue = useStore(options.select, store)
+    const watchValue = useCommittedSelector(options.select, store)
     const isLoading = useTransition(options.transition, store)
 
     useEffect(() => {
@@ -128,15 +133,15 @@ export function createStoreUtils<
   }
 
   const utils: StoreUtils<TState, TStore> = {
-    Provider: Context.Provider,
-    useStore,
-    useOptimisticStore,
+    Context,
+    useSelector,
+    useCommittedSelector,
+    useTransitionSelector,
     useUseState,
     useTransition,
     useErrorHandlers,
     useLazyValue,
     createLazyOptions: opts => opts,
-    useTransitionState,
   }
 
   return utils
@@ -159,13 +164,18 @@ export type StoreUtils<
   TStore extends
     ReturnType<StoreInstantiatorGeneric> = ReturnType<StoreInstantiatorGeneric>,
 > = {
-  Provider: React.Provider<any>
-  useStore: <R = TState>(selector?: (data: TState) => R, store?: TStore) => R
-  useOptimisticStore: <R = TState>(
+  Context: React.Context<StateTuple<TStore> | null>
+  useSelector: <R = TState>(selector?: (data: TState) => R, store?: TStore) => R
+  useCommittedSelector: <R = TState>(
     selector?: (data: TState) => R,
     store?: TStore
   ) => R
-  useUseState: () => [TStore, React.Dispatch<React.SetStateAction<TStore>>]
+  useTransitionSelector: <R = TState>(
+    transition: any[],
+    selector?: (data: TState) => R,
+    store?: TStore
+  ) => R
+  useUseState: () => StateTuple<TStore>
   useTransition: (transition: any[], store?: TStore) => boolean
   useErrorHandlers: (handler: StoreErrorHandler, store?: TStore) => void
   useLazyValue: <const TTransition extends any[], TPromiseResult, R>(
@@ -174,9 +184,4 @@ export type StoreUtils<
   createLazyOptions: <const TTransition extends any[], TPromiseResult, R>(
     options: LazyValueOptions<TState, TTransition, TPromiseResult, R>
   ) => LazyValueOptions<TState, TTransition, TPromiseResult, R>
-  useTransitionState: <R = TState>(
-    transition: any[],
-    selector?: (data: TState) => R,
-    store?: TStore
-  ) => R
 }

@@ -97,9 +97,9 @@ export function PokemonPage() {
     )
 
   return (
-    <Pokemon.Provider value={pokemonStoreState}>
+    <Pokemon.Context.Provider value={pokemonStoreState}>
       <PokemonPageContent />
-    </Pokemon.Provider>
+    </Pokemon.Context.Provider>
   )
 }
 
@@ -116,7 +116,7 @@ const beforeDispatch = ({
 
 export function PokemonPageContent({}: PokemonPageContentProps) {
   const [store] = Pokemon.useUseState()
-  const currentPokemonId = Pokemon.useOptimisticStore(s => s.currentPokemonId)
+  const currentPokemonId = Pokemon.useSelector(s => s.currentPokemonId)
   const isLoadingNewPokemon = Pokemon.useTransition(["pokemon"])
 
   return (

@@ -92,11 +92,11 @@ export function DebouncedSearchPage() {
   }
 
   return (
-    <DebouncedSearch.Provider
+    <DebouncedSearch.Context.Provider
       value={[debouncedSearchStore, setDebouncedSearchStore]}
     >
       <DebouncedSearchView />
-    </DebouncedSearch.Provider>
+    </DebouncedSearch.Context.Provider>
   )
 }
 
@@ -109,8 +109,8 @@ export function DebouncedSearchView({}: DebouncedSearchViewProps) {
     Object.assign(window, { debouncedSearch })
   }, [debouncedSearch])
 
-  const optimisticState = DebouncedSearch.useOptimisticStore()
-  const query = DebouncedSearch.useOptimisticStore(s => s.name)
+  const optimisticState = DebouncedSearch.useSelector()
+  const query = DebouncedSearch.useSelector(s => s.name)
 
   DebouncedSearch.useErrorHandlers(error => {
     toast(extractErrorMessage(error))

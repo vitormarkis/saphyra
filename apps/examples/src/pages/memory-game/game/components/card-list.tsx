@@ -5,7 +5,9 @@ import { Game } from "../provider"
 type MemoryGameCardListProps = PropsWithChildren
 
 export function MemoryGameCardList({ children }: MemoryGameCardListProps) {
-  const cardIdListStr = Game.useStore(s => JSON.stringify(s.$cardIdList))
+  const cardIdListStr = Game.useCommittedSelector(s =>
+    JSON.stringify(s.$cardIdList)
+  )
   const cardIdList: string[] = JSON.parse(cardIdListStr)
 
   return (

@@ -124,16 +124,16 @@ export function ChangeRolePage() {
     )
 
   return (
-    <Auth.Provider value={authStoreState}>
+    <Auth.Context.Provider value={authStoreState}>
       <ChangeRolePageContent />
-    </Auth.Provider>
+    </Auth.Context.Provider>
   )
 }
 
 function ChangeRolePageContent() {
   const [authStore] = Auth.useUseState()
-  const state = Auth.useStore()
-  const optimisticRole = Auth.useOptimisticStore(s => s.role)
+  const state = Auth.useCommittedSelector()
+  const optimisticRole = Auth.useSelector(s => s.role)
 
   const isChangingRole = Auth.useTransition(["auth", "role"])
 

@@ -18,10 +18,12 @@ type EditingPostProps = {}
 export function EditingPost({}: EditingPostProps) {
   const [postsStore] = Posts.useUseState()
 
-  const commentingPostId = Posts.useStore(s => s.commentingPostId)
+  const commentingPostId = Posts.useCommittedSelector(s => s.commentingPostId)
   if (!commentingPostId) throw new Error("No commenting post id") // this will be solved with states in v2
 
-  const post = Posts.useStore(s => s.$postsByPostId[commentingPostId])
+  const post = Posts.useCommittedSelector(
+    s => s.$postsByPostId[commentingPostId]
+  )
 
   /** [external-deps.react-query]
    * This useLazyValue is triggering a query run
@@ -49,9 +51,10 @@ export function EditingPost({}: EditingPostProps) {
 
   useCallbackOnKeyDown("Escape", closeModal)
 
-  const revalidateCommentsOnSameTransition = PostsController.useStore(
-    s => s.revalidateCommentsOnSameTransition
-  )
+  const revalidateCommentsOnSameTransition =
+    PostsController.useCommittedSelector(
+      s => s.revalidateCommentsOnSameTransition
+    )
 
   return (
     <div
