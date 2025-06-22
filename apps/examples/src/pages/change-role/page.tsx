@@ -11,6 +11,7 @@ import { toastWithResult } from "./fn/toast-with-result"
 import { createStoreUtils, useHistory } from "saphyra/react"
 import { Waterfall } from "~/devtools/waterfall"
 import { useSuspenseStore } from "saphyra/react"
+import { fetchPermissions } from "./fn/get-permissions"
 
 export type SelectedRole = "user" | "admin"
 

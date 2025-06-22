@@ -7,8 +7,9 @@ import { PokemonPage } from "~/pages/pokemon/page"
 import { BeforeDispatchPage } from "./pages/before-dispatch/page"
 import { DebouncedSearchPage } from "./pages/debounced-search/page"
 import { MultipleOptimisticUpdatesPage } from "./pages/multiple-optimistic-updates/page"
+import { RouteObject } from "react-router-dom"
 
-export const myRoutesManifest = [
+export const myRoutesManifest: RouteObject[] = [
   {
     path: "/github-profile",
     element: <GithubProfilePage />,

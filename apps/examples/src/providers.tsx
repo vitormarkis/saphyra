@@ -1,4 +1,4 @@
-import { useEffect } from "react"
+import { Suspense, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { Toaster } from "sonner"
 import { GoToSourceButton } from "./go-to-source-button"
@@ -27,7 +27,7 @@ export function Providers({ children }: ProvidersProps) {
   return (
     <QueryClientProvider client={queryClient}>
       <SaphyraProvider>
-        {children}
+        <Suspense>{children}</Suspense>
         {displayGoToSourceButton && <GoToSourceButton />}
         <Analytics />
         <Toaster
