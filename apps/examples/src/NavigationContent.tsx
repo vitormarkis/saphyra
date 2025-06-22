@@ -22,10 +22,10 @@ export function NavigationContent({}: NavigationContentProps) {
       <nav className="flex flex-col py-6 gap-1">
         {routes.map(route => (
           <NavLink
-            to={route}
+            to={route ?? ""}
             key={route}
             onClick={() => {
-              globalEvents.emit("navigated_through_navlink", route)
+              globalEvents.emit("navigated_through_navlink", route ?? "")
             }}
             className={({ isActive }) =>
               cn(
