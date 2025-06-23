@@ -19,8 +19,8 @@ type AuthStoreState = {
   role: "user" | "admin"
   username: string
   $permissions: string[]
-  $welcomeMessage: string
-  $firstPermission: string
+  getWelcomeMessage: () => string
+  getFirstPermission: () => string
 }
 
 type AuthStoreActions = ChangeRole
@@ -40,6 +40,20 @@ const newAuthStore = newStoreDef<
     onPushToHistory({ history, state, transition }) {
       if (!!transition) return [state]
       return [...history, state]
+    },
+  },
+  derivations: {
+    getFirstPermission: {
+      selectors: [s => s.$permissions],
+      evaluator: permissions => {
+        console.log("77- CALCULATING FIRST PERMISSION")
+        return permissions[0]
+      },
+    },
+    getWelcomeMessage: {
+      selectors: [s => s.username, s => s.role],
+      evaluator: (username, role) =>
+        `Welcome ${username}! Your role is [${role}].`,
     },
   },
   reducer({ prevState, state, action, diff, set, async, events, optimistic }) {
@@ -67,16 +81,6 @@ const newAuthStore = newStoreDef<
         },
         { label: "Fetch permissions" }
       )
-    }
-
-    set(s =>
-      s.$permissions != null ? { $firstPermission: s.$permissions[0] } : s
-    )
-
-    if (diff(["username", "role"])) {
-      set(s => ({
-        $welcomeMessage: `Welcome ${s.username}! Your role is [${s.role}].`,
-      }))
     }
 
     return state

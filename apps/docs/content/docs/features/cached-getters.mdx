@@ -1,0 +1,300 @@
+---
+title: Cached Getters
+description: Cached getters provide a way to declare state derivations in a getter format. The value is only calculated when the getter function is called, and once calculated, it's cached for O(1) reads until dependencies change.
+---
+
+## Basic Usage
+
+### 1. Define State with Function Properties
+
+```typescript
+type State = {
+  todos: Todo[]
+  filter: "all" | "completed" | "active"
+  // These will be turned into cached getters
+  getCompletedCount: () => number
+  getFilteredTodos: () => Todo[]
+}
+```
+
+### 2. Create Store with Derivations
+
+```typescript
+const newTodoStore = newStoreDef<State>({
+  derivations: {
+    getCompletedCount: {
+      selectors: [s => s.todos],
+      evaluator: todos => todos.filter(todo => todo.completed).length,
+    },
+    getFilteredTodos: {
+      selectors: [s => s.todos, s => s.filter],
+      evaluator: (todos, filter) => {
+        if (filter === "completed") return todos.filter(todo => todo.completed)
+        if (filter === "active") return todos.filter(todo => !todo.completed)
+        return todos
+      },
+    },
+  },
+})
+```
+
+### 3. Use in Components
+
+```typescript
+function TodoApp() {
+  const completedCount = TodoStore.useSelector(s => s.getCompletedCount())
+  const filteredTodos = TodoStore.useSelector(s => s.getFilteredTodos())
+
+  return (
+    <div>
+      <p>Completed: {completedCount}</p>
+      <ul>
+        {filteredTodos.map(todo => (
+          <li key={todo.id}>{todo.text}</li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+```
+
+### 4. Use in Reducers
+
+```typescript
+const TodoStore = newStoreDef<State>({
+  derivations: {
+    /* ... */
+  },
+  reducer: ({ state, action, set }) => {
+    if (action.type === "add-todo") {
+      // Access cached getters in reducer
+      const currentCompleted = state.getCompletedCount()
+      console.log(`Currently ${currentCompleted} todos completed`)
+
+      set(s => ({
+        todos: [
+          ...s.todos,
+          { id: Date.now(), text: action.text, completed: false },
+        ],
+      }))
+    }
+    return state
+  },
+})
+```
+
+## Features
+
+- **Lazy Evaluation**: Values are only calculated when the getter is called
+- **Automatic Caching**: Results are cached and reused until dependencies change
+- **Dependency Tracking**: Automatically detects when dependencies change and invalidates cache
+- **Type Safety**: Full TypeScript support with proper type inference
+- **Use anywhere**: You can read in hook selectors and reducers
+
+## Important to know:
+
+- Functions inside the state object will be turned into cached getters
+- You can try to set the property with another value, but it will be overridden once the value is read
+
+## In depth
+
+### Selectors
+
+Selectors extract values from the state that the derivation depends on. The order of selectors determines the order of arguments passed to the evaluator.
+
+```typescript
+const store = newStoreDef({
+  derivations: {
+    getFilteredTodos: {
+      selectors: [
+        s => s.todos, // First argument to evaluator
+        s => s.filter, // Second argument to evaluator
+      ],
+      evaluator: (todos, filter) => {
+        /* ... */
+      },
+    },
+  },
+})
+```
+
+### Evaluator
+
+The evaluator function receives the values from selectors as arguments and returns the computed value.
+
+```typescript
+evaluator: (todos, filter) => {
+  if (filter === "completed") return todos.filter(todo => todo.completed)
+  if (filter === "active") return todos.filter(todo => !todo.completed)
+  return todos
+}
+```
+
+## Caching Strategy
+
+- **Cache Invalidation**: Automatically invalidates when any dependency changes
+
+## Performance Benefits
+
+1. **Lazy Evaluation**: Values are only computed when needed
+2. **Automatic Caching**: Subsequent calls return cached results
+3. **Dependency Tracking**: Only recalculates when dependencies actually change
+4. **Memory Efficient**: No unnecessary object creation
+
+## Best Practices
+
+1. **Keep Selectors Simple**: Selectors should be pure functions that extract values
+2. **Use Multiple Selectors**: Break down complex dependencies into multiple selectors
+3. **Avoid Side Effects**: Evaluators should be pure functions
+
+## Examples
+
+### Simple Counter
+
+```typescript
+type State = {
+  count: number
+  getDoubledCount: () => number
+  getSquaredCount: () => number
+}
+
+const CounterStore = newStoreDef<State>({
+  derivations: {
+    getDoubledCount: {
+      selectors: [s => s.count],
+      evaluator: count => count * 2,
+    },
+    getSquaredCount: {
+      selectors: [s => s.count],
+      evaluator: count => count * count,
+    },
+  },
+})
+```
+
+### Complex Todo App
+
+```typescript
+type State = {
+  todos: Todo[]
+  filter: "all" | "completed" | "active"
+  searchTerm: string
+  getFilteredTodos: () => Todo[]
+  getSearchResults: () => Todo[]
+  getTodos: () => {
+    completed: Todo[]
+    active: Todo[]
+  }
+}
+
+const TodoStore = newStoreDef<State>({
+  derivations: {
+    getTodos: {
+      selectors: [s => s.todos],
+      evaluator: todos => {
+        const completed = []
+        const active = []
+        for (const todo of todos) {
+          if (todo.completed) completed.push(todo)
+          else active.push(todo)
+        }
+        return { completed, active }
+      },
+    },
+    getFilteredTodos: {
+      selectors: [s => s.todos, s => s.filter],
+      evaluator: (todos, filter) => {
+        if (filter === "completed") return todos.filter(todo => todo.completed)
+        if (filter === "active") return todos.filter(todo => !todo.completed)
+        return todos
+      },
+    },
+    getSearchResults: {
+      selectors: [s => s.todos, s => s.searchTerm],
+      evaluator: (todos, searchTerm) => {
+        if (!searchTerm) return todos
+        return todos.filter(todo =>
+          todo.text.toLowerCase().includes(searchTerm.toLowerCase())
+        )
+      },
+    },
+  },
+})
+```
+
+## Migration Guide
+
+### From Manual Selectors
+
+**Before:**
+
+- ❌ - Bad practice: avoid calculations in selectors, they run multiple times per render.
+- ❌ - Each selector runs a calculation.
+
+```typescript
+const completedCount = useSelector(
+  s => s.todos.filter(todo => todo.completed).length
+)
+const completedCount = useSelector(
+  s => s.todos.filter(todo => todo.completed).length
+)
+const completedCount = useSelector(
+  s => s.todos.filter(todo => todo.completed).length
+)
+```
+
+**After:**
+
+- ✅ - Using cached getters, the calculation runs only once and is re-used across many selectors and many renders.
+
+```typescript
+const completedCount = useSelector(s => s.getCompletedCount())
+const completedCount = useSelector(s => s.getCompletedCount())
+const completedCount = useSelector(s => s.getCompletedCount())
+```
+
+### From useMemo
+
+**Before:**
+
+- ❌ - Derived at component level, can't be used in reducers
+- ❌ - Requires multiple hooks instead of one unified solution
+- ❌ - If other components need `completedCount`, the calculation runs once per component that needs the value
+
+```typescript
+const todos = useSelector(s => s.todos)
+const completedCount = useMemo(
+  () => todos.filter(todo => todo.completed).length,
+  [todos]
+)
+```
+
+**After:**
+
+- ✅ - Using cached getters, the calculation runs only once and is re-used across many selectors and many renders.
+
+```typescript
+const completedCount = useSelector(s => s.getCompletedCount())
+```
+
+## Limitations
+
+1. **Synchronous Only**: Evaluators must be synchronous functions
+   - For async derivation, read [async derivation value](/docs/guides/async-derived-values)
+
+## Troubleshooting
+
+### Cache Not Updating
+
+If cached getters are not updating:
+
+1. Check that selectors are returning the correct dependencies
+2. Verify that the state is actually changing
+3. Ensure evaluator is pure and deterministic
+
+### Performance Issues
+
+If performance is poor:
+
+1. Break down complex selectors into smaller ones
+2. Use more specific selectors to minimize cache invalidation
