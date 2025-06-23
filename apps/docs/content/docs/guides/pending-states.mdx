@@ -1,0 +1,64 @@
+---
+title: Pending States
+description: Learn how Saphyra handles pending states.
+---
+
+## Principles
+
+### Motivation
+
+- One of Saphyra's core principles is to reduce boilerplate and overhead when managing state.
+- A common challenge developers face with async operations is deriving pending states.
+- Most developers don't derive pending states, they imperatively set state to `true` when an async operation starts and `false` when it ends.
+- This approach is not a derivation and is prone to errors.
+
+### Solution
+
+- When you dispatch an action, it may trigger async operations (via the async() module).
+- When this happens, you need to pass a transition to the action.
+- All pending async operations will be assigned to this transition.
+- This allows us to track how many pending operations are running for a specific transition, such as `["like-post"]`.
+- If there's at least one async operation running for the transition `["like-post"]`, we know there's a pending state for that transition.
+- We provide a hook called [`useTransition`](/docs/exports/create-store-utils#usetransition) to read this information, which is available in the [`createStoreUtils`](/docs/exports/create-store-utils) function.
+
+**Important read: [what is transition](/docs/transitions)**
+
+## Example
+
+```typescript
+const newSocialMediaStore = newStoreDef({
+  reducer({ state, set, diff, async, deps, action }) {
+    if (action.type === "like-post") {
+      async()
+        .onFinish(revalidate())
+        .promise(async ({ signal }) => {
+          await deps.likePost(action.postId, signal)
+        })
+    }
+
+    return state
+  },
+})
+
+const SocialMedia = createStoreUtils<typeof newSocialMediaStore>()
+
+function Post({ post }) {
+  const [socialMedia] = SocialMedia.useStore()
+  const isPending = SocialMedia.useTransition(["post", post.id, "like"])
+
+  return (
+    <button
+      disabled={isPending}
+      onClick={() =>
+        socialMedia.dispatch({
+          type: "like-post",
+          postId: post.id,
+          transition: ["post", post.id, "like"],
+        })
+      }
+    >
+    {isPending ? "Pending..." : "Like"}
+  </button>
+  )
+}
+```

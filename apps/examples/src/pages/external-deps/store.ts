@@ -9,9 +9,12 @@ import { createStoreUtils } from "saphyra/react"
 
 type PostsState = {
   currentTransition: null
-  $postsByUserId: Record<string, PostType[]>
-  $postsByPostId: Record<string, PostType>
-  $postsId: number[]
+
+  getPosts: () => {
+    byId: Record<string, PostType>
+    byUserId: Record<string, PostType[]>
+    postsId: number[]
+  }
 
   commentingPostId: number | null
 
@@ -52,6 +55,24 @@ export const newPostsStore = newStoreDef<
     onPushToHistory({ history, state, transition }) {
       if (!!transition) return []
       return [...history, state]
+    },
+  },
+  derivations: {
+    getPosts: {
+      selectors: [s => s.posts],
+      evaluator: posts => {
+        console.log("77- CALCULATING LONG LIST")
+        return posts.reduce(
+          (acc: any, post: PostType) => {
+            acc.byId[post.id] = post
+            acc.byUserId[post.userId] ??= []
+            acc.byUserId[post.userId].push(post)
+            acc.postsId.push(post.id)
+            return acc
+          },
+          { byId: {}, byUserId: {}, postsId: [] }
+        )
+      },
     },
   },
   async onConstruct({ signal, deps }) {
@@ -124,17 +145,6 @@ export const newPostsStore = newStoreDef<
         },
         { label }
       )
-    }
-
-    if (diff(["posts"])) {
-      set(s => {
-        const group = s.posts.reduce(...reduceGroupById())
-        return {
-          $postsByUserId: group.byUserId,
-          $postsByPostId: group.byPostId,
-          $postsId: [...group.idList],
-        }
-      })
     }
 
     return state

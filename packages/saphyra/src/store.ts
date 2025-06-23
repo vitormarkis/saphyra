@@ -1,6 +1,12 @@
 import { createDiffOnKeyChange } from "./diff"
 import { createSubject } from "./Subject"
-import { OptimisticRegistry, RemoveDollarSignProps } from "./types"
+import {
+  OptimisticRegistry,
+  RemoveDollarSignProps,
+  DerivationsConfig,
+  InitialProps,
+  RemoveFunctionProps,
+} from "./types"
 import { createAsync, errorNoTransition } from "./createAsync"
 import { runSuccessCallback, TransitionsStore } from "./transitions-store"
 import type {
@@ -51,6 +57,7 @@ import { mockAsync } from "./helpers/mock-async"
 import { mockEventEmitter } from "./helpers/mock-event-emitter"
 import { log, logDebug } from "./helpers/log"
 import { TransitionsStateStore } from "./transitions-state"
+import { DerivationsRegistry } from "./derivations-registry"
 
 export type ExternalProps = Record<string, any> | null
 
@@ -88,7 +95,9 @@ type OnConstruct<
     TDeps
   >,
   config?: StoreConstructorConfig<TDeps>
-) => RemoveDollarSignProps<TState> | Promise<RemoveDollarSignProps<TState>>
+) =>
+  | RemoveDollarSignProps<RemoveFunctionProps<TState>>
+  | Promise<RemoveDollarSignProps<RemoveFunctionProps<TState>>>
 
 function defaultOnConstruct<
   TInitialProps,
@@ -235,6 +244,7 @@ type CreateStoreOptions<
     TUncontrolledState,
     TDeps
   >
+  derivations?: DerivationsConfig<TState>
 }
 
 export type StoreConstructorConfig<TDeps> = {
@@ -289,6 +299,7 @@ export function newStoreDef<
       TDeps
     >,
     config: globalConfig,
+    derivations,
   } = {} as CreateStoreOptions<
     TInitialProps,
     TState,
@@ -314,8 +325,15 @@ export function newStoreDef<
   >
   const { onPushToHistory = defaultOnPushToHistory } = globalConfig ?? {}
 
+  // Create derivations registry if derivations are provided
+  const derivationsRegistry = derivations
+    ? new DerivationsRegistry<TState>(derivations)
+    : null
+
   function createStore(
-    initialProps: RemoveDollarSignProps<TInitialProps>,
+    initialProps: TInitialProps extends TState
+      ? InitialProps<TState>
+      : RemoveDollarSignProps<TInitialProps>,
     config: StoreConstructorConfig<TDeps> = {} as StoreConstructorConfig<TDeps>
   ): SomeStore<TState, TActions, TEvents, TUncontrolledState, TDeps> {
     type Action = ClassicAction<TState, TActions, TEvents>
@@ -347,7 +365,9 @@ export function newStoreDef<
       optimisticState: {} as TState,
       uncontrolledState: {} as TUncontrolledState,
       transitionsState: new TransitionsStateStore<TState>(),
-    }
+      derivationsRegistry,
+    } as any
+
     let store = createDebugableShallowCopy(
       storeValues as unknown as SomeStore<
         TState,
@@ -372,9 +392,14 @@ export function newStoreDef<
         store.registerOptimistic(setterOrPartialState, transition, notify)
     }
 
-    const getState: Met["getState"] = () => store.state
+    const getState: Met["getState"] = () =>
+      derivationsRegistry?.injectCachedGetters(store.state, "committed") ??
+      store.state
     const getOptimisticState: Met["getOptimisticState"] = () =>
-      store.optimisticState
+      derivationsRegistry?.injectCachedGetters(
+        store.optimisticState,
+        "optimistic"
+      ) ?? store.optimisticState
 
     function calculateOptimisticState(
       allSetters: SetterOrPartialState<TState>[],
@@ -996,8 +1021,16 @@ export function newStoreDef<
           TUncontrolledState,
           TDeps
         > = {
-          prevState: prevState,
-          state: newState,
+          prevState:
+            derivationsRegistry?.injectCachedGetters(
+              prevState,
+              transition ? `transition:${transition.join(":")}` : "committed"
+            ) ?? prevState,
+          state:
+            derivationsRegistry?.injectCachedGetters(
+              newState,
+              transition ? `transition:${transition.join(":")}` : "committed"
+            ) ?? newState,
           action,
           events: store.events,
           store,
@@ -1437,7 +1470,7 @@ export function newStoreDef<
       store.historyRedo = []
     }
 
-    construct(initialProps as TInitialProps, config)
+    construct(initialProps as unknown as TInitialProps, config)
 
     return store
   }

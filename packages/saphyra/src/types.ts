@@ -405,7 +405,9 @@ export type StoreInstantiator<
   TUncontrolledState extends Record<string, any>,
   TDeps,
 > = (
-  initialProps: RemoveDollarSignProps<TInitialProps>,
+  initialProps: TInitialProps extends TState
+    ? InitialProps<TState>
+    : RemoveDollarSignProps<TInitialProps>,
   config?: StoreConstructorConfig<TDeps>
 ) => SomeStore<TState, TActions, TEvents, TUncontrolledState, TDeps>
 
@@ -444,6 +446,14 @@ export type RemoveDollarSignProps<T> = {
   [K in keyof T as K extends `$${string}` ? never : K]: T[K]
 }
 
+export type RemoveFunctionProps<T> = {
+  [K in keyof T as T[K] extends (...args: any[]) => any ? never : K]: T[K]
+}
+
+export type InitialProps<TState> = RemoveFunctionProps<
+  RemoveDollarSignProps<TState>
+>
+
 export type ReactState<T> = [T, React.Dispatch<React.SetStateAction<T>>]
 
 export type NonUndefined<T> = T & ({} & null)
@@ -458,3 +468,26 @@ export type RequireKeys<T extends object, K extends keyof T> = Required<
 type StringSerializable = string | number | boolean | null | undefined
 export type Transition = StringSerializable[]
 export type TransitionNullable = StringSerializable[] | null | undefined
+
+export type Selector<TState, TValue> = (state: TState) => TValue
+export type Evaluator<TArgs extends any[], TReturn> = (
+  ...args: TArgs
+) => TReturn
+
+export type DerivationConfig<TState, TArgs extends any[], TReturn> = {
+  selectors: Selector<TState, any>[]
+  evaluator: Evaluator<TArgs, TReturn>
+}
+
+export type DerivationsConfig<TState> = {
+  [K in keyof TState as TState[K] extends (...args: any[]) => any
+    ? K
+    : never]?: DerivationConfig<TState, any[], any>
+}
+
+export type StateWithDerivations<
+  TState,
+  TDerivations extends DerivationsConfig<TState>,
+> = TState & {
+  [K in keyof TDerivations]: () => any
+}

@@ -17,6 +17,18 @@ function defaultSelector<T>(data: T) {
   return data
 }
 
+export type LazyValueOptions<
+  TState,
+  TTransition extends any[],
+  TPromiseResult,
+  R = TState,
+> = {
+  select: (state: TState) => R
+  transition: TTransition
+  transitionFn: (options: TransitionFunctionOptions) => Promise<TPromiseResult>
+  onSuccess: (value: TPromiseResult) => void
+}
+
 export function createStoreUtils<
   TStoreInstantiator extends
     StoreInstantiatorGeneric = StoreInstantiatorGeneric,
@@ -24,7 +36,6 @@ export function createStoreUtils<
     ReturnType<TStoreInstantiator> = ReturnType<TStoreInstantiator>,
 >(store?: TStore) {
   type TState = TStore["state"]
-
   const Context = createContext<StateTuple<TStore> | null>(null)
 
   function useStore() {
@@ -91,12 +102,26 @@ export function createStoreUtils<
       () => {
         const state =
           store.transitionsState.state[transition.join(":")] ?? store.getState()
-        return finalSelector(state)
+        // For transition states, we need to inject cached getters manually
+        const stateWithGetters = (store as any).derivationsRegistry
+          ? (store as any).derivationsRegistry.injectCachedGetters(
+              state,
+              `transition:${transition.join(":")}`
+            )
+          : state
+        return finalSelector(stateWithGetters)
       },
       () => {
         const state =
           store.transitionsState.state[transition.join(":")] ?? store.getState()
-        return finalSelector(state)
+        // For transition states, we need to inject cached getters manually
+        const stateWithGetters = (store as any).derivationsRegistry
+          ? (store as any).derivationsRegistry.injectCachedGetters(
+              state,
+              `transition:${transition.join(":")}`
+            )
+          : state
+        return finalSelector(stateWithGetters)
       }
     )
   }
@@ -145,18 +170,6 @@ export function createStoreUtils<
   }
 
   return utils
-}
-
-export interface LazyValueOptions<
-  TState,
-  TTransition extends any[],
-  TPromiseResult,
-  R,
-> {
-  transition: TTransition
-  select: (state: TState) => R
-  transitionFn: (options: TransitionFunctionOptions) => Promise<TPromiseResult>
-  onSuccess?: (value: TPromiseResult) => void
 }
 
 export type StoreUtils<
