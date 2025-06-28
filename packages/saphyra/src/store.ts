@@ -35,6 +35,8 @@ import type {
   ClassicActionRedispatch,
   TransitionFunctionOptions,
   AsyncOperation,
+  Transition,
+  TransitionNullable,
 } from "./types"
 import { EventEmitter, EventsTuple } from "./event-emitter"
 import { noop } from "./fn/noop"
@@ -180,7 +182,7 @@ type OnPushToHistoryProps<
 > = {
   history: TState[]
   state: TState
-  transition: any[] | null | undefined
+  transition: TransitionNullable
   from: "dispatch" | "set" | "rerender"
   store: SomeStore<TState, TActions, TEvents, TUncontrolledState, TDeps>
   action: TActions
@@ -531,7 +533,7 @@ export function newStoreDef<
     }
 
     function completeTransition(
-      transition: any[],
+      transition: Transition,
       action: TActions,
       onTransitionEnd?: OnTransitionEnd<TState, TEvents>
     ) {
@@ -541,7 +543,7 @@ export function newStoreDef<
       commitTransition(transition, action, onTransitionEnd)
     }
 
-    function getAbortController(transition?: any[] | null | undefined) {
+    function getAbortController(transition?: TransitionNullable) {
       if (!transition)
         return {
           controller: undefined,
@@ -561,7 +563,10 @@ export function newStoreDef<
       }
     }
 
-    const cleanUpTransition = (transition: any[], error: unknown | null) => {
+    const cleanUpTransition = (
+      transition: Transition,
+      error: unknown | null
+    ) => {
       const transitionKey = transition.join(":")
       const cleanUpList = store.transitions.cleanUpList[transitionKey] ?? []
       cleanUpList.forEach(fn => fn(error))
@@ -983,7 +988,7 @@ export function newStoreDef<
 
     const registerOnOptimisticSettersRegistry = (
       setterOrPartialState: SetterOrPartialState<TState>,
-      transition: any[]
+      transition: Transition
     ) => {
       const transitionKey = transition.join(":")
       store.optimisticRegistry.add(transitionKey, setterOrPartialState)
@@ -1169,7 +1174,7 @@ export function newStoreDef<
     }
 
     const updateTransitionState = (
-      transition: any[],
+      transition: Transition,
       newSetterOrPartialState: SetterOrPartialState<TState> | null
     ) => {
       const transitionKey = transition.join(":")
@@ -1199,7 +1204,7 @@ export function newStoreDef<
       }
 
       function getAncestorSettersOfTransition(
-        transitionAncestor: any[]
+        transitionAncestor: Transition
       ): SetterOrPartialState<TState>[] {
         const transitionKey = transitionAncestor.join(":")
         return Object.entries(store.settersRegistry)
@@ -1207,7 +1212,8 @@ export function newStoreDef<
           .flatMap(([, setters]) => setters)
       }
 
-      createAncestor(transition).forEach(transitionAncestor => {
+      const ancestor = createAncestor(transition) as Transition[]
+      ancestor.forEach(transitionAncestor => {
         const allSetters = getAncestorSettersOfTransition(transitionAncestor)
         const shouldClear = allSetters.length === 0
         const transitionAncestorKey = transitionAncestor.join(":")
@@ -1236,7 +1242,7 @@ export function newStoreDef<
 
     const handleSetStateTransitionOngoing = (
       setterOrPartialState: SetterOrPartialState<TState>,
-      action: Action & { transition: any[] },
+      action: Action & { transition: Transition },
       when: string
     ) => {
       const transitionString = action.transition.join(":")
@@ -1259,7 +1265,7 @@ export function newStoreDef<
 
     const handleSetStateTransitionToStart = (
       setterOrPartialState: SetterOrPartialState<TState>,
-      action: Action & { transition: any[] },
+      action: Action & { transition: Transition },
       when: string
     ) => {
       const state = store.state
@@ -1311,7 +1317,7 @@ export function newStoreDef<
 
     const handleSetStateWithTransition = (
       setterOrPartialState: SetterOrPartialState<TState>,
-      transition: any[],
+      transition: Transition,
       when: string
     ) => {
       const transitionIsOngoing =
@@ -1325,13 +1331,13 @@ export function newStoreDef<
       if (transitionIsOngoing) {
         handleSetStateTransitionOngoing(
           setterOrPartialState,
-          action as Action & { transition: any[] },
+          action as Action & { transition: Transition },
           when
         )
       } else {
         handleSetStateTransitionToStart(
           setterOrPartialState,
-          action as Action & { transition: any[] },
+          action as Action & { transition: Transition },
           when
         )
       }
@@ -1500,8 +1506,7 @@ export function newStoreDef<
       )
 
       const isOkToPushToHistory = (() => {
-        const isTransitioning =
-          Object.keys(store.transitions.state.transitions).length > 0
+        const isTransitioning = Object.keys(store.transitions.state).length > 0
 
         if (isTransitioning) return false
         return true
@@ -1523,7 +1528,7 @@ export function newStoreDef<
 
 export function createEnsureAbortController(transitionStore: TransitionsStore) {
   return function (props: {
-    transition: any[]
+    transition: Transition
     controller?: AbortController | null | undefined
   }): AbortController {
     const key = props.transition.join(":")

@@ -12,6 +12,7 @@ import {
   BaseAction,
   DefaultActions,
   SomeStore,
+  TransitionNullable,
 } from "./types"
 import { isNewActionError, labelWhen } from "./utils"
 
@@ -30,7 +31,7 @@ export function createAsync<
 >(
   store: SomeStore<TState, TActions, TEvents, TUncontrolledState, TDeps>,
   _whenProp: string,
-  transition: any[] | null | undefined,
+  transition: TransitionNullable,
   signal: AbortSignal,
   onAsyncOperation: (asyncOperation: AsyncOperation) => void,
   from?: string

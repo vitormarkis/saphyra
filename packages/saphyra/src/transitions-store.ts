@@ -1,12 +1,15 @@
-import { DoneKeyOptions, OnFinishTransition } from "./types"
+import {
+  DoneKeyOptions,
+  OnFinishTransition,
+  Transition,
+  TransitionNullable,
+} from "./types"
 import { EventEmitter } from "./event-emitter"
 import { Subject } from "./Subject"
 import { setImmutable } from "./fn/common"
 import { $$onDebugMode } from "./helpers/log"
 
-export type TransitionsStoreState = {
-  transitions: Record<string, number>
-}
+export type TransitionsStoreState = Record<string, number>
 
 export const runSuccessCallback: OnFinishTransition = ({
   transitionName,
@@ -22,11 +25,11 @@ export class TransitionsStore extends Subject {
   #prefix = "00)"
   controllers: {
     get: (
-      transition: any[] | null | undefined | string,
+      transition: TransitionNullable | string,
       controller?: AbortController | null | undefined
     ) => AbortController | undefined
     set: (
-      transition: any[] | null | undefined | string,
+      transition: TransitionNullable | string,
       value: AbortController
     ) => void
     values: Record<string, AbortController>
@@ -37,7 +40,7 @@ export class TransitionsStore extends Subject {
     error: new EventEmitter(),
   }
   meta: {
-    get: (transition: any[] | null | undefined) => Record<string, any>
+    get: (transition: TransitionNullable) => Record<string, any>
     values: Record<string, any>
   }
 
@@ -54,9 +57,7 @@ export class TransitionsStore extends Subject {
     if (shouldLog !== undefined) {
       this.#shouldLog = shouldLog
     }
-    this.state = {
-      transitions: {},
-    }
+    this.state = {}
 
     this.meta = {
       get: this.getMeta.bind(this),
@@ -70,7 +71,7 @@ export class TransitionsStore extends Subject {
     }
   }
 
-  private getMeta(transition: any[] | null | undefined) {
+  private getMeta(transition: TransitionNullable) {
     if (!transition) return {} // TODO
     const key = transition.join(":")
     this.meta.values[key] ??= {}
@@ -78,13 +79,13 @@ export class TransitionsStore extends Subject {
   }
 
   eraseKey(
-    transition: any[] | null | undefined,
+    transition: TransitionNullable,
     options: DoneKeyOptions,
     from?: string
   ) {
     if (!transition) return
     const key = transition.join(":")
-    const subTransitions = this.state.transitions[key]
+    const subTransitions = this.state[key]
     for (let i = 0; i < subTransitions; i++) {
       this.doneKey(transition, options, from)
     }
@@ -96,7 +97,7 @@ export class TransitionsStore extends Subject {
     this.callbacks.error.set(transitionName, null)
   }
 
-  emitError(transition: any[], error: unknown) {
+  emitError(transition: Transition, error: unknown) {
     const transitionName = transition.join(":")
     const errorCallback = this.callbacks.error.get(transitionName)
     errorCallback?.(error)
@@ -106,7 +107,7 @@ export class TransitionsStore extends Subject {
   }
 
   setController(
-    transition: any[] | null | undefined | string,
+    transition: TransitionNullable | string,
     value: AbortController
   ) {
     if (!transition) return
@@ -116,7 +117,7 @@ export class TransitionsStore extends Subject {
     this.controllers = setImmutable(this.controllers, `values.${key}`, value)
   }
 
-  ensureController(transition: any[] | null | undefined | string) {
+  ensureController(transition: TransitionNullable | string) {
     if (!transition) return
     const transitionName =
       typeof transition === "string" ? transition : transition.join(":")
@@ -134,33 +135,34 @@ export class TransitionsStore extends Subject {
     this.state = newState
     if (this.#shouldLog)
       $$onDebugMode(() =>
-        console.log(`${this.#prefix} transitions`, this.state.transitions)
+        console.log(`${this.#prefix} transitions`, this.state)
       )
     this.notify()
   }
 
-  get(transition: any[]) {
+  get(transition: Transition) {
     const key = transition.join(":")
-    return this.state.transitions[key] ?? 0
+    return this.state[key] ?? 0
   }
 
-  add(state: TransitionsStoreState, transitionName: string | null) {
-    if (!transitionName) return
-    state.transitions[transitionName] ??= 0
-    state.transitions[transitionName]++
+  add(
+    state: TransitionsStoreState,
+    transitionName: string
+  ): TransitionsStoreState {
+    state[transitionName] ??= 0
+    state[transitionName]++
     return state
   }
 
-  addKey(transition: any[] | null | undefined, from?: string) {
+  addKey(transition: TransitionNullable, from?: string) {
     if (!transition) return
+    transition
 
-    const state = {
-      ...this.state,
-      transitions: { ...this.state.transitions },
-    }
+    const state = { ...this.state }
 
     let meta = ""
     const newState = transition.reduce((acc, key) => {
+      key = String(key)
       if (meta !== "") key = `${meta}:${key}`
       meta = key
       return this.add(acc, key)
@@ -170,7 +172,7 @@ export class TransitionsStore extends Subject {
 
     if (this.#shouldLog) {
       const key = transition?.join(":")
-      const sub = this.state.transitions[key] ?? 0
+      const sub = this.state[key] ?? 0
       $$onDebugMode(() =>
         console.log(
           `%c ${this.#prefix} k add: ${key} ${from} [${sub}]`,
@@ -191,16 +193,16 @@ export class TransitionsStore extends Subject {
 
   done(
     state: TransitionsStoreState,
-    transitionName: string | null,
+    transitionName: string,
     options: DoneKeyOptions,
     functionsToRun: Record<string, Function[]>
-  ) {
-    if (!transitionName) return
-    state.transitions[transitionName] ??= 0
-    state.transitions[transitionName]--
-    if (state.transitions[transitionName] === -1) debugger
+  ): TransitionsStoreState {
+    if (!transitionName) return state
+    state[transitionName] ??= 0
+    state[transitionName]--
+    if (state[transitionName] === -1) debugger
 
-    if (state.transitions[transitionName] <= 0) {
+    if (state[transitionName] <= 0) {
       if (transitionName !== null) {
         functionsToRun[transitionName] ??= []
         functionsToRun[transitionName].push(() => {
@@ -218,30 +220,24 @@ export class TransitionsStore extends Subject {
 
   clear(transitionName: string | null) {
     if (!transitionName) return
-    const state = {
-      ...this.state,
-      transitions: { ...this.state.transitions },
-    }
-    state.transitions[transitionName] = 0
+    const state = { ...this.state }
+    state[transitionName] = 0
 
     this.setState(state)
   }
 
   doneKey(
-    transition: any[] | null | undefined,
+    transition: TransitionNullable,
     options: DoneKeyOptions,
     from?: string
   ) {
     if (!transition) return
 
-    const state = {
-      ...this.state,
-      transitions: { ...this.state.transitions },
-    }
-
+    const state = { ...this.state }
     const functionsToRun: Record<string, Function[]> = {}
     let meta = ""
     const newState = transition.reduce((acc, key) => {
+      key = String(key)
       if (meta !== "") key = `${meta}:${key}`
       meta = key
       return this.done(acc, key, options, functionsToRun)
@@ -250,7 +246,7 @@ export class TransitionsStore extends Subject {
     this.setState(newState)
     if (this.#shouldLog) {
       const key = transition?.join(":")!
-      const sub = this.state.transitions[key] ?? 0
+      const sub = this.state[key] ?? 0
       $$onDebugMode(() =>
         console.log(
           `%c ${this.#prefix} k done: ${key} ${from} [${sub}]`,
@@ -263,21 +259,22 @@ export class TransitionsStore extends Subject {
       .forEach(fn => fn())
   }
 
-  isHappeningUnique(transition: any[] | null | undefined) {
+  isHappeningUnique(transition: TransitionNullable) {
     if (!transition) return false
     const key = transition.join(":")
-    return this.state.transitions[key] > 0
+    return this.state[key] > 0
   }
 
-  isHappening(transition: any[] | null | undefined) {
+  isHappening(transition: TransitionNullable) {
     if (!transition) return false
     let isHappening = false
 
     let meta = ""
     for (let key of transition) {
+      key = String(key)
       if (meta !== "") key = `${meta}:${key}`
       meta = key
-      const subtransitions = this.state.transitions[key]
+      const subtransitions = this.state[key]
       if (subtransitions > 0) {
         isHappening = true
         break

@@ -80,7 +80,7 @@ export function getStoreTransitionInfoShallowCopy(
   const setters = store.settersRegistry[transitionName]
   const doneCallback = store.transitions.callbacks.done.get(transitionName)
   const errorCallback = store.transitions.callbacks.error.get(transitionName)
-  const transitions = store.transitions.state.transitions
+  const transitions = store.transitions.state
   const state = store.getState()
 
   return {
@@ -100,7 +100,7 @@ export function getStoreTransitionInfoSourceShallowCopy(
   const setters = { ...store.settersRegistry }
   const doneCallbackList = new Map(store.transitions.callbacks.done)
   const errorCallbackList = new Map(store.transitions.callbacks.error)
-  const transitions = { ...store.transitions.state.transitions }
+  const transitions = { ...store.transitions.state }
   const state = cloneObj(store.getState())
 
   return {

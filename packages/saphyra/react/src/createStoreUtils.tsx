@@ -8,6 +8,7 @@ import {
 import type {
   StoreErrorHandler,
   StoreInstantiatorGeneric,
+  Transition,
   TransitionFunctionOptions,
 } from "saphyra"
 import { exact } from "~/fn/common"
@@ -49,7 +50,7 @@ export function createStoreUtils<
     : () => useStore()[0]
 
   function useTransition(
-    transition: any[],
+    transition: Transition,
     store = getDefaultStore()
   ): boolean {
     return useSyncExternalStore(
@@ -92,7 +93,7 @@ export function createStoreUtils<
     store.getOptimisticState()
   )
   function useTransitionSelector<R = TState>(
-    transition: any[],
+    transition: Transition,
     selector?: (data: TState) => R,
     store = getDefaultStore()
   ) {
@@ -184,12 +185,12 @@ export type StoreUtils<
     store?: TStore
   ) => R
   useTransitionSelector: <R = TState>(
-    transition: any[],
+    transition: Transition,
     selector?: (data: TState) => R,
     store?: TStore
   ) => R
   useStore: () => StateTuple<TStore>
-  useTransition: (transition: any[], store?: TStore) => boolean
+  useTransition: (transition: Transition, store?: TStore) => boolean
   useErrorHandlers: (handler: StoreErrorHandler, store?: TStore) => void
   useLazyValue: <const TTransition extends any[], TPromiseResult, R>(
     options: LazyValueOptions<TState, TTransition, TPromiseResult, R>

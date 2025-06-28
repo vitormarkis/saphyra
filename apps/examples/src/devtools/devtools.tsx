@@ -57,10 +57,10 @@ export function Devtools<
   useEffect(() => {
     if (seeingTab === "transitions") return
     if (prev_transitions_state.current) {
-      setTransitionPing(Object.keys(transitions_state.transitions).length > 0)
+      setTransitionPing(Object.keys(transitions_state).length > 0)
     }
     prev_transitions_state.current = true
-  }, [transitions_state.transitions])
+  }, [transitions_state])
 
   return (
     <Tabs
