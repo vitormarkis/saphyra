@@ -7,5 +7,5 @@ export function log(...args: any[]) {
 }
 
 export function logDebug(...args: any[]) {
-  if (isDev || isDebug) console.debug(...args)
+  if (isDev || isDebug) console.log(...args)
 }
