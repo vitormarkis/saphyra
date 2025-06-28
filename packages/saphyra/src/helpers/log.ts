@@ -6,6 +6,6 @@ export function log(...args: any[]) {
   if (isDev) console.log(...args)
 }
 
-export function logDebug(...args: any[]) {
-  if (isDev || isDebug) console.log(...args)
+export function $$onDebugMode(fn: () => void) {
+  if (isDev || isDebug) fn()
 }

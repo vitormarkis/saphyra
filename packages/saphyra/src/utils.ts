@@ -8,7 +8,10 @@ export function isNewActionError(error: unknown) {
   return false
 }
 
-export function labelWhen(date: Date) {
+export function labelWhen(date: Date | number) {
+  if (typeof date === "number") {
+    date = new Date(date)
+  }
   const isoString = date.toISOString()
   const [_hour, minute, secondWithDot] = isoString.split("T")[1].split(":")
   const [second, milisecondWithZ] = secondWithDot.split(".")

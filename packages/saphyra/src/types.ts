@@ -118,6 +118,7 @@ export type InnerCreateAsync<
   when: string
   transition: any[] | null | undefined
   signal: AbortSignal
+  onAsyncOperation: (asyncOperation: AsyncOperation) => void
   from?: string
 }
 
@@ -490,4 +491,12 @@ export type StateWithDerivations<
   TDerivations extends DerivationsConfig<TState>,
 > = TState & {
   [K in keyof TDerivations]: () => any
+}
+
+export type AsyncOperation = {
+  when: number
+  fn: () => void
+  type: "promise" | "timeout"
+  label: string | null
+  whenReadable: string
 }
