@@ -154,10 +154,7 @@ export class TransitionsStore extends Subject {
     return state
   }
 
-  addKey(transition: TransitionNullable, from?: string) {
-    if (!transition) return
-    transition
-
+  addKey(transition: Transition, from?: string) {
     const state = { ...this.state }
 
     let meta = ""

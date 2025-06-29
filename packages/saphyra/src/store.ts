@@ -830,8 +830,12 @@ export function newStoreDef<
         return
       }
 
-      rootAction
-      store.transitions.addKey(rootAction.transition, "dispatch/new-transition")
+      if (rootAction.transition) {
+        store.transitions.addKey(
+          rootAction.transition,
+          "dispatch/new-transition"
+        )
+      }
       handleRegisterTransition(rootAction, store, when)
 
       /**
@@ -1411,7 +1415,7 @@ export function newStoreDef<
         controller: initialAbort.controller,
       })
 
-      store.transitions.addKey(BOOTSTRAP_TRANSITION, "dispatch/new-transition")
+      store.transitions.addKey(BOOTSTRAP_TRANSITION, "dispatch/on-construct")
       const bootstrapAction = {
         type: "bootstrap",
         transition: BOOTSTRAP_TRANSITION,

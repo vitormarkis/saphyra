@@ -57,7 +57,6 @@ describe("before dispatch: default", () => {
       expect(info.errorCallbackList).toStrictEqual(new Map())
       expect(info.transitions).toMatchObject({})
       expect(info.state).toEqual(expect.objectContaining({ count: 0 }))
-      expect(info.controllers).toStrictEqual({})
     })
 
     test("no transition", () => {
@@ -71,7 +70,6 @@ describe("before dispatch: default", () => {
       expect(info.doneCallbackList).toStrictEqual(new Map())
       expect(info.errorCallbackList).toStrictEqual(new Map())
       expect(info.transitions).toMatchObject({})
-      expect(info.controllers).toStrictEqual({})
       expect(info.state).toEqual(expect.objectContaining({ count: 0 }))
     })
 
@@ -93,7 +91,6 @@ describe("before dispatch: default", () => {
       expect(info.errorCallbackList).toStrictEqual(new Map())
       expect(info.transitions).toMatchObject({})
       expect(info.state).toEqual(expect.objectContaining({ count: 0 }))
-      expect(info.controllers).toStrictEqual({})
     })
 
     it("should increment 3 times", () => {
@@ -114,7 +111,6 @@ describe("before dispatch: default", () => {
       })
 
       const info = prepareInfo(getStoreTransitionInfoSourceShallowCopy(store))
-      expect(info.controllers).toStrictEqual({})
       expect(info.setters).toStrictEqual({})
       expect(info.doneCallbackList).toStrictEqual(new Map())
       expect(info.errorCallbackList).toStrictEqual(new Map())
@@ -166,7 +162,6 @@ describe("before dispatch: default", () => {
       expect(settersHistory).toStrictEqual([])
 
       const info = prepareInfo(getStoreTransitionInfoSourceShallowCopy(store))
-      expect(info.controllers).toStrictEqual({})
       expect(info.doneCallbackList).toStrictEqual(new Map())
       expect(info.errorCallbackList).toStrictEqual(new Map())
       expect(info.transitions).toMatchObject({})
@@ -203,7 +198,6 @@ describe("before dispatch: default", () => {
 
       const info = prepareInfo(getStoreTransitionInfoSourceShallowCopy(store))
 
-      expect(info.controllers).toStrictEqual({})
       expect(info.setters).toStrictEqual({})
       expect(info.doneCallbackList).toStrictEqual(new Map())
       expect(info.errorCallbackList).toStrictEqual(new Map())

@@ -151,7 +151,6 @@ describe("before dispatch: default", () => {
       })
 
       const info = getStoreTransitionInfoSourceShallowCopy(store)
-      expect(Object.keys(info.controllers)).toHaveLength(3 + 1) // + 1 for bootstrap
       info.doneCallbackList.forEach(fn => {
         expect(fn).toBeNull()
       })

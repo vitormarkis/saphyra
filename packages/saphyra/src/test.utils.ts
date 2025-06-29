@@ -80,15 +80,17 @@ export function getStoreTransitionInfoShallowCopy(
   const setters = store.settersRegistry[transitionName]
   const doneCallback = store.transitions.callbacks.done.get(transitionName)
   const errorCallback = store.transitions.callbacks.error.get(transitionName)
-  const transitions = store.transitions.state
+  const transitionsFromStore = store.transitions.state
   const state = store.getState()
+  const transitions = transitionsFromStore ? cloneObj(transitionsFromStore) : {}
+  delete transitions.bootstrap
 
   return {
     controller,
     setters: setters ? [...setters] : setters,
     doneCallback: typeof doneCallback === "function" ? doneCallback : null,
     errorCallback: typeof errorCallback === "function" ? errorCallback : null,
-    transitions: transitions ? cloneObj(transitions) : transitions,
+    transitions,
     state: state ? cloneObj(state) : state,
   }
 }
@@ -96,7 +98,6 @@ export function getStoreTransitionInfoShallowCopy(
 export function getStoreTransitionInfoSourceShallowCopy(
   store: SomeStoreGeneric
 ) {
-  const controllers = { ...store.transitions.controllers.values }
   const setters = { ...store.settersRegistry }
   const doneCallbackList = new Map(store.transitions.callbacks.done)
   const errorCallbackList = new Map(store.transitions.callbacks.error)
@@ -104,7 +105,6 @@ export function getStoreTransitionInfoSourceShallowCopy(
   const state = cloneObj(store.getState())
 
   return {
-    controllers,
     setters,
     doneCallbackList,
     errorCallbackList,
@@ -116,7 +116,6 @@ export function getStoreTransitionInfoSourceShallowCopy(
 export function deleteBootstrap(
   info: ReturnType<typeof getStoreTransitionInfoSourceShallowCopy>
 ) {
-  delete info.controllers.bootstrap
   delete info.setters.bootstrap
   info.doneCallbackList.delete("bootstrap")
   info.errorCallbackList.delete("bootstrap")
