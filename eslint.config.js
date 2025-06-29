@@ -8,7 +8,7 @@ import importPlugin from "eslint-plugin-import"
 
 export default defineConfig([
   {
-    ignores: ["**/dist/**"],
+    ignores: ["**/dist/**", "apps/examples/**"],
   },
   {
     files: ["**/*.{js,mjs,cjs,ts,mts,cts,jsx,tsx}"],
