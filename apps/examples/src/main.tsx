@@ -10,6 +10,9 @@ import { myRoutesManifest } from "./my-routes-manifest.tsx"
 import { Providers } from "./providers.tsx"
 import { PostHogProvider } from "posthog-js/react"
 import { themeStore } from "~/theme"
+import { readState } from "saphyra"
+
+Object.assign(window, { readState })
 
 function onThemeChange(event: any, theme: string) {
   if (event.matches) {

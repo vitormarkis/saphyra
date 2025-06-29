@@ -474,7 +474,7 @@ export type DerivationConfig<TState, TArgs extends any[], TReturn> = {
 export type DerivationsConfig<TState> = {
   [K in keyof TState as TState[K] extends (...args: any[]) => any
     ? K
-    : never]?: DerivationConfig<TState, any[], any>
+    : never]: DerivationConfig<TState, any[], any>
 }
 
 export type StateWithDerivations<

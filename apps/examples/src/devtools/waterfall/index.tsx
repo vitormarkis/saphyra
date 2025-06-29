@@ -182,11 +182,28 @@ export function WaterfallController({}: WaterfallControllerProps) {
 
 function WaterfallContent() {
   const [waterfallStore] = WF.useStore()
-  const displayingBarsIdList = WF.useCommittedSelector(
-    s => s.$displayingBarsIdList
+  const displayingBarsIdList = WF.useCommittedSelector(s =>
+    s.getDisplayingBarsIdList()
   )
 
   const [seeingElement, hover] = useState<string | null>(null)
+
+  useEffect(() => {
+    Object.assign(window, { waterfallStore })
+  }, [])
+
+  const updateConfig = useCallback(() => {
+    waterfallStore.dispatch({
+      type: "refresh",
+    })
+
+    if (waterfallStore.state.getIsSomeRunning()) {
+      waterfallStore.uncontrolledState.animationFrame =
+        requestAnimationFrame(updateConfig)
+    }
+  }, [waterfallStore])
+
+  const lines = WF.useCommittedSelector(s => s.getLines())
 
   const tooltipRef = useRef<HTMLDivElement>(null)
   useMouse({
@@ -196,24 +213,6 @@ function WaterfallContent() {
       tooltipRef.current.style.transform = `translate3d(${x}px, ${y}px, 0px)`
     },
   })
-
-  useEffect(() => {
-    Object.assign(window, { waterfallStore })
-  }, [])
-
-  const updateConfig = useCallback(() => {
-    console.log("refreshing")
-    waterfallStore.dispatch({
-      type: "refresh",
-    })
-
-    if (waterfallStore.state.$isSomeRunning) {
-      waterfallStore.uncontrolledState.animationFrame =
-        requestAnimationFrame(updateConfig)
-    }
-  }, [waterfallStore])
-
-  const lines = WF.useCommittedSelector(s => s.$lines)
 
   const rowsAmount =
     displayingBarsIdList.length > 0 ? displayingBarsIdList.length + 2 : 0
@@ -311,7 +310,7 @@ export function WaterfallTooltip({
   const { extractErrorMessage: extractErrorMessageFn } =
     useContext(WaterfallContext) ?? {}
   const barInfo = WF.useCommittedSelector(s =>
-    seeingBar ? s.$barsByBarId[seeingBar] : null
+    seeingBar ? s.getBarsByBarId()[seeingBar] : null
   )
   if (!seeingBar || barInfo === null) return null
   // const barInfo = MOCK
@@ -412,7 +411,7 @@ export const Bar = forwardRef(function Bar({
   const [waterfallStore] = WF.useStore()
   const barRef = useContext(RefContext)
   const transitionName = WF.useCommittedSelector(
-    s => s.$barsByBarId[barId].transitionName
+    s => s.getBarsByBarId()[barId].transitionName
   )
   const isHovering = barId === seeingElement
 
@@ -421,8 +420,8 @@ export const Bar = forwardRef(function Bar({
     () => {
       if (!barRef?.current) return
       const state = waterfallStore.getState()
-      const config = state.$config
-      const bar = state.$barsByBarId[barId]
+      const config = state.getConfig()
+      const bar = state.getBarsByBarId()[barId]
       // const isHighlighting = state.highlightingTransition !== null
       const isHighlighting = false
       const dataHighlight =
@@ -566,10 +565,10 @@ const handle = ({
   idx,
 }: Handle) => {
   const state = waterfallStore.getState()
-  const duration = state.$config.max - state.$config.min
+  const duration = state.getConfig().max - state.getConfig().min
 
   if (lineViewContentRef.current) {
-    if (state.$config.max === undefined) return
+    if (state.getConfig().max === undefined) return
     const displayingValue = getDisplayingValue(
       idx != null ? idx * state.distance : duration
     )
@@ -672,7 +671,7 @@ export function SorterHeader({ children, property }: SorterHeaderProps) {
   const [waterfallStore] = WF.useStore()
 
   const currentSorter = WF.useCommittedSelector(
-    s => s.$currentSorters[property]
+    s => s.getCurrentSorters()[property]
   )
 
   return (
@@ -733,14 +732,14 @@ type TransitionNameProps = {
 
 export function TransitionName({ barId }: TransitionNameProps) {
   const transitionName = WF.useCommittedSelector(
-    s => s.$displayingBars.find(bar => bar.id === barId)?.transitionName
+    s => s.getDisplayingBars().find(bar => bar.id === barId)?.transitionName
   )
   return transitionName
 }
 
 const createLineStyleFn = (idx: number) => (state: WaterfallState) => {
   const duration = state.distance * idx
-  const left = duration / state.$config.traveled
+  const left = duration / state.getConfig().traveled
 
   return { left: left * 100 + "%", width: duration === 0 ? 0 : 1 }
 }
@@ -759,7 +758,7 @@ type TransitionNameWrapperProps = {
 export function TransitionNameWrapper({ barId }: TransitionNameWrapperProps) {
   const [waterfallStore] = WF.useStore()
   const transitionName = WF.useCommittedSelector(
-    s => s.$barsByBarId[barId].transitionName
+    s => s.getBarsByBarId()[barId].transitionName
   )
 
   return (

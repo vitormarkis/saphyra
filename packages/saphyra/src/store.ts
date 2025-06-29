@@ -55,7 +55,7 @@ import { defaultErrorHandler } from "./default-error-handler"
 import { setImmutable } from "./fn/common"
 import { mockAsync } from "./helpers/mock-async"
 import { mockEventEmitter } from "./helpers/mock-event-emitter"
-import { log, $$onDebugMode } from "./helpers/log"
+import { $$onDevMode, $$onDebugMode } from "./helpers/log"
 import { TransitionsStateStore } from "./transitions-state"
 import { DerivationsRegistry } from "./derivations-registry"
 
@@ -469,19 +469,16 @@ export function newStoreDef<
       const transitionKey = transition.join(":")
       const setters = store.settersRegistry[transitionKey] ?? []
       if (!setters) {
-        log(
-          "No setters found for this transition. It's most likely you didn't use the `set` function in your reducer."
+        $$onDevMode(() =>
+          console.log(
+            "No setters found for this transition. It's most likely you didn't use the `set` function in your reducer."
+          )
         )
       }
       $$onDebugMode(() =>
         console.log("%c 00) k applying setters", "color: orange", setters)
       )
-      // if (setters.length > 0) {
-      //   const has = setters.some(s => "name" in s)
-      //   if (!has) debugger
-      // }
 
-      if (setters.length === 0 && transitionKey !== "bootstrap") debugger
       const newStateFromSetters = setters.reduce(
         (acc: TState, stateOrSetter, _index) => {
           const setter = mergeSetterWithState(ensureSetter(stateOrSetter))
@@ -531,7 +528,12 @@ export function newStoreDef<
     ) {
       const transitionString = transition.join(":")
       if (!transition) throw new Error("Impossible to reach this point")
-      log(`%cTransition completed! [${transitionString}]`, "color: lightgreen")
+      $$onDevMode(() =>
+        console.log(
+          `%cTransition completed! [${transitionString}]`,
+          "color: lightgreen"
+        )
+      )
       commitTransition(transition, action, onTransitionEnd)
     }
 
@@ -586,11 +588,15 @@ export function newStoreDef<
       const newActionAbort = isNewActionError(error)
       if (!newActionAbort) {
         handleError(error, transition)
-        log(`%cTransition failed! [${transitionKey}]`, "color: red")
+        $$onDevMode(() =>
+          console.log(`%cTransition failed! [${transitionKey}]`, "color: red")
+        )
       } else {
-        log(
-          `%cPrevious transition canceled! [${transitionKey}], creating new one.`,
-          "color: orange"
+        $$onDevMode(() =>
+          console.log(
+            `%cPrevious transition canceled! [${transitionKey}], creating new one.`,
+            "color: orange"
+          )
         )
       }
     }
@@ -1226,12 +1232,6 @@ export function newStoreDef<
           })
         }
       })
-
-      log(
-        `%c [${transition.join(":")}]`,
-        "color: coral",
-        store.transitionsState.state
-      )
     }
 
     const handleSetStateTransitionOngoing = (

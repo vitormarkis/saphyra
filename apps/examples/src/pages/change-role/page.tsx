@@ -138,6 +138,7 @@ function ChangeRolePageContent() {
   const [authStore] = Auth.useStore()
   const state = Auth.useCommittedSelector()
   const optimisticRole = Auth.useSelector(s => s.role)
+  const welcomeMessage = Auth.useCommittedSelector(s => s.getWelcomeMessage())
 
   const isChangingRole = Auth.useTransition(["auth", "role"])
 
@@ -258,6 +259,7 @@ function ChangeRolePageContent() {
         ) : null}
       </div>
       <pre>{JSON.stringify(state, null, 2)}</pre>
+      <pre>{JSON.stringify(welcomeMessage, null, 2)}</pre>
       {/* <div className="h-full grid grid-cols-1 gap-2 min-w-0">
         <Devtools
           store={authStore}

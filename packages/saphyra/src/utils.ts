@@ -26,3 +26,17 @@ export function createAncestor<T>(head: any[]): T[][] {
     return acc
   }, [])
 }
+
+export function readState(state: Record<string, any>) {
+  const finalState: Record<string, any> = {}
+  for (const key in state) {
+    const value = state[key]
+    const isFunction = typeof value === "function"
+    if (isFunction) {
+      finalState[key] = value()
+    } else {
+      finalState[key] = value
+    }
+  }
+  return finalState
+}
