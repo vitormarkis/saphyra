@@ -9,19 +9,19 @@ export type TODO = any
 
 export type Dispatch<
   TState extends Record<string, any>,
-  TActions extends ActionShape<TState, TEvents>,
+  TActions extends ActionShape,
   TEvents extends EventsTuple,
 > = (action: ClassicAction<TState, TActions, TEvents>) => void
 
 export type ClassicAction<
   TState extends Record<string, any>,
-  TActions extends ActionShape<TState, TEvents>,
+  TActions extends ActionShape,
   TEvents extends EventsTuple,
 > = TActions & BaseAction<TState, TActions, TEvents>
 
 export type ClassicActionRedispatch<
   TState extends Record<string, any>,
-  TActions extends ActionShape<TState, TEvents>,
+  TActions extends ActionShape,
   TEvents extends EventsTuple,
 > = TActions & Omit<BaseAction<TState, TActions, TEvents>, "beforeDispatch">
 
@@ -109,7 +109,7 @@ type SetStateOptions = {
 
 export type InnerCreateAsync<
   TState extends Record<string, any>,
-  TActions extends ActionShape<TState, TEvents>,
+  TActions extends ActionShape,
   TEvents extends EventsTuple,
   TUncontrolledState extends Record<string, any>,
   TDeps,
@@ -124,7 +124,7 @@ export type InnerCreateAsync<
 
 export type HandleActionProps<
   TState extends Record<string, any>,
-  TActions extends ActionShape<TState, TEvents>,
+  TActions extends ActionShape,
   TEvents extends EventsTuple,
   TUncontrolledState extends Record<string, any>,
   TDeps,
@@ -148,7 +148,7 @@ export type HandleActionProps<
 
 export type GenericStoreMethods<
   TState extends Record<string, any>,
-  TActions extends ActionShape<TState, TEvents>,
+  TActions extends ActionShape,
   TEvents extends EventsTuple,
   TUncontrolledState extends Record<string, any>,
   TDeps,
@@ -212,7 +212,7 @@ type UncontrolledState<
 
 export type SomeStore<
   TState extends Record<string, any>,
-  TActions extends ActionShape<TState, TEvents>,
+  TActions extends ActionShape,
   TEvents extends EventsTuple,
   TUncontrolledState extends Record<string, any>,
   TDeps,
@@ -238,16 +238,13 @@ export type DefaultActions =
       onSuccess: (value: any) => void
     }
 
-export type ActionShape<
-  TState extends Record<string, any>,
-  TEvents extends EventsTuple,
-> = {
+export type ActionShape = {
   type: string
 }
 
 export type BaseAction<
   TState extends Record<string, any> = any,
-  TActions extends ActionShape<TState, TEvents> = ActionShape<TState, any>,
+  TActions extends ActionShape = ActionShape,
   TEvents extends EventsTuple = EventsTuple,
 > = {
   transition?: TransitionNullable
@@ -256,15 +253,14 @@ export type BaseAction<
   controller?: AbortController
 }
 
-export type ActionRedispatch<
-  TState extends Record<string, any>,
-  TEvents extends EventsTuple,
-  TActions extends ActionShape<TState, TEvents>,
-> = Omit<TActions, "beforeDispatch">
+export type ActionRedispatch<TActions extends ActionShape> = Omit<
+  TActions,
+  "beforeDispatch"
+>
 
 export type BeforeDispatchOptions<
   TState extends Record<string, any>,
-  TActions extends ActionShape<TState, TEvents>,
+  TActions extends ActionShape,
   TEvents extends EventsTuple,
   TUncontrolledState extends Record<string, any>,
   TDeps,
@@ -310,7 +306,7 @@ export type BeforeDispatchOptions<
 
 export type BeforeDispatch<
   TState extends Record<string, any> = any,
-  TActions extends ActionShape<TState, TEvents> = ActionShape<any, any>,
+  TActions extends ActionShape = ActionShape,
   TEvents extends EventsTuple = EventsTuple,
   TUncontrolledState extends Record<string, any> = Record<string, any>,
   TDeps = undefined,
@@ -398,7 +394,7 @@ export type SomeStoreGeneric = SomeStore<any, any, any, any, any>
 export type StoreInstantiator<
   TInitialProps,
   TState extends Record<string, any>,
-  TActions extends ActionShape<TState, TEvents>,
+  TActions extends ActionShape,
   TEvents extends EventsTuple,
   TUncontrolledState extends Record<string, any>,
   TDeps,

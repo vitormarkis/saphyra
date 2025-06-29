@@ -12,7 +12,6 @@ import {
   newStore,
   deleteBootstrap,
   TestCounterStore,
-  captureValueHistory,
 } from "./test.utils"
 
 let store: TestCounterStore
@@ -27,7 +26,7 @@ beforeEach(() => {
   spy_emitError = vi.spyOn(store.transitions, "emitError")
 })
 
-const transitionName = "increment"
+// const transitionName = "increment"
 
 beforeAll(() => {
   vi.useFakeTimers()
@@ -38,15 +37,6 @@ afterAll(() => {
 })
 
 test("should handle transition error gracefully", async () => {
-  let getSettersHistory = captureValueHistory(
-    store,
-    "settersRegistry",
-    null,
-    v => {
-      v
-    }
-  )
-
   const info_before_dispatch = deleteBootstrap(
     getStoreTransitionInfoSourceShallowCopy(store)
   )
@@ -89,7 +79,7 @@ test("should handle transition error gracefully", async () => {
     getStoreTransitionInfoSourceShallowCopy(store)
   )
 
-  const history = getSettersHistory()
+  // const history = getSettersHistory()
 
   // ensure all the main entities were reseted
   expect(spy_completeTransition).toHaveBeenCalledTimes(0)

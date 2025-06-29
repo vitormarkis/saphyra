@@ -12,7 +12,6 @@ import {
   newStore,
   TestCounterStore,
 } from "./test.utils"
-import { BeforeDispatch } from "./types"
 
 let store: TestCounterStore
 let spy_completeTransition: MockInstance<any>
@@ -42,10 +41,7 @@ describe("before dispatch: cancel previous", () => {
     store.dispatch({
       type: "increment",
       transition: ["increment"],
-      beforeDispatch({ action }) {
-        if (action.type === "increment") {
-        }
-      },
+      beforeDispatch: () => {},
     })
 
     const info = getStoreTransitionInfoShallowCopy(store, transitionName)

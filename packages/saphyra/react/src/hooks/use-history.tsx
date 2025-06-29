@@ -13,7 +13,7 @@ const isBrowser = typeof window !== "undefined"
 
 export function useHistory<
   TState extends Record<string, any> = any,
-  TActions extends ActionShape<TState, TEvents> = ActionShape<TState, any>,
+  TActions extends ActionShape = ActionShape,
   TEvents extends EventsTuple = EventsTuple,
   TUncontrolledState extends Record<string, any> = Record<string, any>,
   TDeps = undefined,

@@ -4,7 +4,6 @@ import {
   OptimisticRegistry,
   RemoveDollarSignProps,
   DerivationsConfig,
-  InitialProps,
   RemoveFunctionProps,
 } from "./types"
 import { createAsync, errorNoTransition } from "./createAsync"
@@ -25,7 +24,6 @@ import type {
   StoreInstantiator,
   StoreInternalEvents,
   ReducerOptimistic,
-  Registry,
   InnerCreateAsync,
   HandleActionProps,
   OnTransitionEnd,
@@ -52,10 +50,9 @@ import {
   ensureSetter,
   isAsyncFunction,
   isSetter,
-  newSetter,
 } from "./helpers/utils"
 import { defaultErrorHandler } from "./default-error-handler"
-import { setImmutable, setImmutableFn } from "./fn/common"
+import { setImmutable } from "./fn/common"
 import { mockAsync } from "./helpers/mock-async"
 import { mockEventEmitter } from "./helpers/mock-event-emitter"
 import { log, $$onDebugMode } from "./helpers/log"
@@ -70,7 +67,7 @@ export type ExternalProps = Record<string, any> | null
 type OnConstructProps<
   TInitialProps,
   TState extends Record<string, any>,
-  TActions extends ActionShape<TState, TEvents>,
+  TActions extends ActionShape,
   TEvents extends EventsTuple,
   TUncontrolledState extends Record<string, any>,
   TDeps,
@@ -84,7 +81,7 @@ type OnConstructProps<
 type OnConstruct<
   TInitialProps,
   TState extends Record<string, any>,
-  TActions extends ActionShape<TState, TEvents>,
+  TActions extends ActionShape,
   TEvents extends EventsTuple,
   TUncontrolledState extends Record<string, any>,
   TDeps,
@@ -105,7 +102,7 @@ type OnConstruct<
 function defaultOnConstruct<
   TInitialProps,
   TState extends Record<string, any>,
-  TActions extends ActionShape<TState, TEvents>,
+  TActions extends ActionShape,
   TEvents extends EventsTuple,
   TUncontrolledState extends Record<string, any>,
   TDeps,
@@ -117,8 +114,7 @@ function defaultOnConstruct<
     TEvents,
     TUncontrolledState,
     TDeps
-  >,
-  _config?: StoreConstructorConfig<TDeps>
+  >
 ) {
   const state = props.initialProps as unknown as TState
   return cloneObj(state)
@@ -131,7 +127,7 @@ function defaultOnConstruct<
  */
 type ReducerProps<
   TState extends Record<string, any>,
-  TActions extends ActionShape<TState, TEvents> & DefaultActions,
+  TActions extends ActionShape & DefaultActions,
   TEvents extends EventsTuple,
   TUncontrolledState extends Record<string, any>,
   TDeps,
@@ -151,7 +147,7 @@ type ReducerProps<
 
 export type Reducer<
   TState extends Record<string, any>,
-  TActions extends ActionShape<TState, TEvents>,
+  TActions extends ActionShape,
   TEvents extends EventsTuple,
   TUncontrolledState extends Record<string, any>,
   TDeps,
@@ -161,7 +157,7 @@ export type Reducer<
 
 function defaultReducer<
   TState extends Record<string, any>,
-  TActions extends ActionShape<TState, TEvents>,
+  TActions extends ActionShape,
   TEvents extends EventsTuple,
   TUncontrolledState extends Record<string, any>,
   TDeps,
@@ -175,7 +171,7 @@ export type ExternalPropsFn<TExternalProps> =
 
 type OnPushToHistoryProps<
   TState extends Record<string, any>,
-  TActions extends ActionShape<TState, TEvents>,
+  TActions extends ActionShape,
   TEvents extends EventsTuple,
   TUncontrolledState extends Record<string, any>,
   TDeps,
@@ -190,7 +186,7 @@ type OnPushToHistoryProps<
 
 type OnPushToHistory<
   TState extends Record<string, any>,
-  TActions extends ActionShape<TState, TEvents>,
+  TActions extends ActionShape,
   TEvents extends EventsTuple,
   TUncontrolledState extends Record<string, any>,
   TDeps,
@@ -206,7 +202,7 @@ type OnPushToHistory<
 
 type CreateStoreOptionsConfig<
   TState extends Record<string, any>,
-  TActions extends ActionShape<TState, TEvents>,
+  TActions extends ActionShape,
   TEvents extends EventsTuple,
   TUncontrolledState extends Record<string, any>,
   TDeps,
@@ -226,7 +222,7 @@ type CreateStoreOptionsConfig<
 type CreateStoreOptions<
   TInitialProps,
   TState extends Record<string, any>,
-  TActions extends ActionShape<TState, TEvents>,
+  TActions extends ActionShape,
   TEvents extends EventsTuple,
   TUncontrolledState extends Record<string, any>,
   TDeps,
@@ -259,14 +255,13 @@ export type StoreConstructorConfig<TDeps> = {
 const BOOTSTRAP_TRANSITION = ["bootstrap"]
 const defaultOnPushToHistory = <
   TState extends Record<string, any>,
-  TActions extends ActionShape<TState, TEvents>,
+  TActions extends ActionShape,
   TEvents extends EventsTuple,
   TUncontrolledState extends Record<string, any>,
   TDeps,
 >({
   history,
   state,
-  ...props
 }: OnPushToHistoryProps<
   TState,
   TActions,
@@ -280,7 +275,7 @@ const defaultOnPushToHistory = <
 export function newStoreDef<
   TInitialProps extends Record<string, any>,
   TState extends Record<string, any> = TInitialProps,
-  TActions extends ActionShape<TState, TEvents> = ActionShape<TState, any>,
+  TActions extends ActionShape = ActionShape,
   TEvents extends EventsTuple = EventsTuple,
   TUncontrolledState extends Record<string, any> = Record<string, any>,
   TDeps = undefined,
@@ -341,7 +336,6 @@ export function newStoreDef<
     type ActionRedispatch = ClassicActionRedispatch<TState, TActions, TEvents>
     const subject = createSubject()
     const errorsStore = new ErrorsStore()
-    const now = Date.now()
     const deps = config.deps ?? ({} as unknown as TDeps)
 
     const storeValues: GenericStoreValues<
@@ -603,8 +597,7 @@ export function newStoreDef<
 
     const handleRegisterTransition = (
       action: ActionRedispatch,
-      store: SomeStore<TState, TActions, TEvents, TUncontrolledState, TDeps>,
-      when: string
+      store: SomeStore<TState, TActions, TEvents, TUncontrolledState, TDeps>
     ) => {
       if (!action.transition) return
       const doneCallback = store.transitions.callbacks.done.get(
@@ -624,7 +617,6 @@ export function newStoreDef<
       const transition = action.transition
       const transitionString = transition.join(":")
 
-      const internalTransitionId = `${transitionString}-${when}`
       // store.internal.events.emit("new-transition", {
       //   transitionName: transitionString,
       //   id: internalTransitionId,
@@ -805,7 +797,7 @@ export function newStoreDef<
         store,
       }
 
-      let rootAction = beforeDispatch(opts as any)
+      const rootAction = beforeDispatch(opts as any)
       asyncOperations.forEach(asyncOperation => asyncOperation.fn())
 
       if (rootAction == null) {
@@ -834,7 +826,7 @@ export function newStoreDef<
           "dispatch/new-transition"
         )
       }
-      handleRegisterTransition(rootAction, store, when)
+      handleRegisterTransition(rootAction, store)
 
       /**
        * Sobreescrevendo controller, quando na verdade cada action
@@ -863,6 +855,7 @@ export function newStoreDef<
         // the observers will be notified
         // when the transition is done
       } else {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const _previousState = newState
         const [historyLatestState, newHistory] = handleNewStateToHistory({
           state: newState,
@@ -944,8 +937,7 @@ export function newStoreDef<
 
     const registerOptimistic: Met["registerOptimistic"] = (
       setterOrPartialStateList,
-      transition,
-      notify: "notify" | "no-notify" = "notify"
+      transition
     ) => {
       // 1. register de optimistic setter or partial state
       if (transition) {
@@ -1019,7 +1011,7 @@ export function newStoreDef<
       const { when, optimisticStateSource } = props
       let newState = cloneObj(props?.state ?? store.state)
       let prevState = props?.prevState ?? store.state
-      let optimisticState = cloneObj(
+      const optimisticState = cloneObj(
         props?.optimisticState ?? store.optimisticState
       )
       const { createAsync = defaultInnerCreateAsync } = props ?? {}
@@ -1418,7 +1410,7 @@ export function newStoreDef<
         type: "bootstrap",
         transition: BOOTSTRAP_TRANSITION,
       } as Action
-      handleRegisterTransition(bootstrapAction, store, when)
+      handleRegisterTransition(bootstrapAction, store)
 
       const isAsync = isAsyncFunction(onConstruct)
       if (isAsync) {

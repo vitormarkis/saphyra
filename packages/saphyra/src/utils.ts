@@ -13,7 +13,7 @@ export function labelWhen(date: Date | number) {
     date = new Date(date)
   }
   const isoString = date.toISOString()
-  const [_hour, minute, secondWithDot] = isoString.split("T")[1].split(":")
+  const [, minute, secondWithDot] = isoString.split("T")[1].split(":")
   const [second, milisecondWithZ] = secondWithDot.split(".")
   const milisecond = milisecondWithZ.slice(0, -1)
   return `${minute}m_${second}s_${milisecond}ms`

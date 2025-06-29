@@ -8,18 +8,16 @@ import {
   test,
   vi,
 } from "vitest"
-import { GENERAL_TRANSITION } from "./const"
+// import { noop } from "./fn/noop"
 import {
-  captureCallbackHistory,
+  // captureCallbackHistory,
   captureValueHistory,
-  getStoreTransitionInfoShallowCopy,
   getStoreTransitionInfoSourceShallowCopy,
   newStore,
   prepareInfo,
   TestCounterStore,
 } from "./test.utils"
 import { BeforeDispatch } from "./types"
-import { noop } from "./fn/noop"
 
 let store: TestCounterStore
 let spy_completeTransition: MockInstance
@@ -39,8 +37,6 @@ beforeEach(() => {
 afterEach(() => {
   vi.useRealTimers()
 })
-
-const transitionName = "increment"
 
 describe("before dispatch: default", () => {
   describe("should rollback any effects if no action will be dispatched", () => {
@@ -74,16 +70,16 @@ describe("before dispatch: default", () => {
     })
 
     test("async transition", () => {
-      const getHistory = captureCallbackHistory(store, "dispatch", [], v => {
-        noop()
-      })
+      // const getHistory = captureCallbackHistory(store, "dispatch", [], () => {
+      //   noop()
+      // })
       store.dispatch({
         type: "increment-async",
         transition: ["increment"],
         beforeDispatch: earlyReturn,
       })
 
-      const hh = getHistory()
+      // const hh = getHistory()
 
       const info = prepareInfo(getStoreTransitionInfoSourceShallowCopy(store))
       expect(info.setters).toStrictEqual({})

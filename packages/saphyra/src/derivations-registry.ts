@@ -65,7 +65,7 @@ export class DerivationsRegistry<TState> {
     derivationKeys.forEach(key => {
       const getter = this.getGetter(stateType, key)
       if (getter) {
-        // @ts-expect-error
+        // @ts-expect-error key is keyof of state
         state[key] = () => getter.get(state)
       }
     })

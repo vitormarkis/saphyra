@@ -9,7 +9,6 @@ import {
   AsyncPromiseConfig,
   AsyncPromiseProps,
   AsyncTimerConfig,
-  BaseAction,
   DefaultActions,
   SomeStore,
   TransitionNullable,
@@ -23,8 +22,7 @@ export const errorNoTransition = () =>
 
 export function createAsync<
   TState extends Record<string, any> = Record<string, any>,
-  TActions extends ActionShape<TState, TEvents> = DefaultActions &
-    ActionShape<TState, any>,
+  TActions extends ActionShape = DefaultActions & ActionShape,
   TEvents extends EventsTuple = EventsTuple,
   TUncontrolledState extends Record<string, any> = Record<string, any>,
   TDeps = undefined,

@@ -192,7 +192,7 @@ export class TransitionsStore extends Subject {
     state: TransitionsStoreState,
     transitionName: string,
     options: DoneKeyOptions,
-    functionsToRun: Record<string, Function[]>
+    functionsToRun: Record<string, VoidFunction[]>
   ): TransitionsStoreState {
     if (!transitionName) return state
     state[transitionName] ??= 0
@@ -231,7 +231,7 @@ export class TransitionsStore extends Subject {
     if (!transition) return
 
     const state = { ...this.state }
-    const functionsToRun: Record<string, Function[]> = {}
+    const functionsToRun: Record<string, VoidFunction[]> = {}
     let meta = ""
     const newState = transition.reduce((acc, key) => {
       key = String(key)
@@ -242,7 +242,7 @@ export class TransitionsStore extends Subject {
 
     this.setState(newState)
     if (this.#shouldLog) {
-      const key = transition?.join(":")!
+      const key = transition?.join(":")
       const sub = this.state[key] ?? 0
       $$onDebugMode(() =>
         console.log(

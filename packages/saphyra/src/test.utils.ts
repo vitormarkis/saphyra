@@ -25,7 +25,7 @@ type CounterActions =
 export type TestCounterStore = SomeStore<
   CounterState,
   CounterActions,
-  {},
+  any,
   any,
   any
 >
@@ -38,7 +38,7 @@ export const newStore = newStoreDef<
   any,
   any
 >({
-  reducer({ state, action, set, async, diff, store }) {
+  reducer({ state, action, set, async, store }) {
     if (action.type === "increment") {
       set(s => ({ count: s.count + 1 }))
     }
@@ -184,7 +184,7 @@ export function captureCallbackHistory<
 ) {
   const history: any[] = initialValue ?? []
 
-  let oldCallback = source[key]
+  const oldCallback = source[key]
 
   Object.assign(source, {
     [key]: (...args: any[]) => {
