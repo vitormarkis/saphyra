@@ -45,7 +45,8 @@
     "test:debug": "vitest --config vitest.config.ts --inspect-brk --browser --no-file-parallelism",
     "build": "tsup",
     "build-vite": "vite build",
-    "check-types": "npm run check"
+    "check-types": "npm run check",
+    "prettier": "prettier --write src react"
   },
   "dependencies": {
     "tiny-invariant": "^1.3.3"

@@ -8,10 +8,14 @@
   "license": "MIT",
   "files": [],
   "packageManager": "pnpm@9.6.0",
-  "scripts": {},
-  "dependencies": {
-    "typescript": "^5.5.3",
-    "turbo": "2.5.1"
+  "scripts": {
+    "prepare": "husky"
   },
-  "devDependencies": {}
+  "dependencies": {
+    "turbo": "2.5.1",
+    "typescript": "^5.5.3"
+  },
+  "devDependencies": {
+    "husky": "^9.1.7"
+  }
 }

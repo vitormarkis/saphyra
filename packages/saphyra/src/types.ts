@@ -403,9 +403,7 @@ export type StoreInstantiator<
   TUncontrolledState extends Record<string, any>,
   TDeps,
 > = (
-  initialProps: TInitialProps extends TState
-    ? InitialProps<TState>
-    : RemoveDollarSignProps<TInitialProps>,
+  initialProps: RemoveFunctionProps<RemoveDollarSignProps<TInitialProps>>,
   config?: StoreConstructorConfig<TDeps>
 ) => SomeStore<TState, TActions, TEvents, TUncontrolledState, TDeps>
 

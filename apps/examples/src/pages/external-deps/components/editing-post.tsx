@@ -1,13 +1,10 @@
 import { cn } from "~/lib/cn"
 import { Spinner } from "@blueprintjs/core"
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useState } from "react"
 import { Posts } from "~/pages/external-deps/store"
 import { useCallbackOnKeyDown } from "~/hooks/use-callback-on-keydown"
 import { getCommentsLazyOptions } from "~/pages/external-deps/lazy-values-options/get-comments-lazy-options"
 import { toast } from "sonner"
-import { notifyOnChange } from "~/notify-on-change"
-import { getCommentsQueryOptions } from "~/pages/external-deps/query-options/get-comments-query-options"
-import { useQuery } from "@tanstack/react-query"
 import {
   postsController,
   PostsController,
@@ -22,7 +19,7 @@ export function EditingPost({}: EditingPostProps) {
   if (!commentingPostId) throw new Error("No commenting post id") // this will be solved with states in v2
 
   const post = Posts.useCommittedSelector(
-    s => s.$postsByPostId[commentingPostId]
+    s => s.getPosts().byId[commentingPostId]
   )
 
   /** [external-deps.react-query]

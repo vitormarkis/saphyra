@@ -12,6 +12,15 @@
     "dev": {
       "persistent": true,
       "cache": false
+    },
+    "test": {
+      "cache": false
+    },
+    "check": {
+      "cache": false
+    },
+    "prettier": {
+      "cache": false
     }
   },
   "ui": "tui"

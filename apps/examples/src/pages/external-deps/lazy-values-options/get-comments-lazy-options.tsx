@@ -16,6 +16,7 @@ type GetCommentsLazyOptionsProps = {
 export function getCommentsLazyOptions({
   postId,
 }: GetCommentsLazyOptionsProps) {
+  const [postsStore] = Posts.useStore()
   return Posts.createLazyOptions({
     select: s => s.commentsByPostId[postId],
     transition: ["comments", postId],
@@ -23,6 +24,14 @@ export function getCommentsLazyOptions({
       return queryClient.ensureQueryData({
         ...getCommentsQueryOptions({ postId }, { signal }),
       })
+    },
+    onSuccess(value) {
+      postsStore.setState(s => ({
+        commentsByPostId: {
+          ...s.commentsByPostId,
+          [postId]: value,
+        },
+      }))
     },
   })
 }

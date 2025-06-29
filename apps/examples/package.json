@@ -27,8 +27,7 @@
     "lint": "eslint .",
     "start": "vite preview --outDir dist_vite",
     "check": "tsc --noEmit --project ./tsconfig.app.json",
-    "pr": "prettier --write src",
-    "test": "vitest --config vitest.config.ts --silent",
+    "prettier": "prettier --write src",
     "test:debug": "vitest --config vitest.config.ts --inspect-brk --browser --no-file-parallelism",
     "build": "vite build",
     "check-types": "tsc --noEmit"

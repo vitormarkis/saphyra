@@ -334,9 +334,7 @@ export function newStoreDef<
     : null
 
   function createStore(
-    initialProps: TInitialProps extends TState
-      ? InitialProps<TState>
-      : RemoveDollarSignProps<TInitialProps>,
+    initialProps: RemoveFunctionProps<RemoveDollarSignProps<TInitialProps>>,
     config: StoreConstructorConfig<TDeps> = {} as StoreConstructorConfig<TDeps>
   ): SomeStore<TState, TActions, TEvents, TUncontrolledState, TDeps> {
     type Action = ClassicAction<TState, TActions, TEvents>
