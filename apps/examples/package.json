@@ -24,7 +24,6 @@
   ],
   "scripts": {
     "dev": "vite",
-    "lint": "eslint .",
     "start": "vite preview --outDir dist_vite",
     "check": "tsc --noEmit --project ./tsconfig.app.json",
     "prettier": "prettier --write src",

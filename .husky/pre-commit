@@ -1,3 +1,4 @@
 turbo test
 turbo check
 turbo prettier
+turbo lint

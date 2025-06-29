@@ -82,30 +82,4 @@ export default defineConfig([
       import: importPlugin,
     },
   },
-
-  // Configuration for examples project (Vite + React)
-  {
-    files: ["apps/examples/**/*.{js,mjs,cjs,ts,mts,cts,jsx,tsx}"],
-    settings: {
-      "import/resolver": {
-        typescript: {
-          project: "./apps/examples/tsconfig.app.json",
-        },
-        node: {
-          paths: ["apps/examples/src"],
-          extensions: [".js", ".jsx", ".ts", ".tsx"],
-        },
-      },
-    },
-    rules: {
-      "react-refresh/only-export-components": "error",
-      "@typescript-eslint/no-explicit-any": "off",
-      "no-debugger": "off",
-      "import/no-unresolved": ["error"],
-    },
-    plugins: {
-      "react-refresh": reactRefresh,
-      "import": importPlugin,
-    },
-  },
 ])
