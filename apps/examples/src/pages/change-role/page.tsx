@@ -1,7 +1,7 @@
 import { Spinner } from "@blueprintjs/core"
 import { fetchRole } from "./fn/fetch-role"
-import { newStoreDef } from "saphyra"
-import { useCallback, useEffect, useState } from "react"
+import { newStoreDef, readState } from "saphyra"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { ErrorPage } from "~/components/error-page"
 import { fetchPermissions } from "~/pages/change-role/fn/get-permissions"
 import { Devtools } from "~/devtools/devtools"
@@ -136,9 +136,9 @@ export function ChangeRolePage() {
 
 function ChangeRolePageContent() {
   const [authStore] = Auth.useStore()
-  const state = Auth.useCommittedSelector()
+  const state_2 = Auth.useCommittedSelector(s => s)
+  const state = useMemo(() => readState(state_2), [state_2])
   const optimisticRole = Auth.useSelector(s => s.role)
-  const welcomeMessage = Auth.useCommittedSelector(s => s.getWelcomeMessage())
 
   const isChangingRole = Auth.useTransition(["auth", "role"])
 
@@ -258,16 +258,13 @@ function ChangeRolePageContent() {
           </div>
         ) : null}
       </div>
-      <pre>{JSON.stringify(state, null, 2)}</pre>
-      <pre>{JSON.stringify(welcomeMessage, null, 2)}</pre>
-      {/* <div className="h-full grid grid-cols-1 gap-2 min-w-0">
+      <div className="h-full grid grid-cols-1 gap-2 min-w-0">
         <Devtools
           store={authStore}
           allExpanded
         />
         <Waterfall store={authStore} />
-      </div> */}
-      {/* </div> */}
+      </div>
     </div>
   )
 }

@@ -767,16 +767,17 @@ export function newStoreDef<
     ) => {
       let newState = cloneObj(store.state)
       let prevState: TState | null = null
-      if (setterOrPartialState) {
-        if (initialAction.transition) {
-          const transitionKey = initialAction.transition.join(":")
-          const getTransitionState = () =>
-            cloneObj(store.transitionsState.state[transitionKey] ?? store.state)
-          prevState = getTransitionState()
+      if (initialAction.transition) {
+        const transitionKey = initialAction.transition.join(":")
+        const getTransitionState = () =>
+          cloneObj(store.transitionsState.state[transitionKey] ?? store.state)
+        prevState = getTransitionState()
+        if (setterOrPartialState) {
           updateTransitionState(initialAction.transition, setterOrPartialState)
-          newState = getTransitionState()
-          noop()
-        } else {
+        }
+        newState = getTransitionState()
+      } else {
+        if (setterOrPartialState) {
           const setter = mergeSetterWithState(
             ensureSetter(setterOrPartialState)
           )
@@ -1089,6 +1090,8 @@ export function newStoreDef<
             },
             from: "action",
           })
+          prevState = getStateToUseOnAction(prevState, "prev")
+          newState = getStateToUseOnAction(newState, "current")
           const context: ReducerProps<
             TState,
             TActions,
@@ -1096,8 +1099,8 @@ export function newStoreDef<
             TUncontrolledState,
             TDeps
           > = {
-            prevState: getStateToUseOnAction(prevState),
-            state: getStateToUseOnAction(newState),
+            prevState,
+            state: newState,
             action,
             events: store.events,
             store,
@@ -1576,13 +1579,14 @@ function createGetStateToUseOnAction<TState>(
   derivationsRegistry: DerivationsRegistry<TState> | null,
   transitionsState: TransitionsStateStore<TState>
 ) {
-  return (state: TState) => {
+  return (state: TState, type: "prev" | "current") => {
     if (transition) {
       return getStateToUseOnActionTransition(
         state,
         transition,
         derivationsRegistry,
-        transitionsState
+        transitionsState,
+        type
       )
     }
 
@@ -1600,10 +1604,14 @@ function getStateToUseOnActionTransition<TState>(
   state: TState,
   transition: Transition,
   derivationsRegistry: DerivationsRegistry<TState> | null,
-  transitionsState: TransitionsStateStore<TState>
+  transitionsState: TransitionsStateStore<TState>,
+  type: "prev" | "current"
 ) {
   const transitionKey = transition.join(":")
-  const transitionState = transitionsState.state[transitionKey] ?? state
+  const transitionState =
+    type === "prev"
+      ? (transitionsState.prevState[transitionKey] ?? state)
+      : (transitionsState.state[transitionKey] ?? state)
   if (derivationsRegistry) {
     return derivationsRegistry.injectCachedGetters(
       transitionState,

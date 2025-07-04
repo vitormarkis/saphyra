@@ -1,5 +1,11 @@
-import { useEffect, useRef, useState, useSyncExternalStore } from "react"
-import type { StoreInstantiatorGeneric } from "saphyra"
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react"
+import { readState, type StoreInstantiatorGeneric } from "saphyra"
 import {
   GenericStructureDisplayer,
   GenericStructureDisplayerProps,
@@ -39,10 +45,11 @@ export function Devtools<
     sessionStorage.setItem(`${pathname}.devtools-tab`, tab)
   }
 
-  const state = useSyncExternalStore(
+  const state_2 = useSyncExternalStore(
     cb => store.subscribe(cb),
     () => store.getState()
   )
+  const state = useMemo(() => readState(state_2), [state_2])
 
   const prev_transitions_state = useRef<any>()
   const transitions_state = useSyncExternalStore(

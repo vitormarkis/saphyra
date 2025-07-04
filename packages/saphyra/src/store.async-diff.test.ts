@@ -98,7 +98,7 @@ describe("async-diff", () => {
     expect(testStore.getState().$data).toBe("1")
   })
 
-  it.only("should run diff with dispatch async when setting state", async () => {
+  it("should run diff with dispatch async when setting state", async () => {
     const newTestStore = newStoreDefTest({
       reducer({ state, action, diff, async, set, dispatch }) {
         if (action.type === "set-data") {
