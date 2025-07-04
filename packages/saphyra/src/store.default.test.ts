@@ -15,6 +15,7 @@ import {
   newStore,
 } from "./test.utils"
 import { SomeStoreGeneric } from "./types"
+import { newStoreDef } from "./store"
 
 let store: SomeStoreGeneric
 let spy_completeTransition: MockInstance
@@ -161,6 +162,13 @@ describe("before dispatch: default", () => {
       expect(info.state).toEqual(expect.objectContaining({ count: 3 }))
       expect(spy_completeTransition).toHaveBeenCalledTimes(3)
     })
+
+    it("should set state", () => {
+      const { setState, getState } = newStoreDef({})({ count: 0 })
+      expect(getState().count).toBe(0)
+      setState({ count: 1 })
+      expect(getState().count).toBe(1)
+    })
   })
 
   describe("async", () => {
@@ -173,7 +181,11 @@ describe("before dispatch: default", () => {
     })
 
     test("ensure effects are settled after sync action", async () => {
-      const getSettersHistory = captureValueHistory(store, "settersRegistry")
+      const getSettersHistory = captureValueHistory(
+        store,
+        "settersRegistry",
+        undefined
+      )
 
       const TIMES = 3
       const SETS_PER_ACTION = 1

@@ -4,6 +4,7 @@ import { TransitionsStore } from "./transitions-store"
 import { ErrorsStore } from "./errors-store"
 import { SubjectType } from "./Subject"
 import { TransitionsStateStore } from "./transitions-state"
+import { WaitForResult } from "./fn/wait-for"
 
 export type TODO = any
 
@@ -202,6 +203,8 @@ export type GenericStoreMethods<
   }
   abort(transition: TransitionNullable): void
   cleanUpTransition(transition: Transition, error: unknown | null): void
+  waitFor(transition: Transition, timeout?: number): Promise<WaitForResult>
+  waitForBootstrap(timeout?: number): Promise<WaitForResult>
 }
 
 type UncontrolledState<

@@ -26,6 +26,9 @@ export default defineConfig([
   {
     files: ["apps/docs/**/*.{js,mjs,cjs,ts,mts,cts,jsx,tsx}"],
     settings: {
+      "react": {
+        version: "detect",
+      },
       "import/resolver": {
         typescript: {
           project: "./apps/docs/tsconfig.json",
@@ -52,6 +55,9 @@ export default defineConfig([
   {
     files: ["packages/saphyra/**/*.{js,mjs,cjs,ts,mts,cts,jsx,tsx}"],
     settings: {
+      "react": {
+        version: "detect",
+      },
       "import/resolver": {
         typescript: {
           project: "./packages/saphyra/tsconfig.json",

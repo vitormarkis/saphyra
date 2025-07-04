@@ -1,5 +1,5 @@
 import { newStoreDef } from "./store"
-import { SomeStore, SomeStoreGeneric } from "./types"
+import { SomeStore, SomeStoreGeneric, StoreInstantiatorGeneric } from "./types"
 import { cloneObj } from "./helpers/obj-descriptors"
 import { sleep } from "./fn/common"
 
@@ -197,4 +197,19 @@ export function captureCallbackHistory<
   return () => {
     return history
   }
+}
+
+export function newStoreDefTest(
+  ...args: Parameters<
+    typeof newStoreDef<
+      Record<string, any>,
+      Record<string, any>,
+      { type: any } & Record<string, any>,
+      any,
+      any,
+      any
+    >
+  >
+): StoreInstantiatorGeneric {
+  return newStoreDef(...args)
 }
