@@ -1,3 +1,13 @@
+### 0.7.2
+- Add Cached Getters [see documentation](https://www.saphyra.dev/docs/features/cached-getters)
+- Enqueue async operations from Async Module, made it easier to debug
+- Logs conditionally based on Environment Variable
+- Got tests working again
+- Add husky
+- Add Eslint
+- Unified `setState` and `dispatch` in one common god function called `dispatchImpl`. A `setState` is an action with type `noop` + the setter
+- Fix bugs related to reducer `dispatches` and `sets` with transitions
+
 ### v0.7.0
 Renamed hooks and some other properties in the `createStoreUtils` function:
 - `useOptimisticStore` -> `useSelector`
