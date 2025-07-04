@@ -12,7 +12,7 @@ A quick overview of the hooks and utilities provided by `createStoreUtils`:
 | `useCommittedSelector`           | Pass a selector to get a slice of the store state                                    |
 | `useSelector` | Pass a selector to get a slice of the optimistic state                               |
 | `Provider`           | A `Context.Provider` to provide the store state to children                          |
-| `useUseState`        | Access the `[store, setStore]` tuple provided by the context                         |
+| `useStore`        | Access the `[store, setStore]` tuple provided by the context                         |
 | `useErrorHandler`    | Pass an error handler that runs whenever an error is caught                           |
 | `useTransition`      | Subscribe to an ongoing transition and derive loading states from it                 |
 | `useLazyValue`       | Pass a selector, if the returned value is `undefined`, run a promise to populate the store and re-run the selector again |

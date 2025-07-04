@@ -58,7 +58,7 @@ export function MultipleOptimisticUpdatesPage() {
 }
 
 function Content() {
-  const [store] = Store.useUseState()
+  const [store] = Store.useStore()
   const state = Store.useSelector()
   const loading = Store.useTransition(["fire"])
   return (

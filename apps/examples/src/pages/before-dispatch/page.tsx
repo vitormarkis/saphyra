@@ -460,7 +460,7 @@ type ExampleProps = {
 
 export function Example({ createExample }: ExampleProps) {
   const theme = Theme.useCommittedSelector(s => s.theme)
-  const [store] = TransitionsStore.useUseState()
+  const [store] = TransitionsStore.useStore()
   const example = createExample(store)
   const transition = [...example.action.transition!]
   const transitionSupport = example.actionSupport

@@ -1,5 +1,5 @@
 import { newStoreDef } from "./store"
-import { SomeStore, SomeStoreGeneric } from "./types"
+import { SomeStore, SomeStoreGeneric, StoreInstantiatorGeneric } from "./types"
 import { cloneObj } from "./helpers/obj-descriptors"
 import { sleep } from "./fn/common"
 
@@ -25,7 +25,7 @@ type CounterActions =
 export type TestCounterStore = SomeStore<
   CounterState,
   CounterActions,
-  {},
+  any,
   any,
   any
 >
@@ -38,7 +38,7 @@ export const newStore = newStoreDef<
   any,
   any
 >({
-  reducer({ state, action, set, async, diff, store }) {
+  reducer({ state, action, set, async, store }) {
     if (action.type === "increment") {
       set(s => ({ count: s.count + 1 }))
     }
@@ -80,15 +80,17 @@ export function getStoreTransitionInfoShallowCopy(
   const setters = store.settersRegistry[transitionName]
   const doneCallback = store.transitions.callbacks.done.get(transitionName)
   const errorCallback = store.transitions.callbacks.error.get(transitionName)
-  const transitions = store.transitions.state.transitions
+  const transitionsFromStore = store.transitions.state
   const state = store.getState()
+  const transitions = transitionsFromStore ? cloneObj(transitionsFromStore) : {}
+  delete transitions.bootstrap
 
   return {
     controller,
     setters: setters ? [...setters] : setters,
     doneCallback: typeof doneCallback === "function" ? doneCallback : null,
     errorCallback: typeof errorCallback === "function" ? errorCallback : null,
-    transitions: transitions ? cloneObj(transitions) : transitions,
+    transitions,
     state: state ? cloneObj(state) : state,
   }
 }
@@ -96,15 +98,13 @@ export function getStoreTransitionInfoShallowCopy(
 export function getStoreTransitionInfoSourceShallowCopy(
   store: SomeStoreGeneric
 ) {
-  const controllers = { ...store.transitions.controllers.values }
   const setters = { ...store.settersRegistry }
   const doneCallbackList = new Map(store.transitions.callbacks.done)
   const errorCallbackList = new Map(store.transitions.callbacks.error)
-  const transitions = { ...store.transitions.state.transitions }
+  const transitions = { ...store.transitions.state }
   const state = cloneObj(store.getState())
 
   return {
-    controllers,
     setters,
     doneCallbackList,
     errorCallbackList,
@@ -116,7 +116,6 @@ export function getStoreTransitionInfoSourceShallowCopy(
 export function deleteBootstrap(
   info: ReturnType<typeof getStoreTransitionInfoSourceShallowCopy>
 ) {
-  delete info.controllers.bootstrap
   delete info.setters.bootstrap
   info.doneCallbackList.delete("bootstrap")
   info.errorCallbackList.delete("bootstrap")
@@ -185,7 +184,7 @@ export function captureCallbackHistory<
 ) {
   const history: any[] = initialValue ?? []
 
-  let oldCallback = source[key]
+  const oldCallback = source[key]
 
   Object.assign(source, {
     [key]: (...args: any[]) => {
@@ -198,4 +197,19 @@ export function captureCallbackHistory<
   return () => {
     return history
   }
+}
+
+export function newStoreDefTest(
+  ...args: Parameters<
+    typeof newStoreDef<
+      Record<string, any>,
+      Record<string, any>,
+      { type: any } & Record<string, any>,
+      any,
+      any,
+      any
+    >
+  >
+): StoreInstantiatorGeneric {
+  return newStoreDef(...args)
 }

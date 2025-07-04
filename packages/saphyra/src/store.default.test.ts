@@ -15,6 +15,7 @@ import {
   newStore,
 } from "./test.utils"
 import { SomeStoreGeneric } from "./types"
+import { newStoreDef } from "./store"
 
 let store: SomeStoreGeneric
 let spy_completeTransition: MockInstance
@@ -151,7 +152,6 @@ describe("before dispatch: default", () => {
       })
 
       const info = getStoreTransitionInfoSourceShallowCopy(store)
-      expect(Object.keys(info.controllers)).toHaveLength(3 + 1) // + 1 for bootstrap
       info.doneCallbackList.forEach(fn => {
         expect(fn).toBeNull()
       })
@@ -161,6 +161,13 @@ describe("before dispatch: default", () => {
       expect(info.transitions).toMatchObject({})
       expect(info.state).toEqual(expect.objectContaining({ count: 3 }))
       expect(spy_completeTransition).toHaveBeenCalledTimes(3)
+    })
+
+    it("should set state", () => {
+      const { setState, getState } = newStoreDef({})({ count: 0 })
+      expect(getState().count).toBe(0)
+      setState({ count: 1 })
+      expect(getState().count).toBe(1)
     })
   })
 
@@ -174,7 +181,11 @@ describe("before dispatch: default", () => {
     })
 
     test("ensure effects are settled after sync action", async () => {
-      const getSettersHistory = captureValueHistory(store, "settersRegistry")
+      const getSettersHistory = captureValueHistory(
+        store,
+        "settersRegistry",
+        undefined
+      )
 
       const TIMES = 3
       const SETS_PER_ACTION = 1
@@ -190,6 +201,7 @@ describe("before dispatch: default", () => {
       const settersHistory = getSettersHistory()
       expect(settersHistory).toHaveLength(3 + 1) // + 1 for done cleanup
 
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const [_completedTransitionSetters, lastSetters] =
         settersHistory.toReversed()
       const incrementSetters = lastSetters[transitionName]

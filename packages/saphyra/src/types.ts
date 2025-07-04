@@ -4,24 +4,25 @@ import { TransitionsStore } from "./transitions-store"
 import { ErrorsStore } from "./errors-store"
 import { SubjectType } from "./Subject"
 import { TransitionsStateStore } from "./transitions-state"
+import { WaitForResult } from "./fn/wait-for"
 
 export type TODO = any
 
 export type Dispatch<
   TState extends Record<string, any>,
-  TActions extends ActionShape<TState, TEvents>,
+  TActions extends ActionShape,
   TEvents extends EventsTuple,
 > = (action: ClassicAction<TState, TActions, TEvents>) => void
 
 export type ClassicAction<
   TState extends Record<string, any>,
-  TActions extends ActionShape<TState, TEvents>,
+  TActions extends ActionShape,
   TEvents extends EventsTuple,
 > = TActions & BaseAction<TState, TActions, TEvents>
 
 export type ClassicActionRedispatch<
   TState extends Record<string, any>,
-  TActions extends ActionShape<TState, TEvents>,
+  TActions extends ActionShape,
   TEvents extends EventsTuple,
 > = TActions & Omit<BaseAction<TState, TActions, TEvents>, "beforeDispatch">
 
@@ -48,7 +49,7 @@ export class OptimisticRegistry<TState> {
     this.settersOrPartialStateList[key] = []
   }
 
-  check(transition: any[] | null | undefined) {
+  check(transition: TransitionNullable) {
     if (!transition) return false
     const transitionKey = transition.join(":")
     if (!(transitionKey in this.settersOrPartialStateList)) return false
@@ -104,26 +105,27 @@ export type GenericStoreValues<
   UncontrolledState<TUncontrolledState>
 
 type SetStateOptions = {
-  transition?: any[] | null | undefined
+  transition?: TransitionNullable
 }
 
 export type InnerCreateAsync<
   TState extends Record<string, any>,
-  TActions extends ActionShape<TState, TEvents>,
+  TActions extends ActionShape,
   TEvents extends EventsTuple,
   TUncontrolledState extends Record<string, any>,
   TDeps,
 > = {
   store: SomeStore<TState, TActions, TEvents, TUncontrolledState, TDeps>
   when: string
-  transition: any[] | null | undefined
+  transition: TransitionNullable
   signal: AbortSignal
+  onAsyncOperation: (asyncOperation: AsyncOperation) => void
   from?: string
 }
 
 export type HandleActionProps<
   TState extends Record<string, any>,
-  TActions extends ActionShape<TState, TEvents>,
+  TActions extends ActionShape,
   TEvents extends EventsTuple,
   TUncontrolledState extends Record<string, any>,
   TDeps,
@@ -147,7 +149,7 @@ export type HandleActionProps<
 
 export type GenericStoreMethods<
   TState extends Record<string, any>,
-  TActions extends ActionShape<TState, TEvents>,
+  TActions extends ActionShape,
   TEvents extends EventsTuple,
   TUncontrolledState extends Record<string, any>,
   TDeps,
@@ -161,7 +163,7 @@ export type GenericStoreMethods<
   ): void
   registerOptimistic: InnerReducerOptimistic<TState>
   createOptimisticScheduler(
-    transition: any[] | null | undefined,
+    transition: TransitionNullable,
     notify: "notify" | "no-notify"
   ): ReducerSet<TState>
   registerErrorHandler(handler: StoreErrorHandler): () => void
@@ -177,12 +179,12 @@ export type GenericStoreMethods<
     TDeps
   >
   completeTransition(
-    transition: any[],
+    transition: Transition,
     action: TActions,
     onTransitionEnd?: OnTransitionEnd<TState, TEvents>
   ): void
   commitTransition(
-    transition: any[] | null | undefined,
+    transition: TransitionNullable,
     action: TActions,
     onTransitionEnd?: OnTransitionEnd<TState, TEvents>
   ): void
@@ -199,8 +201,10 @@ export type GenericStoreMethods<
     newState: TState
     prevState: TState
   }
-  abort(transition: any[] | null | undefined): void
-  cleanUpTransition(transition: any[], error: unknown | null): void
+  abort(transition: TransitionNullable): void
+  cleanUpTransition(transition: Transition, error: unknown | null): void
+  waitFor(transition: Transition, timeout?: number): Promise<WaitForResult>
+  waitForBootstrap(timeout?: number): Promise<WaitForResult>
 }
 
 type UncontrolledState<
@@ -211,7 +215,7 @@ type UncontrolledState<
 
 export type SomeStore<
   TState extends Record<string, any>,
-  TActions extends ActionShape<TState, TEvents>,
+  TActions extends ActionShape,
   TEvents extends EventsTuple,
   TUncontrolledState extends Record<string, any>,
   TDeps,
@@ -220,33 +224,30 @@ export type SomeStore<
   SubjectType
 
 export type TransitionFunctionOptions = {
-  transition: any[] | null | undefined
+  transition: TransitionNullable
   signal: AbortSignal
 }
 
 export type DefaultActions =
   | {
       type: string
-      transition?: any[]
+      transition?: TransitionNullable
       onTransitionEnd?: (state: TODO) => void
     }
   | {
       type: "$$lazy-value"
-      transition: any[]
+      transition: TransitionNullable
       transitionFn: (options: TransitionFunctionOptions) => Promise<any>
       onSuccess: (value: any) => void
     }
 
-export type ActionShape<
-  TState extends Record<string, any>,
-  TEvents extends EventsTuple,
-> = {
+export type ActionShape = {
   type: string
 }
 
 export type BaseAction<
   TState extends Record<string, any> = any,
-  TActions extends ActionShape<TState, TEvents> = ActionShape<TState, any>,
+  TActions extends ActionShape = ActionShape,
   TEvents extends EventsTuple = EventsTuple,
 > = {
   transition?: TransitionNullable
@@ -255,15 +256,14 @@ export type BaseAction<
   controller?: AbortController
 }
 
-export type ActionRedispatch<
-  TState extends Record<string, any>,
-  TEvents extends EventsTuple,
-  TActions extends ActionShape<TState, TEvents>,
-> = Omit<TActions, "beforeDispatch">
+export type ActionRedispatch<TActions extends ActionShape> = Omit<
+  TActions,
+  "beforeDispatch"
+>
 
 export type BeforeDispatchOptions<
   TState extends Record<string, any>,
-  TActions extends ActionShape<TState, TEvents>,
+  TActions extends ActionShape,
   TEvents extends EventsTuple,
   TUncontrolledState extends Record<string, any>,
   TDeps,
@@ -283,7 +283,7 @@ export type BeforeDispatchOptions<
   /**
    * The transition that is being dispatched
    */
-  transition: any[] | null | undefined
+  transition: TransitionNullable
   /**
    * A stable reference to the current transition metadata
    */
@@ -298,21 +298,18 @@ export type BeforeDispatchOptions<
    * For example: you can debounce a search query and group the wait
    * time and request time under the same transition
    */
-  createAsync: (
-    transition?: any[] | null | undefined,
-    signal?: AbortSignal
-  ) => Async
+  createAsync: (transition?: TransitionNullable, signal?: AbortSignal) => Async
   /**
    * Used to abort an ongoing transition
    *
    * If the provided transition is not ongoing, it will do nothing
    */
-  abort(transition: any[] | null | undefined): void
+  abort(transition: TransitionNullable): void
 }
 
 export type BeforeDispatch<
   TState extends Record<string, any> = any,
-  TActions extends ActionShape<TState, TEvents> = ActionShape<any, any>,
+  TActions extends ActionShape = ActionShape,
   TEvents extends EventsTuple = EventsTuple,
   TUncontrolledState extends Record<string, any> = Record<string, any>,
   TDeps = undefined,
@@ -327,7 +324,7 @@ export type BeforeDispatch<
 ) => ClassicActionRedispatch<TState, TActions, TEvents> | void
 
 export type OnTransitionEndProps<TState, TEvents extends EventsTuple> = {
-  transition: any[]
+  transition: Transition
   transitionStore: TransitionsStore
   state: TState
   meta: Record<string, any>
@@ -381,13 +378,13 @@ export type ReducerSet<TState> = (
 ) => void
 export type InnerReducerOptimistic<TState> = (
   setterOrPartialStateList: SetterOrPartialState<TState>,
-  transition: any[] | null | undefined,
+  transition: TransitionNullable,
   notify: "notify" | "no-notify"
 ) => void
 export type InnerReducerSet<TState> = (
   setterOrPartialStateList: SetterOrPartialState<TState>,
   state: TState,
-  transition: any[] | null | undefined
+  transition: TransitionNullable
 ) => void
 
 export type StoreErrorHandler = (
@@ -400,12 +397,12 @@ export type SomeStoreGeneric = SomeStore<any, any, any, any, any>
 export type StoreInstantiator<
   TInitialProps,
   TState extends Record<string, any>,
-  TActions extends ActionShape<TState, TEvents>,
+  TActions extends ActionShape,
   TEvents extends EventsTuple,
   TUncontrolledState extends Record<string, any>,
   TDeps,
 > = (
-  initialProps: RemoveDollarSignProps<TInitialProps>,
+  initialProps: RemoveFunctionProps<RemoveDollarSignProps<TInitialProps>>,
   config?: StoreConstructorConfig<TDeps>
 ) => SomeStore<TState, TActions, TEvents, TUncontrolledState, TDeps>
 
@@ -444,6 +441,14 @@ export type RemoveDollarSignProps<T> = {
   [K in keyof T as K extends `$${string}` ? never : K]: T[K]
 }
 
+export type RemoveFunctionProps<T> = {
+  [K in keyof T as T[K] extends (...args: any[]) => any ? never : K]: T[K]
+}
+
+export type InitialProps<TState> = RemoveFunctionProps<
+  RemoveDollarSignProps<TState>
+>
+
 export type ReactState<T> = [T, React.Dispatch<React.SetStateAction<T>>]
 
 export type NonUndefined<T> = T & ({} & null)
@@ -457,4 +462,35 @@ export type RequireKeys<T extends object, K extends keyof T> = Required<
 
 type StringSerializable = string | number | boolean | null | undefined
 export type Transition = StringSerializable[]
-export type TransitionNullable = StringSerializable[] | null | undefined
+export type TransitionNullable = Transition | null | undefined
+
+export type Selector<TState, TValue> = (state: TState) => TValue
+export type Evaluator<TArgs extends any[], TReturn> = (
+  ...args: TArgs
+) => TReturn
+
+export type DerivationConfig<TState, TArgs extends any[], TReturn> = {
+  selectors: Selector<TState, any>[]
+  evaluator: Evaluator<TArgs, TReturn>
+}
+
+export type DerivationsConfig<TState> = {
+  [K in keyof TState as TState[K] extends (...args: any[]) => any
+    ? K
+    : never]: DerivationConfig<TState, any[], any>
+}
+
+export type StateWithDerivations<
+  TState,
+  TDerivations extends DerivationsConfig<TState>,
+> = TState & {
+  [K in keyof TDerivations]: () => any
+}
+
+export type AsyncOperation = {
+  when: number
+  fn: () => void
+  type: "promise" | "timeout"
+  label: string | null
+  whenReadable: string
+}

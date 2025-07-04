@@ -4,7 +4,7 @@ import { useMemoryCard } from "../hooks"
 type MemoryGameCardProps = {}
 
 export function MemoryGameCard({}: MemoryGameCardProps) {
-  const [memoryGame] = Game.useUseState()
+  const [memoryGame] = Game.useStore()
   const cardId = useMemoryCard(s => s.id)
 
   return (

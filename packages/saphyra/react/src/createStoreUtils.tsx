@@ -8,6 +8,7 @@ import {
 import type {
   StoreErrorHandler,
   StoreInstantiatorGeneric,
+  Transition,
   TransitionFunctionOptions,
 } from "saphyra"
 import { exact } from "~/fn/common"
@@ -17,6 +18,18 @@ function defaultSelector<T>(data: T) {
   return data
 }
 
+export type LazyValueOptions<
+  TState,
+  TTransition extends any[],
+  TPromiseResult,
+  R = TState,
+> = {
+  select: (state: TState) => R
+  transition: TTransition
+  transitionFn: (options: TransitionFunctionOptions) => Promise<TPromiseResult>
+  onSuccess: (value: TPromiseResult) => void
+}
+
 export function createStoreUtils<
   TStoreInstantiator extends
     StoreInstantiatorGeneric = StoreInstantiatorGeneric,
@@ -24,10 +37,9 @@ export function createStoreUtils<
     ReturnType<TStoreInstantiator> = ReturnType<TStoreInstantiator>,
 >(store?: TStore) {
   type TState = TStore["state"]
-
   const Context = createContext<StateTuple<TStore> | null>(null)
 
-  function useUseState() {
+  function useStore() {
     const ctx = useContext(Context)
     if (!ctx) throw new Error(`[Context] No context provided.`)
     return ctx
@@ -35,10 +47,10 @@ export function createStoreUtils<
 
   const getDefaultStore: () => TStore = store
     ? () => store
-    : () => useUseState()[0]
+    : () => useStore()[0]
 
   function useTransition(
-    transition: any[],
+    transition: Transition,
     store = getDefaultStore()
   ): boolean {
     return useSyncExternalStore(
@@ -81,7 +93,7 @@ export function createStoreUtils<
     store.getOptimisticState()
   )
   function useTransitionSelector<R = TState>(
-    transition: any[],
+    transition: Transition,
     selector?: (data: TState) => R,
     store = getDefaultStore()
   ) {
@@ -91,12 +103,26 @@ export function createStoreUtils<
       () => {
         const state =
           store.transitionsState.state[transition.join(":")] ?? store.getState()
-        return finalSelector(state)
+        // For transition states, we need to inject cached getters manually
+        const stateWithGetters = (store as any).derivationsRegistry
+          ? (store as any).derivationsRegistry.injectCachedGetters(
+              state,
+              `transition:${transition.join(":")}`
+            )
+          : state
+        return finalSelector(stateWithGetters)
       },
       () => {
         const state =
           store.transitionsState.state[transition.join(":")] ?? store.getState()
-        return finalSelector(state)
+        // For transition states, we need to inject cached getters manually
+        const stateWithGetters = (store as any).derivationsRegistry
+          ? (store as any).derivationsRegistry.injectCachedGetters(
+              state,
+              `transition:${transition.join(":")}`
+            )
+          : state
+        return finalSelector(stateWithGetters)
       }
     )
   }
@@ -137,7 +163,7 @@ export function createStoreUtils<
     useSelector,
     useCommittedSelector,
     useTransitionSelector,
-    useUseState,
+    useStore,
     useTransition,
     useErrorHandlers,
     useLazyValue,
@@ -145,18 +171,6 @@ export function createStoreUtils<
   }
 
   return utils
-}
-
-export interface LazyValueOptions<
-  TState,
-  TTransition extends any[],
-  TPromiseResult,
-  R,
-> {
-  transition: TTransition
-  select: (state: TState) => R
-  transitionFn: (options: TransitionFunctionOptions) => Promise<TPromiseResult>
-  onSuccess?: (value: TPromiseResult) => void
 }
 
 export type StoreUtils<
@@ -171,12 +185,12 @@ export type StoreUtils<
     store?: TStore
   ) => R
   useTransitionSelector: <R = TState>(
-    transition: any[],
+    transition: Transition,
     selector?: (data: TState) => R,
     store?: TStore
   ) => R
-  useUseState: () => StateTuple<TStore>
-  useTransition: (transition: any[], store?: TStore) => boolean
+  useStore: () => StateTuple<TStore>
+  useTransition: (transition: Transition, store?: TStore) => boolean
   useErrorHandlers: (handler: StoreErrorHandler, store?: TStore) => void
   useLazyValue: <const TTransition extends any[], TPromiseResult, R>(
     options: LazyValueOptions<TState, TTransition, TPromiseResult, R>

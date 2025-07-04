@@ -3,7 +3,7 @@ import type { BeforeDispatch, ActionShape } from "~/types"
 
 export const rateLimiter = <
   TState extends Record<string, any> = any,
-  TActions extends ActionShape<TState, TEvents> = ActionShape<any, any>,
+  TActions extends ActionShape = ActionShape,
   TEvents extends EventsTuple = EventsTuple,
   TUncontrolledState extends Record<string, any> = Record<string, any>,
   TDeps = undefined,

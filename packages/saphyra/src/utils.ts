@@ -8,9 +8,12 @@ export function isNewActionError(error: unknown) {
   return false
 }
 
-export function labelWhen(date: Date) {
+export function labelWhen(date: Date | number) {
+  if (typeof date === "number") {
+    date = new Date(date)
+  }
   const isoString = date.toISOString()
-  const [_hour, minute, secondWithDot] = isoString.split("T")[1].split(":")
+  const [, minute, secondWithDot] = isoString.split("T")[1].split(":")
   const [second, milisecondWithZ] = secondWithDot.split(".")
   const milisecond = milisecondWithZ.slice(0, -1)
   return `${minute}m_${second}s_${milisecond}ms`
@@ -22,4 +25,18 @@ export function createAncestor<T>(head: any[]): T[][] {
     acc.push(items)
     return acc
   }, [])
+}
+
+export function readState(state: Record<string, any>) {
+  const finalState: Record<string, any> = {}
+  for (const key in state) {
+    const value = state[key]
+    const isFunction = typeof value === "function"
+    if (isFunction) {
+      finalState[key] = value()
+    } else {
+      finalState[key] = value
+    }
+  }
+  return finalState
 }

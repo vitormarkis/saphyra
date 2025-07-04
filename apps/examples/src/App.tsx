@@ -96,7 +96,7 @@ export default function App() {
 }
 
 export function Content() {
-  const [todosStore] = Todos.useUseState()
+  const [todosStore] = Todos.useStore()
   const isTransitioning = Todos.useTransition(["increment"])
   const state = Todos.useTransitionSelector(["increment"])
   useEffect(() => console.log({ state }), [state])

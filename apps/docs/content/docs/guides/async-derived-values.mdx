@@ -1,0 +1,30 @@
+---
+title: Async Derived Values
+description: Learn how to use async derived values in Saphyra.
+---
+
+## Examples
+
+Whenever the query state changes, `$movies` will be asynchronously re-calculated.
+
+```typescript
+type State = {
+  query: string
+  $movies: Movie[]
+}
+
+const store = newStoreDef<State>({
+  reducer({ state, set, diff, async, deps }) {
+    diff()
+      .on(s => s.query)
+      .run(query => {
+        async().promise(async ({ signal }) => {
+          const movies = await deps.fetchMovies(query, signal)
+          set(s => ({ $movies: movies }))
+        })
+      })
+
+    return state
+  },
+})
+```

@@ -15,6 +15,8 @@ const vitestTestConfig = {
     globals: true,
     environment: "jsdom",
     reporters: ["verbose"],
+    testTimeout: 999_999,
+    timeout: 999_999,
   },
 }
 

@@ -5,12 +5,13 @@ import { runSuccessCallback } from "./transitions-store"
 import {
   ActionShape,
   Async,
+  AsyncOperation,
   AsyncPromiseConfig,
   AsyncPromiseProps,
   AsyncTimerConfig,
-  BaseAction,
   DefaultActions,
   SomeStore,
+  TransitionNullable,
 } from "./types"
 import { isNewActionError, labelWhen } from "./utils"
 
@@ -21,16 +22,16 @@ export const errorNoTransition = () =>
 
 export function createAsync<
   TState extends Record<string, any> = Record<string, any>,
-  TActions extends ActionShape<TState, TEvents> = DefaultActions &
-    ActionShape<TState, any>,
+  TActions extends ActionShape = DefaultActions & ActionShape,
   TEvents extends EventsTuple = EventsTuple,
   TUncontrolledState extends Record<string, any> = Record<string, any>,
   TDeps = undefined,
 >(
   store: SomeStore<TState, TActions, TEvents, TUncontrolledState, TDeps>,
   _whenProp: string,
-  transition: any[] | null | undefined,
+  transition: TransitionNullable,
   signal: AbortSignal,
+  onAsyncOperation: (asyncOperation: AsyncOperation) => void,
   from?: string
 ): Async {
   const completeBar = (
@@ -65,100 +66,123 @@ export function createAsync<
     promise: (props: AsyncPromiseProps) => Promise<T>,
     config?: AsyncPromiseConfig
   ) => {
-    const { label = null } = config ?? {}
-    if (!transition) throw errorNoTransition()
-    store.transitions.addKey(transition, `async-promise/${from}`)
-    const transitionString = transition.join(":")
-
-    /**
-     * TO-DO: save when clean up was added, so if a transition fails
-     * I run only the cleanups from that point backward
-     */
-    const cleanUpList = (store.transitions.cleanUpList[transitionString] ??=
-      new Set())
-
-    async function handlePromise(promise: Promise<T>) {
+    const when = Date.now()
+    const fn = () => {
+      const { label = null } = config ?? {}
       if (!transition) throw errorNoTransition()
-      const racePromise = PromiseWithResolvers<T>()
+      store.transitions.addKey(transition, `async-promise/${from}`)
+      const transitionString = transition.join(":")
 
-      const finishBar = newBar(transitionString, labelWhen(new Date()), label)
+      /**
+       * TO-DO: save when clean up was added, so if a transition fails
+       * I run only the cleanups from that point backward
+       */
+      const cleanUpList = (store.transitions.cleanUpList[transitionString] ??=
+        new Set())
 
-      const cleanUp = (error: unknown) => {
+      async function handlePromise(promise: Promise<T>) {
+        if (!transition) throw errorNoTransition()
+        const racePromise = PromiseWithResolvers<T>()
+
+        const finishBar = newBar(transitionString, labelWhen(new Date()), label)
+
+        cleanUpList.add(cleanUp)
+        if (!transition) throw errorNoTransition()
+        try {
+          if (!transition) throw errorNoTransition()
+          await Promise.race<T>([promise, racePromise.promise])
+          finishBar("success")
+          cleanUpList.delete(cleanUp)
+          store.transitions.doneKey(
+            transition,
+            { onFinishTransition: runSuccessCallback },
+            "async-promise/on-success"
+          )
+        } catch (error) {
+          const aborted = isNewActionError(error)
+          if (aborted) return
+          store.transitions.emitError(transition, error)
+        }
+
+        function cleanUp(error: unknown) {
+          cleanUpList.delete(cleanUp)
+
+          const aborted = isNewActionError(error)
+          finishBar(aborted ? "cancelled" : "fail", error)
+
+          store.transitions.doneKey(
+            transition,
+            { onFinishTransition: noop },
+            `async-promise/${aborted ? "cancel" : "on-error"}`
+          )
+          if (aborted) {
+            racePromise.reject({ code: 20 })
+          }
+        }
+      }
+      handlePromise(promise({ signal }))
+    }
+
+    onAsyncOperation({
+      fn,
+      when,
+      type: "promise",
+      label: config?.label ?? null,
+      whenReadable: labelWhen(when),
+    })
+  }
+
+  const timer = (callback: () => void, time = 0, config?: AsyncTimerConfig) => {
+    const when = Date.now()
+    const fn = () => {
+      const { label = null } = config ?? {}
+      if (!transition) throw errorNoTransition()
+      const transitionString = transition.join(":")
+
+      const cleanUpList = (store.transitions.cleanUpList[transitionString] ??=
+        new Set())
+
+      store.transitions.addKey(transition, `async-timer/${from}`)
+      cleanUpList.add(cleanUp)
+      const when = labelWhen(new Date())
+      const finishBar = newBar(transitionString, when, label)
+      const timerId = setTimeout(() => {
+        try {
+          callback()
+          finishBar("success")
+          cleanUpList.delete(cleanUp)
+          store.transitions.doneKey(
+            transition,
+            { onFinishTransition: runSuccessCallback },
+            "async-timer/on-success"
+          )
+        } catch (error) {
+          store.transitions.emitError(transition, error)
+        }
+      }, time)
+
+      function cleanUp(error: unknown | null) {
         cleanUpList.delete(cleanUp)
+        clearTimeout(timerId)
 
         const aborted = isNewActionError(error)
         finishBar(aborted ? "cancelled" : "fail", error)
 
         store.transitions.doneKey(
           transition,
-          { onFinishTransition: noop },
-          `async-promise/${aborted ? "cancel" : "on-error"}`
+          { onFinishTransition: () => {} },
+          `async-timer/${aborted ? "cancel" : "on-error"}`
         )
-        if (aborted) {
-          racePromise.reject({ code: 20 })
-        }
-      }
-      cleanUpList.add(cleanUp)
-      if (!transition) throw errorNoTransition()
-      try {
-        if (!transition) throw errorNoTransition()
-        await Promise.race<T>([promise, racePromise.promise])
-        finishBar("success")
-        cleanUpList.delete(cleanUp)
-        store.transitions.doneKey(
-          transition,
-          { onFinishTransition: runSuccessCallback },
-          "async-promise/on-success"
-        )
-      } catch (error) {
-        const aborted = isNewActionError(error)
-        if (aborted) return
-        store.transitions.emitError(transition, error)
       }
     }
-    handlePromise(promise({ signal }))
-  }
 
-  const timer = (callback: () => void, time = 0, config?: AsyncTimerConfig) => {
-    const { label = null } = config ?? {}
-    if (!transition) throw errorNoTransition()
-    const transitionString = transition.join(":")
-
-    const cleanUpList = (store.transitions.cleanUpList[transitionString] ??=
-      new Set())
-
-    store.transitions.addKey(transition, `async-timer/${from}`)
-    cleanUpList.add(cleanUp)
-    const when = labelWhen(new Date())
-    const finishBar = newBar(transitionString, when, label)
-    const timerId = setTimeout(() => {
-      try {
-        callback()
-        finishBar("success")
-        cleanUpList.delete(cleanUp)
-        store.transitions.doneKey(
-          transition,
-          { onFinishTransition: runSuccessCallback },
-          "async-timer/on-success"
-        )
-      } catch (error) {
-        store.transitions.emitError(transition, error)
-      }
-    }, time)
-
-    function cleanUp(error: unknown | null) {
-      cleanUpList.delete(cleanUp)
-      clearTimeout(timerId)
-
-      const aborted = isNewActionError(error)
-      finishBar(aborted ? "cancelled" : "fail", error)
-
-      store.transitions.doneKey(
-        transition,
-        { onFinishTransition: () => {} },
-        `async-timer/${aborted ? "cancel" : "on-error"}`
-      )
-    }
+    onAsyncOperation({
+      fn,
+      when,
+      type: "timeout",
+      label: config?.label ?? null,
+      whenReadable: labelWhen(when),
+    })
   }
 
   return {

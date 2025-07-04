@@ -8,18 +8,16 @@ import {
   test,
   vi,
 } from "vitest"
-import { GENERAL_TRANSITION } from "./const"
+// import { noop } from "./fn/noop"
 import {
-  captureCallbackHistory,
+  // captureCallbackHistory,
   captureValueHistory,
-  getStoreTransitionInfoShallowCopy,
   getStoreTransitionInfoSourceShallowCopy,
   newStore,
   prepareInfo,
   TestCounterStore,
 } from "./test.utils"
 import { BeforeDispatch } from "./types"
-import { noop } from "./fn/noop"
 
 let store: TestCounterStore
 let spy_completeTransition: MockInstance
@@ -40,8 +38,6 @@ afterEach(() => {
   vi.useRealTimers()
 })
 
-const transitionName = "increment"
-
 describe("before dispatch: default", () => {
   describe("should rollback any effects if no action will be dispatched", () => {
     test("transition", () => {
@@ -57,7 +53,6 @@ describe("before dispatch: default", () => {
       expect(info.errorCallbackList).toStrictEqual(new Map())
       expect(info.transitions).toMatchObject({})
       expect(info.state).toEqual(expect.objectContaining({ count: 0 }))
-      expect(info.controllers).toStrictEqual({})
     })
 
     test("no transition", () => {
@@ -71,21 +66,20 @@ describe("before dispatch: default", () => {
       expect(info.doneCallbackList).toStrictEqual(new Map())
       expect(info.errorCallbackList).toStrictEqual(new Map())
       expect(info.transitions).toMatchObject({})
-      expect(info.controllers).toStrictEqual({})
       expect(info.state).toEqual(expect.objectContaining({ count: 0 }))
     })
 
     test("async transition", () => {
-      const getHistory = captureCallbackHistory(store, "dispatch", [], v => {
-        noop()
-      })
+      // const getHistory = captureCallbackHistory(store, "dispatch", [], () => {
+      //   noop()
+      // })
       store.dispatch({
         type: "increment-async",
         transition: ["increment"],
         beforeDispatch: earlyReturn,
       })
 
-      const hh = getHistory()
+      // const hh = getHistory()
 
       const info = prepareInfo(getStoreTransitionInfoSourceShallowCopy(store))
       expect(info.setters).toStrictEqual({})
@@ -93,7 +87,6 @@ describe("before dispatch: default", () => {
       expect(info.errorCallbackList).toStrictEqual(new Map())
       expect(info.transitions).toMatchObject({})
       expect(info.state).toEqual(expect.objectContaining({ count: 0 }))
-      expect(info.controllers).toStrictEqual({})
     })
 
     it("should increment 3 times", () => {
@@ -114,7 +107,6 @@ describe("before dispatch: default", () => {
       })
 
       const info = prepareInfo(getStoreTransitionInfoSourceShallowCopy(store))
-      expect(info.controllers).toStrictEqual({})
       expect(info.setters).toStrictEqual({})
       expect(info.doneCallbackList).toStrictEqual(new Map())
       expect(info.errorCallbackList).toStrictEqual(new Map())
@@ -166,7 +158,6 @@ describe("before dispatch: default", () => {
       expect(settersHistory).toStrictEqual([])
 
       const info = prepareInfo(getStoreTransitionInfoSourceShallowCopy(store))
-      expect(info.controllers).toStrictEqual({})
       expect(info.doneCallbackList).toStrictEqual(new Map())
       expect(info.errorCallbackList).toStrictEqual(new Map())
       expect(info.transitions).toMatchObject({})
@@ -203,7 +194,6 @@ describe("before dispatch: default", () => {
 
       const info = prepareInfo(getStoreTransitionInfoSourceShallowCopy(store))
 
-      expect(info.controllers).toStrictEqual({})
       expect(info.setters).toStrictEqual({})
       expect(info.doneCallbackList).toStrictEqual(new Map())
       expect(info.errorCallbackList).toStrictEqual(new Map())

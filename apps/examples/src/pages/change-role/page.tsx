@@ -1,7 +1,7 @@
 import { Spinner } from "@blueprintjs/core"
 import { fetchRole } from "./fn/fetch-role"
-import { newStoreDef } from "saphyra"
-import { useCallback, useEffect, useState } from "react"
+import { newStoreDef, readState } from "saphyra"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { ErrorPage } from "~/components/error-page"
 import { fetchPermissions } from "~/pages/change-role/fn/get-permissions"
 import { Devtools } from "~/devtools/devtools"
@@ -19,8 +19,8 @@ type AuthStoreState = {
   role: "user" | "admin"
   username: string
   $permissions: string[]
-  $welcomeMessage: string
-  $firstPermission: string
+  getWelcomeMessage: () => string
+  getFirstPermission: () => string
 }
 
 type AuthStoreActions = ChangeRole
@@ -40,6 +40,20 @@ const newAuthStore = newStoreDef<
     onPushToHistory({ history, state, transition }) {
       if (!!transition) return [state]
       return [...history, state]
+    },
+  },
+  derivations: {
+    getFirstPermission: {
+      selectors: [s => s.$permissions],
+      evaluator: permissions => {
+        console.log("77- CALCULATING FIRST PERMISSION")
+        return permissions[0]
+      },
+    },
+    getWelcomeMessage: {
+      selectors: [s => s.username, s => s.role],
+      evaluator: (username, role) =>
+        `Welcome ${username}! Your role is [${role}].`,
     },
   },
   reducer({ prevState, state, action, diff, set, async, events, optimistic }) {
@@ -67,16 +81,6 @@ const newAuthStore = newStoreDef<
         },
         { label: "Fetch permissions" }
       )
-    }
-
-    set(s =>
-      s.$permissions != null ? { $firstPermission: s.$permissions[0] } : s
-    )
-
-    if (diff(["username", "role"])) {
-      set(s => ({
-        $welcomeMessage: `Welcome ${s.username}! Your role is [${s.role}].`,
-      }))
     }
 
     return state
@@ -131,8 +135,9 @@ export function ChangeRolePage() {
 }
 
 function ChangeRolePageContent() {
-  const [authStore] = Auth.useUseState()
-  const state = Auth.useCommittedSelector()
+  const [authStore] = Auth.useStore()
+  const state_2 = Auth.useCommittedSelector(s => s)
+  const state = useMemo(() => readState(state_2), [state_2])
   const optimisticRole = Auth.useSelector(s => s.role)
 
   const isChangingRole = Auth.useTransition(["auth", "role"])
@@ -253,15 +258,13 @@ function ChangeRolePageContent() {
           </div>
         ) : null}
       </div>
-      <pre>{JSON.stringify(state, null, 2)}</pre>
-      {/* <div className="h-full grid grid-cols-1 gap-2 min-w-0">
+      <div className="h-full grid grid-cols-1 gap-2 min-w-0">
         <Devtools
           store={authStore}
           allExpanded
         />
         <Waterfall store={authStore} />
-      </div> */}
-      {/* </div> */}
+      </div>
     </div>
   )
 }

@@ -103,7 +103,7 @@ export function DebouncedSearchPage() {
 type DebouncedSearchViewProps = {}
 
 export function DebouncedSearchView({}: DebouncedSearchViewProps) {
-  const [debouncedSearch] = DebouncedSearch.useUseState()
+  const [debouncedSearch] = DebouncedSearch.useStore()
 
   useEffect(() => {
     Object.assign(window, { debouncedSearch })

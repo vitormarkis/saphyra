@@ -11,12 +11,15 @@ import { TextChart } from "~/components/text-chart"
 import { Waterfall } from "~/devtools/waterfall"
 import { createStoreUtils, useBootstrapError } from "saphyra/react"
 import { sleep } from "~/lib/common"
+import { randomString } from "~/lib/utils"
 
 type PokemonState = {
   currentPokemonId: number
   $pokemon: Record<number, any>
   currentTransition: null
 }
+
+let count = 0
 
 const newPokemonStore = newStoreDef<
   PokemonState,
@@ -33,18 +36,32 @@ const newPokemonStore = newStoreDef<
     }
   },
   reducer({ prevState, state, action, diff, async, set, store, optimistic }) {
+    const prefix = randomString()
+    if (count === 5) debugger
     if (action.type === "fetch-pokemon") {
-      optimistic({ currentPokemonId: action.pokemonId })
+      // optimistic({ currentPokemonId: action.pokemonId })
       set({ currentPokemonId: action.pokemonId })
+      console.log(
+        `%c 66- ${prefix}-set pokemon id ${++count}`,
+        "color: fuchsia"
+      )
     }
 
     if (diff(["currentPokemonId"])) {
+      console.log(
+        `%c 66- ${prefix}-pokemon id changed, firing async ${++count}`,
+        "color: fuchsia"
+      )
       async.promise(async ({ signal }) => {
         await sleep(1000, "", signal)
         const pokemon = await getPokemon({
           id: state.currentPokemonId,
           signal,
         })
+        console.log(
+          `%c 66- ${prefix}-got pokemon data, setting ${++count}`,
+          "color: fuchsia"
+        )
         set({ $pokemon: pokemon })
       })
     }
@@ -115,7 +132,7 @@ const beforeDispatch = ({
 }
 
 export function PokemonPageContent({}: PokemonPageContentProps) {
-  const [store] = Pokemon.useUseState()
+  const [store] = Pokemon.useStore()
   const currentPokemonId = Pokemon.useSelector(s => s.currentPokemonId)
   const isLoadingNewPokemon = Pokemon.useTransition(["pokemon"])
 

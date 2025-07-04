@@ -1,19 +1,14 @@
-import { beforeEach, expect, MockInstance, test, vi } from "vitest"
-import {
-  getStoreTransitionInfoSourceShallowCopy,
-  newStore,
-  prepareInfo,
-  TestCounterStore,
-} from "./test.utils"
+import { beforeEach, expect, test, vi } from "vitest"
+import { newStore, TestCounterStore } from "./test.utils"
 
 let store: TestCounterStore
-let spy_completeTransition: MockInstance<any>
+// let spy_completeTransition: MockInstance<any>
 
 beforeEach(() => {
   store = newStore({
     count: 0,
   })
-  spy_completeTransition = vi.spyOn(store, "completeTransition")
+  // spy_completeTransition = vi.spyOn(store, "completeTransition")
 })
 
 test("simple dispatch interaction", () => {
@@ -21,7 +16,6 @@ test("simple dispatch interaction", () => {
   const spy_done = vi.spyOn(store.transitions, "doneKey")
 
   store.dispatch({ type: "increment" })
-  const info = prepareInfo(getStoreTransitionInfoSourceShallowCopy(store))
   const state = store.state
   expect(state).toEqual(expect.objectContaining({ count: 1 }))
 

@@ -8,10 +8,22 @@
   "license": "MIT",
   "files": [],
   "packageManager": "pnpm@9.6.0",
-  "scripts": {},
-  "dependencies": {
-    "typescript": "^5.5.3",
-    "turbo": "2.5.1"
+  "scripts": {
+    "prepare": "husky"
   },
-  "devDependencies": {}
+  "dependencies": {
+    "@eslint/js": "^9.9.0",
+    "eslint": "^9.9.0",
+    "eslint-plugin-react": "^7.37.5",
+    "globals": "^15.9.0",
+    "turbo": "2.5.1",
+    "typescript": "^5.5.3",
+    "typescript-eslint": "^8.0.1"
+  },
+  "devDependencies": {
+    "eslint-import-resolver-typescript": "^4.4.4",
+    "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-react-refresh": "^0.4.9",
+    "husky": "^9.1.7"
+  }
 }

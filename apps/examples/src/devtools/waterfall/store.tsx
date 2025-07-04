@@ -18,27 +18,25 @@ type LineType = {
 
 export type WaterfallState = {
   bars: BarType[]
-  $barsByBarId: Record<string, BarType>
   now: number
   distance: number
   clearTimeout: number
   state: "stale" | "fresh"
   highlightingTransition: string | null
-
   barSorters: BarSorters
-  $currentSorters: CurrentSorters
-  $sortersFnList: BarSort[]
-
   barFilters: BarFilters
   query: string
-  $filtersFnList: BarFilter[]
 
-  $displayingBarsIdList: string[]
-  $config: Record<string, number>
-  $displayingBars: BarType[]
-  $isSomeRunning: boolean
-  $lines: LineType[]
-  $linesAmount: number
+  getCurrentSorters: () => CurrentSorters
+  getSortersFnList: () => BarSort[]
+  getFiltersFnList: () => BarFilter[]
+  getIsSomeRunning: () => boolean
+  getDisplayingBarsIdList: () => string[]
+  getConfig: () => Record<string, number>
+  getDisplayingBars: () => BarType[]
+  getLines: () => LineType[]
+  getLinesAmount: () => number
+  getBarsByBarId: () => Record<string, BarType>
 }
 
 type WaterfallAction =
@@ -114,6 +112,107 @@ export const newWaterfallStore = newStoreDef<
       query: "",
       highlightingTransition: null,
     }
+  },
+  derivations: {
+    getCurrentSorters: {
+      selectors: [s => s.barSorters],
+      evaluator(barSorters: BarSorters) {
+        return Object.fromEntries(
+          Object.entries(barSorters).map(([properties, filters]) => {
+            const [currentFilter] = filters
+            return [properties, currentFilter]
+          })
+        )
+      },
+    },
+    getSortersFnList: {
+      selectors: [s => s.getCurrentSorters()],
+      evaluator(currentSorters: CurrentSorters) {
+        return Object.values(currentSorters)
+          .map(filterType => filterType?.sorter)
+          .filter(nonNullable)
+      },
+    },
+    getFiltersFnList: {
+      selectors: [s => s.barFilters],
+      evaluator(barFilters: BarFilters) {
+        return Object.values(barFilters).map(filterType => filterType?.filter)
+      },
+    },
+    getDisplayingBars: {
+      selectors: [
+        s => s.bars,
+        s => s.getFiltersFnList(),
+        s => s.getSortersFnList(),
+        s => s.query,
+      ],
+      evaluator(
+        bars: BarType[],
+        filterFnList: BarFilter[],
+        sortersFnList: BarSort[],
+        query: string
+      ) {
+        bars = bars.filter(bar => {
+          return filterFnList.some(createFilter => {
+            const filter = createFilter(query)
+            return filter(bar)
+          })
+        })
+        bars = bars.toSorted((a, b) => {
+          for (const fn of sortersFnList) {
+            if (!fn) continue
+            const result = fn(a, b)
+            if (result != null) return result
+          }
+          return 0
+        })
+        return bars
+      },
+    },
+    getConfig: {
+      selectors: [s => s.bars, s => s.now],
+      evaluator: (bars, now) => {
+        return bars.reduce(...reduceConfig(now))
+      },
+    },
+    getDisplayingBarsIdList: {
+      selectors: [s => s.getDisplayingBars()],
+      evaluator(displayingBars: BarType[]) {
+        return displayingBars.map(bar => bar.id)
+      },
+    },
+    getLinesAmount: {
+      selectors: [s => s.getConfig(), s => s.distance],
+      evaluator(config, distance) {
+        return Math.ceil((config.max - config.min) / distance)
+      },
+    },
+    getLines: {
+      selectors: [s => s.getLinesAmount()],
+      evaluator(linesAmount: number) {
+        return Array.from({ length: linesAmount }).map(
+          (_, idx): LineType => ({ idx })
+        )
+      },
+    },
+    getBarsByBarId: {
+      selectors: [s => s.bars],
+      evaluator: bars => {
+        return bars.reduce(
+          (acc: Record<string, BarType>, bar: BarType) => {
+            acc[bar.id] = bar
+            return acc
+          },
+          {} as Record<string, BarType>
+        )
+      },
+    },
+    getIsSomeRunning: {
+      selectors: [s => s.bars],
+      evaluator(bars: BarType[]) {
+        return bars.some(bar => bar.status === "running")
+      },
+    },
   },
   reducer({ prevState, state, action, diff, store, dispatch }) {
     if (action.type === "refresh") {
@@ -195,91 +294,6 @@ export const newWaterfallStore = newStoreDef<
 
     if (action.type === "hover-out-transition-name") {
       state.highlightingTransition = null
-    }
-
-    state.$isSomeRunning = state.bars.some(bar => bar.status === "running")
-
-    if (diff(["now", "bars"])) {
-      state.$config = state.bars.reduce(...reduceConfig(state.now))
-    }
-
-    if (diff(["barSorters"])) {
-      state.$currentSorters = Object.fromEntries(
-        Object.entries(state.barSorters).map(([properties, filters]) => {
-          const [currentFilter] = filters
-          return [properties, currentFilter]
-        })
-      ) as any
-    }
-
-    if (diff(["barFilters"])) {
-      state.$currentSorters = Object.fromEntries(
-        Object.entries(state.barSorters).map(([properties, filters]) => {
-          const [currentFilter] = filters
-          return [properties, currentFilter]
-        })
-      ) as any
-    }
-
-    if (diff(["$currentSorters"])) {
-      state.$sortersFnList = Object.values(state.$currentSorters)
-        .map(filterType => filterType?.sorter)
-        .filter(nonNullable)
-    }
-
-    if (diff(["barFilters"])) {
-      state.$filtersFnList = Object.values(state.barFilters).map(
-        filterType => filterType?.filter
-      )
-    }
-
-    state.$displayingBars = state.bars
-
-    if (diff(["$filtersFnList", "$displayingBars", "query"])) {
-      state.$displayingBars = state.$displayingBars.filter(bar => {
-        return state.$filtersFnList.some(createFilter => {
-          const filter = createFilter(state.query)
-          return filter(bar)
-        })
-      })
-    }
-
-    if (diff(["$sortersFnList", "$displayingBars"])) {
-      state.$displayingBars = state.$displayingBars.toSorted((a, b) => {
-        for (const fn of state.$sortersFnList) {
-          if (!fn) continue
-          const result = fn(a, b)
-          if (result != null) return result
-        }
-        return 0
-      })
-    }
-
-    if (diff(["$displayingBars"])) {
-      state.$displayingBarsIdList = state.$displayingBars.map(bar => bar.id)
-    }
-
-    state.$linesAmount = Math.ceil(
-      (state.$config.max - state.$config.min) / state.distance
-    )
-    if (isNaN(state.$linesAmount)) {
-      debugger
-    }
-
-    if (diff(["$linesAmount"])) {
-      state.$lines = Array.from({ length: state.$linesAmount }).map(
-        (_, idx): LineType => ({ idx })
-      )
-    }
-
-    if (diff(["bars"])) {
-      state.$barsByBarId = state.bars.reduce(
-        (acc, bar) => {
-          acc[bar.id] = bar
-          return acc
-        },
-        {} as Record<string, BarType>
-      )
     }
 
     return state
