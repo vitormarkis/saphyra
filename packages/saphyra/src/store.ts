@@ -494,6 +494,9 @@ export function newStoreDef<
         [transitionKey]: [],
       }
       updateTransitionState(transition, null)
+      store.errors.setState({
+        [transitionKey]: null,
+      })
 
       store.optimisticRegistry.clear(transitionKey)
       const [newState, newHistory] = handleNewStateToHistory({
@@ -928,6 +931,12 @@ export function newStoreDef<
       store.errorHandlers.forEach(handleError => {
         handleError(error, transition)
       })
+      if (transition) {
+        const transitionKey = transition.join(":")
+        store.errors.setState({
+          [transitionKey]: error,
+        })
+      }
     }
 
     const registerErrorHandler: Met["registerErrorHandler"] = (
@@ -1190,7 +1199,9 @@ export function newStoreDef<
         }
         asyncOperations.forEach(asyncOperation => asyncOperation.fn())
       } catch (error) {
-        if (transition) {
+        if (!transition) {
+          throw error
+        } else {
           const isHappening = store.transitions.isHappeningUnique(transition)
           if (isHappening) {
             cleanUpTransition(transition, error)
@@ -1376,6 +1387,8 @@ export function newStoreDef<
       initialProps: TInitialProps,
       config: StoreConstructorConfig<TDeps>
     ) {
+      let isSyncOp = true
+      const isSync = () => isSyncOp
       const when = labelWhen(new Date())
       const rollback = new Rollback()
 
@@ -1407,7 +1420,7 @@ export function newStoreDef<
           if (ctx.signal.aborted) throw { code: 20 }
           const initialState = await onConstruct({
             initialProps,
-            store,
+            store: createOnConstructStore(store, isSync),
             signal: ctx.signal,
             deps,
           })
@@ -1460,7 +1473,7 @@ export function newStoreDef<
         try {
           const initialState = onConstruct({
             initialProps,
-            store: store,
+            store: createOnConstructStore(store, isSync),
             signal,
             deps,
           }) as TState
@@ -1477,6 +1490,8 @@ export function newStoreDef<
         } catch (error) {
           handleError(error, BOOTSTRAP_TRANSITION)
           throw error
+        } finally {
+          isSyncOp = false
         }
       }
 
@@ -1501,7 +1516,11 @@ export function newStoreDef<
       store.historyRedo = []
     }
 
-    construct(initialProps as unknown as TInitialProps, config)
+    try {
+      construct(initialProps as unknown as TInitialProps, config)
+    } catch {
+      noop()
+    }
 
     return store
   }
@@ -1620,4 +1639,35 @@ function getStateToUseOnActionTransition<TState>(
   }
 
   return transitionState
+}
+
+function createOnConstructStore<
+  TState extends Record<string, any>,
+  TActions extends ActionShape,
+  TEvents extends EventsTuple,
+  TUncontrolledState extends Record<string, any>,
+  TDeps,
+>(
+  store: SomeStore<TState, TActions, TEvents, TUncontrolledState, TDeps>,
+  getIsSync: () => boolean
+): SomeStore<TState, TActions, TEvents, TUncontrolledState, TDeps> {
+  return {
+    ...store,
+    dispatch: (...args) => {
+      if (getIsSync()) {
+        throw new Error(
+          "You cannot call dispatch synchronously inside onConstruct"
+        )
+      }
+      return store.dispatch(...args)
+    },
+    setState: (...args) => {
+      if (getIsSync()) {
+        throw new Error(
+          "You cannot call setState synchronously inside onConstruct"
+        )
+      }
+      return store.setState(...args)
+    },
+  }
 }

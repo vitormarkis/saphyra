@@ -3,7 +3,7 @@ import type { StoreErrorHandler } from "./types"
 
 export const defaultErrorHandler: StoreErrorHandler = error => {
   function onError(error: string) {
-    $$onDevMode(() => console.log("Saphyra error:", error))
+    $$onDevMode(() => console.error("[Saphyra] ", error))
   }
 
   if (!error) {
