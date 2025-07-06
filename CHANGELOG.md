@@ -1,3 +1,13 @@
+### 0.7.4
+- \[Internal\] Track how many sub transitions are happening via a list of `AsyncOperation` objects.
+  - This is a way better way to handle subtransitions since it's easier to debug because you have detailed info of the subtransition that is happening, where it started, when it started and when it should end.
+  - For you to `doneKey` now, you need to pass the same reference of the `AsyncOperation` object that you passed to `addKey`. Enforcing a clear relationship between the sideffect and it's clean up.
+- Fixed a bug related to `prevState` and `newState` evaluation when running an async setState (e.g: inside a `async.promise`).
+  - It was always re-running all the setters of that transition agains the current store.state, which caused new object/arrays references from these setters to be created everytime.
+
+### 0.7.3
+WIP
+
 ### 0.7.2
 - Add Cached Getters [see documentation](https://www.saphyra.dev/docs/features/cached-getters)
 - Enqueue async operations from Async Module, made it easier to debug
