@@ -6,7 +6,15 @@
   - It was always re-running all the setters of that transition agains the current store.state, which caused new object/arrays references from these setters to be created everytime.
 
 ### 0.7.3
-WIP
+- Add `store.waitFor([todoId, "update"])` method that returns a promise that resolves when the transition is complete.
+- Add `store.waitForBootstrap()` method that returns a promise that resolves when the store is ready to be used.
+- Unify `dispatch` and `setState` in one common function called `dispatchImpl`.
+- Prevent user to call `dispatch` or `setState` inside a `onConstruct` **synchronously**.
+- Improve Saphyra internal error handling.
+- Improve Saphyra logs based on environment variable.
+- Enqueue async operations of the async module with a interface called `AsyncOperation`.
+  - When invoking multiple async operations inside a reducer, they won't fire right away. They'll be saved to a list, that only runs if the reducer call don't error.
+  - This list will be available somehow to the user track how many sideeffects are queued to run so they can debug stuff more easily.
 
 ### 0.7.2
 - Add Cached Getters [see documentation](https://www.saphyra.dev/docs/features/cached-getters)
