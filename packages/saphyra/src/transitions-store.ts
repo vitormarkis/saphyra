@@ -1,4 +1,5 @@
 import {
+  AsyncOperation,
   DoneKeyOptions,
   OnFinishTransition,
   Transition,
@@ -9,7 +10,7 @@ import { Subject } from "./Subject"
 import { setImmutable } from "./fn/common"
 import { $$onDebugMode } from "./helpers/log"
 
-export type TransitionsStoreState = Record<string, number>
+export type TransitionsStoreState = Record<string, AsyncOperation[]>
 
 export const runSuccessCallback: OnFinishTransition = ({
   transitionName,
@@ -78,19 +79,6 @@ export class TransitionsStore extends Subject {
     return this.meta.values[key]
   }
 
-  eraseKey(
-    transition: TransitionNullable,
-    options: DoneKeyOptions,
-    from?: string
-  ) {
-    if (!transition) return
-    const key = transition.join(":")
-    const subTransitions = this.state[key]
-    for (let i = 0; i < subTransitions; i++) {
-      this.doneKey(transition, options, from)
-    }
-  }
-
   cleanup(transitionName: string | null) {
     if (!transitionName) return
     this.callbacks.done.set(transitionName, null)
@@ -140,21 +128,27 @@ export class TransitionsStore extends Subject {
     this.notify()
   }
 
-  get(transition: Transition) {
+  get(transition: Transition): AsyncOperation[] {
     const key = transition.join(":")
-    return this.state[key] ?? 0
+    this.state[key] ??= []
+    return this.state[key]
   }
 
   add(
     state: TransitionsStoreState,
-    transitionName: string
+    transitionName: string,
+    asyncOperation: AsyncOperation
   ): TransitionsStoreState {
-    state[transitionName] ??= 0
-    state[transitionName]++
+    state[transitionName] ??= []
+    state[transitionName].push(asyncOperation)
     return state
   }
 
-  addKey(transition: Transition, from?: string) {
+  addKey(
+    transition: Transition,
+    asyncOperation: AsyncOperation,
+    from?: string
+  ) {
     const state = { ...this.state }
 
     let meta = ""
@@ -162,7 +156,7 @@ export class TransitionsStore extends Subject {
       key = String(key)
       if (meta !== "") key = `${meta}:${key}`
       meta = key
-      return this.add(acc, key)
+      return this.add(acc, key, asyncOperation)
     }, state)
 
     this.setState(newState)
@@ -181,6 +175,7 @@ export class TransitionsStore extends Subject {
     return () =>
       this.doneKey(
         transition,
+        asyncOperation,
         {
           onFinishTransition: runSuccessCallback,
         },
@@ -191,15 +186,19 @@ export class TransitionsStore extends Subject {
   done(
     state: TransitionsStoreState,
     transitionName: string,
+    asyncOperation: AsyncOperation,
     options: DoneKeyOptions,
     functionsToRun: Record<string, VoidFunction[]>
   ): TransitionsStoreState {
     if (!transitionName) return state
-    state[transitionName] ??= 0
-    state[transitionName]--
-    if (state[transitionName] === -1) debugger
+    const oldLength = state[transitionName].length
+    state[transitionName] = state[transitionName].filter(
+      ao => ao !== asyncOperation
+    )
+    const newLength = state[transitionName].length
+    if (oldLength === newLength) debugger
 
-    if (state[transitionName] <= 0) {
+    if (state[transitionName].length <= 0) {
       if (transitionName !== null) {
         functionsToRun[transitionName] ??= []
         functionsToRun[transitionName].push(() => {
@@ -218,13 +217,14 @@ export class TransitionsStore extends Subject {
   clear(transitionName: string | null) {
     if (!transitionName) return
     const state = { ...this.state }
-    state[transitionName] = 0
+    state[transitionName] = []
 
     this.setState(state)
   }
 
   doneKey(
     transition: TransitionNullable,
+    asyncOperation: AsyncOperation,
     options: DoneKeyOptions,
     from?: string
   ) {
@@ -237,7 +237,7 @@ export class TransitionsStore extends Subject {
       key = String(key)
       if (meta !== "") key = `${meta}:${key}`
       meta = key
-      return this.done(acc, key, options, functionsToRun)
+      return this.done(acc, key, asyncOperation, options, functionsToRun)
     }, state)
 
     this.setState(newState)
@@ -259,7 +259,8 @@ export class TransitionsStore extends Subject {
   isHappeningUnique(transition: TransitionNullable) {
     if (!transition) return false
     const key = transition.join(":")
-    return this.state[key] > 0
+    this.state[key] ??= []
+    return this.state[key].length > 0
   }
 
   isHappening(transition: TransitionNullable) {
@@ -271,8 +272,8 @@ export class TransitionsStore extends Subject {
       key = String(key)
       if (meta !== "") key = `${meta}:${key}`
       meta = key
-      const subtransitions = this.state[key]
-      if (subtransitions > 0) {
+      const subtransitions = this.get(transition)
+      if (subtransitions.length > 0) {
         isHappening = true
         break
       }

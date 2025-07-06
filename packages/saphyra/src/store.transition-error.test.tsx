@@ -65,9 +65,7 @@ test("should handle transition error gracefully", async () => {
   expect(info_after_dispatch.errorCallbackList).toStrictEqual(
     new Map([["increment", expect.any(Function)]])
   )
-  expect(info_after_dispatch.transitions).toStrictEqual({
-    increment: 1,
-  })
+  expect(info_after_dispatch.transitions["increment"].length).toBe(1)
   expect(info_after_dispatch.state).toEqual(
     expect.objectContaining({ count: 0 })
   )
@@ -93,9 +91,7 @@ test("should handle transition error gracefully", async () => {
   expect(info_after_error.errorCallbackList).toStrictEqual(
     new Map([["increment", null]])
   )
-  expect(info_after_error.transitions).toStrictEqual({
-    increment: 0,
-  })
+  expect(info_after_error.transitions["increment"].length).toBe(0)
   expect(info_after_error.state).toEqual(expect.objectContaining({ count: 0 }))
 
   expect(spy_emitError).toHaveBeenCalledTimes(1)

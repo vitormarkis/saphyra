@@ -489,8 +489,8 @@ export type StateWithDerivations<
 
 export type AsyncOperation = {
   when: number
-  fn: () => void
-  type: "promise" | "timeout"
-  label: string | null
+  fn?: () => void
+  type: "promise" | "timeout" | "manual"
+  label?: string | null
   whenReadable: string
 }

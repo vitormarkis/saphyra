@@ -39,7 +39,7 @@ import type {
 import { EventEmitter, EventsTuple } from "./event-emitter"
 import { noop } from "./fn/noop"
 import { ErrorsStore } from "./errors-store"
-import { createAncestor, isNewActionError, labelWhen } from "./utils"
+import { isNewActionError, labelWhen } from "./utils"
 import { getSnapshotAction } from "./helpers/get-snapshot-action"
 import { Rollback } from "./helpers/rollback"
 import invariant from "tiny-invariant"
@@ -59,6 +59,7 @@ import { $$onDevMode, $$onDebugMode } from "./helpers/log"
 import { TransitionsStateStore } from "./transitions-state"
 import { DerivationsRegistry } from "./derivations-registry"
 import { waitFor as waitForFn } from "./fn/wait-for"
+import { newAsyncOperation } from "./async-operation"
 
 export type ExternalProps = Record<string, any> | null
 
@@ -613,8 +614,9 @@ export function newStoreDef<
       const doneCallback = store.transitions.callbacks.done.get(
         action.transition.join(":")
       )
-      const noTransitionsRunning =
-        store.transitions.get(action.transition) === 0
+      const noTransitionsRunning = !store.transitions.isHappeningUnique(
+        action.transition
+      )
       if (noTransitionsRunning && !!doneCallback) {
         // Impossible case, some code didn't run the done callback
         // or some code didn't resolve the subtransition keys properly
@@ -844,7 +846,7 @@ export function newStoreDef<
       }
 
       const rootAction = beforeDispatch(opts as any)
-      asyncOperations.forEach(asyncOperation => asyncOperation.fn())
+      asyncOperations.forEach(asyncOperation => asyncOperation.fn?.())
 
       if (rootAction == null) {
         const scheduledTransition = store.transitions.isHappeningUnique(
@@ -866,9 +868,14 @@ export function newStoreDef<
         return
       }
 
+      const dispatchWithTransitionAsyncOP = newAsyncOperation({
+        type: "manual",
+        when: Date.now(),
+      })
       if (rootAction.transition) {
         store.transitions.addKey(
           rootAction.transition,
+          dispatchWithTransitionAsyncOP,
           "dispatch/new-transition"
         )
       }
@@ -894,6 +901,7 @@ export function newStoreDef<
       if (rootAction.transition != null) {
         store.transitions.doneKey(
           rootAction.transition,
+          dispatchWithTransitionAsyncOP,
           {
             onFinishTransition: runSuccessCallback,
           },
@@ -1041,14 +1049,13 @@ export function newStoreDef<
       store.optimisticRegistry.add(transitionKey, setterOrPartialState)
     }
 
-    const applySetterOnCurrentState = (
+    const applySetterOnState = (
       setterOrPartialState: SetterOrPartialState<TState>,
-      setterState: TState,
-      newState: TState
+      state: TState
     ) => {
       const setter = ensureSetter(setterOrPartialState)
-      const stateFromSetter = setter(setterState)
-      assignObjValues(newState, stateFromSetter)
+      const stateFromSetter = setter(state)
+      assignObjValues(state, stateFromSetter)
     }
 
     const handleAction = (
@@ -1121,11 +1128,7 @@ export function newStoreDef<
                 setterOrPartialState,
                 transition
               )
-              applySetterOnCurrentState(
-                setterOrPartialState,
-                optimisticState,
-                optimisticState
-              )
+              applySetterOnState(setterOrPartialState, optimisticState)
 
               notifyOptimistic(optimisticStateSource ?? newState)
             },
@@ -1134,14 +1137,14 @@ export function newStoreDef<
               props?.onSet?.(setterOrPartialState)
               if (isSync) {
                 if (transition) {
-                  updateTransitionState(transition, setterOrPartialState)
+                  const newTransitionState = updateTransitionState(
+                    transition,
+                    setterOrPartialState
+                  )
+                  assignObjValues(newState, newTransitionState)
+                } else {
+                  applySetterOnState(setterOrPartialState, newState)
                 }
-
-                applySetterOnCurrentState(
-                  setterOrPartialState,
-                  newState,
-                  newState
-                )
               } else {
                 store.setState(setterOrPartialState, { transition })
               }
@@ -1194,10 +1197,12 @@ export function newStoreDef<
           }
           const producedState = reducer(context)
           // looks redundant but user might return prev state
+          // if (transition)
+          //   store.transitionsState.prevState[transition.join(":")] = newState
           newState = producedState
           prevState = futurePrevState
         }
-        asyncOperations.forEach(asyncOperation => asyncOperation.fn())
+        asyncOperations.forEach(asyncOperation => asyncOperation.fn?.())
       } catch (error) {
         if (!transition) {
           throw error
@@ -1224,11 +1229,11 @@ export function newStoreDef<
 
     const updateTransitionState = (
       transition: Transition,
-      newSetterOrPartialState: SetterOrPartialState<TState> | null
+      setterOrPartialState: SetterOrPartialState<TState> | null
     ): TState | null => {
       const transitionKey = transition.join(":")
-      const setter = newSetterOrPartialState
-        ? ensureSetter(newSetterOrPartialState)
+      const setter = setterOrPartialState
+        ? ensureSetter(setterOrPartialState)
         : null
 
       if (setter) {
@@ -1241,51 +1246,31 @@ export function newStoreDef<
         }
       }
 
-      function updateTransitionState(
-        setterOrPartialStateList: SetterOrPartialState<TState>[]
-      ) {
-        const newState = cloneObj(store.state)
-        setterOrPartialStateList.forEach(setterOrPartialState => {
-          applySetterOnCurrentState(setterOrPartialState, newState, newState)
-        })
-
-        return newState
-      }
-
-      function getAncestorSettersOfTransition(
-        transitionAncestor: Transition
-      ): SetterOrPartialState<TState>[] {
-        const transitionKey = transitionAncestor.join(":")
-        return Object.entries(store.settersRegistry)
-          .filter(([key]) => key.startsWith(transitionKey))
-          .flatMap(([, setters]) => setters)
-      }
-
       let returningState: TState | null = null
-      const ancestor = createAncestor(transition) as Transition[]
-      ancestor.forEach(transitionAncestor => {
-        const allSetters = getAncestorSettersOfTransition(transitionAncestor)
-        const shouldClear = allSetters.length === 0
-        const transitionAncestorKey = transitionAncestor.join(":")
+      const setters = store.settersRegistry[transitionKey] ?? []
 
-        if (shouldClear) {
-          store.transitionsState.setState({
-            [transitionAncestorKey]: null,
-          })
-        } else {
-          const newState = updateTransitionState(allSetters)
-          /**
-           * Updates the transition state
-           */
-          store.transitionsState.setState({
-            [transitionAncestorKey]: newState,
-          })
+      const shouldClear = setters.length === 0
 
-          if (transitionAncestorKey === transitionKey) {
-            returningState = newState
-          }
-        }
+      if (shouldClear) {
+        store.transitionsState.setState({
+          [transitionKey]: null,
+        })
+        return store.state
+      }
+
+      const newState = cloneObj(
+        store.transitionsState.get(transition) ?? store.state
+      )
+      if (setterOrPartialState) {
+        applySetterOnState(setterOrPartialState, newState)
+      }
+      store.transitionsState.setState({
+        [transitionKey]: newState,
       })
+
+      if (transitionKey === transitionKey) {
+        returningState = newState
+      }
 
       return returningState
     }
@@ -1407,7 +1392,15 @@ export function newStoreDef<
         controller: initialAbort.controller,
       })
 
-      store.transitions.addKey(BOOTSTRAP_TRANSITION, "dispatch/on-construct")
+      const bootstrapAsyncOP = newAsyncOperation({
+        type: "manual",
+        when: Date.now(),
+      })
+      store.transitions.addKey(
+        BOOTSTRAP_TRANSITION,
+        bootstrapAsyncOP,
+        "dispatch/on-construct"
+      )
       const bootstrapAction = {
         type: "bootstrap",
         transition: BOOTSTRAP_TRANSITION,
@@ -1465,7 +1458,7 @@ export function newStoreDef<
           defineState(processedState)
           subject.notify()
         })
-        asyncOperations.forEach(asyncOperation => asyncOperation.fn())
+        asyncOperations.forEach(asyncOperation => asyncOperation.fn?.())
       } else {
         const { signal } = ensureAbortController({
           transition: bootstrapAction.transition!,
@@ -1497,6 +1490,7 @@ export function newStoreDef<
 
       store.transitions.doneKey(
         BOOTSTRAP_TRANSITION,
+        bootstrapAsyncOP,
         {
           onFinishTransition: runSuccessCallback,
         },

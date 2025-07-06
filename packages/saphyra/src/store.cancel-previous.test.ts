@@ -96,9 +96,7 @@ describe("before dispatch: cancel previous", () => {
       expect(info.setters).toBeUndefined()
       expect(info.doneCallback).toBeInstanceOf(Function)
       expect(info.errorCallback).toBeInstanceOf(Function)
-      expect(info.transitions).toStrictEqual({
-        [transitionName]: 1,
-      })
+      expect(info.transitions[transitionName].length).toBe(1)
       expect(info.state).toEqual(expect.objectContaining({ count: 0 }))
       expect(spy_completeTransition).not.toHaveBeenCalledTimes(1)
     })
@@ -116,9 +114,7 @@ describe("before dispatch: cancel previous", () => {
       expect(info.setters).toStrictEqual([])
       expect(info.doneCallback).toBeNull()
       expect(info.errorCallback).toBeNull()
-      expect(info.transitions).toStrictEqual({
-        increment: 0,
-      })
+      expect(info.transitions[transitionName].length).toBe(0)
       expect(info.state).toEqual(expect.objectContaining({ count: 1 }))
 
       expect(spy_completeTransition).toHaveBeenCalledTimes(1)
@@ -154,9 +150,7 @@ describe("before dispatch: cancel previous", () => {
         expect(info.setters).toStrictEqual([])
         expect(info.doneCallback).toBeInstanceOf(Function)
         expect(info.errorCallback).toBeInstanceOf(Function)
-        expect(info.transitions).toStrictEqual({
-          [transitionName]: 1,
-        })
+        expect(info.transitions[transitionName].length).toBe(1)
         expect(info.state).toEqual(expect.objectContaining({ count: 0 }))
         expect(spy_completeTransition).not.toHaveBeenCalledTimes(1)
         expect(spy_emitError).not.toHaveBeenCalled()
@@ -172,9 +166,7 @@ describe("before dispatch: cancel previous", () => {
         expect(info_before.setters).toStrictEqual([])
         expect(info_before.doneCallback).toBeInstanceOf(Function)
         expect(info_before.errorCallback).toBeInstanceOf(Function)
-        expect(info_before.transitions).toStrictEqual({
-          [transitionName]: 1,
-        })
+        expect(info_before.transitions[transitionName].length).toBe(1)
         expect(info_before.state).toEqual(expect.objectContaining({ count: 0 }))
         expect(spy_completeTransition).toHaveBeenCalledTimes(0)
 
@@ -185,9 +177,7 @@ describe("before dispatch: cancel previous", () => {
         expect(info.setters).toStrictEqual([])
         expect(info.doneCallback).toBeNull()
         expect(info.errorCallback).toBeNull()
-        expect(info.transitions).toStrictEqual({
-          increment: 0,
-        })
+        expect(info.transitions[transitionName].length).toBe(0)
         expect(info.state).toEqual(expect.objectContaining({ count: 1 }))
         expect(spy_completeTransition).toHaveBeenCalledTimes(1)
 

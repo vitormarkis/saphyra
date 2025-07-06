@@ -14,7 +14,7 @@ it("should not be able to call dispatch or setState synchronously inside onConst
   expect(mockErrorHandler).toHaveBeenCalledTimes(1)
 })
 
-it.only("should be able to call dispatch or setState asynchronously inside onConstruct", async () => {
+it("should be able to call dispatch or setState asynchronously inside onConstruct", async () => {
   vi.useFakeTimers()
   const mockErrorHandler = vi.fn()
   const newStore = newStoreDefTest({

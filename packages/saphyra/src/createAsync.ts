@@ -1,3 +1,4 @@
+import { newAsyncOperation } from "./async-operation"
 import { EventsTuple } from "./event-emitter"
 import { noop } from "./fn/noop"
 import { PromiseWithResolvers } from "./polyfills/promise-with-resolvers"
@@ -70,7 +71,11 @@ export function createAsync<
     const fn = () => {
       const { label = null } = config ?? {}
       if (!transition) throw errorNoTransition()
-      store.transitions.addKey(transition, `async-promise/${from}`)
+      store.transitions.addKey(
+        transition,
+        asyncOperation,
+        `async-promise/${from}`
+      )
       const transitionString = transition.join(":")
 
       /**
@@ -95,6 +100,7 @@ export function createAsync<
           cleanUpList.delete(cleanUp)
           store.transitions.doneKey(
             transition,
+            asyncOperation,
             { onFinishTransition: runSuccessCallback },
             "async-promise/on-success"
           )
@@ -112,6 +118,7 @@ export function createAsync<
 
           store.transitions.doneKey(
             transition,
+            asyncOperation,
             { onFinishTransition: noop },
             `async-promise/${aborted ? "cancel" : "on-error"}`
           )
@@ -123,13 +130,14 @@ export function createAsync<
       handlePromise(promise({ signal }))
     }
 
-    onAsyncOperation({
+    const asyncOperation = newAsyncOperation({
       fn,
       when,
       type: "promise",
       label: config?.label ?? null,
-      whenReadable: labelWhen(when),
     })
+
+    onAsyncOperation(asyncOperation)
   }
 
   const timer = (callback: () => void, time = 0, config?: AsyncTimerConfig) => {
@@ -142,7 +150,11 @@ export function createAsync<
       const cleanUpList = (store.transitions.cleanUpList[transitionString] ??=
         new Set())
 
-      store.transitions.addKey(transition, `async-timer/${from}`)
+      store.transitions.addKey(
+        transition,
+        asyncOperation,
+        `async-timer/${from}`
+      )
       cleanUpList.add(cleanUp)
       const when = labelWhen(new Date())
       const finishBar = newBar(transitionString, when, label)
@@ -153,6 +165,7 @@ export function createAsync<
           cleanUpList.delete(cleanUp)
           store.transitions.doneKey(
             transition,
+            asyncOperation,
             { onFinishTransition: runSuccessCallback },
             "async-timer/on-success"
           )
@@ -170,19 +183,20 @@ export function createAsync<
 
         store.transitions.doneKey(
           transition,
+          asyncOperation,
           { onFinishTransition: () => {} },
           `async-timer/${aborted ? "cancel" : "on-error"}`
         )
       }
     }
 
-    onAsyncOperation({
+    const asyncOperation = newAsyncOperation({
       fn,
       when,
       type: "timeout",
       label: config?.label ?? null,
-      whenReadable: labelWhen(when),
     })
+    onAsyncOperation(asyncOperation)
   }
 
   return {

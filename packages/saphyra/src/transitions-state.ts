@@ -1,6 +1,6 @@
 import { Subject } from "~/Subject"
 import { cloneObj, mergeObj } from "./helpers/obj-descriptors"
-import { SetterOrPartialState } from "./types"
+import { SetterOrPartialState, Transition } from "./types"
 import { ensureSetter } from "./helpers/utils"
 
 type TransitionsStateState<TState> = Record<string, TState | null>
@@ -23,5 +23,9 @@ export class TransitionsStateStore<TState> extends Subject {
     this.prevState = cloneObj(this.state)
     this.state = mergeObj(this.state, newPartialState)
     this.notify()
+  }
+
+  get(transition: Transition) {
+    return this.state[transition.join(":")]
   }
 }

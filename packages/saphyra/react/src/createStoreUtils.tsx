@@ -55,8 +55,8 @@ export function createStoreUtils<
   ): boolean {
     return useSyncExternalStore(
       cb => store.transitions.subscribe(cb),
-      () => store.transitions.get(transition) > 0,
-      () => store.transitions.get(transition) > 0
+      () => store.transitions.isHappening(transition),
+      () => store.transitions.isHappening(transition)
     )
   }
 
@@ -139,7 +139,7 @@ export function createStoreUtils<
     useEffect(() => {
       if (hasFetched.current) return
       if (watchValue !== undefined || isLoading) return
-      if (store.transitions.get(options.transition) > 0) {
+      if (store.transitions.isHappening(options.transition)) {
         throw new Error(
           "Error! Would've dispatched a transition that is already running."
         )
