@@ -19,6 +19,7 @@ import { ChevronUp } from "lucide-react"
 import React from "react"
 import ReactDOM from "react-dom"
 import { cva, type VariantProps } from "class-variance-authority"
+import "./waterfall.css"
 
 const WaterfallContext = createContext<{
   extractErrorMessage?: (error: unknown) => string

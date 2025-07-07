@@ -21,6 +21,7 @@ import React from "react"
 import ReactDOM from "react-dom"
 import { useMouse } from "./hooks"
 import { BarType } from "./types"
+import "./waterfall.css"
 
 const WaterfallContext = createContext<{
   extractErrorMessage?: (error: unknown) => string
