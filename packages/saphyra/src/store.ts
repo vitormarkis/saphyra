@@ -1645,23 +1645,25 @@ function createOnConstructStore<
   store: SomeStore<TState, TActions, TEvents, TUncontrolledState, TDeps>,
   _getIsSync: () => boolean
 ): SomeStore<TState, TActions, TEvents, TUncontrolledState, TDeps> {
-  return {
-    ...store,
-    dispatch: (...args) => {
-      // if (getIsSync()) {
-      //   throw new Error(
-      //     "You cannot call dispatch synchronously inside onConstruct"
-      //   )
-      // }
-      return store.dispatch(...args)
-    },
-    setState: (...args) => {
-      // if (getIsSync()) {
-      //   throw new Error(
-      //     "You cannot call setState synchronously inside onConstruct"
-      //   )
-      // }
-      return store.setState(...args)
-    },
-  }
+  return store
+  // TO-DO
+  // return {
+  //   ...store,
+  //   dispatch: (...args) => {
+  //     // if (getIsSync()) {
+  //     //   throw new Error(
+  //     //     "You cannot call dispatch synchronously inside onConstruct"
+  //     //   )
+  //     // }
+  //     return store.dispatch(...args)
+  //   },
+  //   setState: (...args) => {
+  //     // if (getIsSync()) {
+  //     //   throw new Error(
+  //     //     "You cannot call setState synchronously inside onConstruct"
+  //     //   )
+  //     // }
+  //     return store.setState(...args)
+  //   },
+  // }
 }
