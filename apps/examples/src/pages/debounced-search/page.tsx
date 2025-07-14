@@ -8,6 +8,7 @@ import { useCallback, useState, useEffect } from "react"
 import {
   createStoreUtils,
   useBootstrapError,
+  useNewStore,
   WaterfallDevtools,
 } from "saphyra/react"
 import { queryClient } from "~/query-client"
@@ -74,15 +75,15 @@ const DebouncedSearch = createStoreUtils<typeof newDebouncedSearch>()
 export function DebouncedSearchPage() {
   const instantiateStore = useCallback(() => newDebouncedSearch({}), [])
 
-  const [debouncedSearchStore, setDebouncedSearchStore] =
-    useState(instantiateStore)
+  const [debouncedSearchStore, resetStore, isLoading] =
+    useNewStore(instantiateStore)
 
   const isBootstraping = DebouncedSearch.useTransition(
     ["bootstrap"],
     debouncedSearchStore
   )
   const [error, tryAgain] = useBootstrapError(
-    [debouncedSearchStore, instantiateStore],
+    [debouncedSearchStore, resetStore, isLoading],
     instantiateStore
   )
 
@@ -96,7 +97,7 @@ export function DebouncedSearchPage() {
 
   return (
     <DebouncedSearch.Context.Provider
-      value={[debouncedSearchStore, setDebouncedSearchStore]}
+      value={[debouncedSearchStore, resetStore, isLoading]}
     >
       <DebouncedSearchView />
     </DebouncedSearch.Context.Provider>

@@ -3,7 +3,7 @@ import { useEffect, useState } from "react"
 import { newStoreDef } from "saphyra"
 import { createSession } from "~/pages/zustand-like/fn/create-session"
 import { Devtools } from "~/devtools/devtools"
-import { createStoreUtils } from "saphyra/react"
+import { createStoreUtils, useNewStore } from "saphyra/react"
 
 type SimpleFormInitialProps = {
   fullName: string
@@ -50,15 +50,14 @@ const createSimpleForm = newStoreDef<SimpleFormInitialProps, SimpleFormState>({
 const SimpleForm = createStoreUtils()
 
 export function SimpleFormPage() {
-  const simpleFormState = useState(() =>
+  const [simpleForm, resetStore, isLoading] = useNewStore(() =>
     createSimpleForm({
       fullName: "Vitor Markis",
     })
   )
-  const [simpleForm] = simpleFormState
 
   return (
-    <SimpleForm.Context.Provider value={simpleFormState}>
+    <SimpleForm.Context.Provider value={[simpleForm, resetStore, isLoading]}>
       <SimpleFormView onGetToken={console.log} />
       <Devtools store={simpleForm} />
     </SimpleForm.Context.Provider>

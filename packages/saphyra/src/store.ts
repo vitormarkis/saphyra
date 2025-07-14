@@ -363,6 +363,7 @@ export function newStoreDef<
       uncontrolledState: {} as TUncontrolledState,
       transitionsState: new TransitionsStateStore<TState>(),
       derivationsRegistry,
+      isDisposed: false,
     } as any
 
     let store = createDebugableShallowCopy(
@@ -669,6 +670,12 @@ export function newStoreDef<
       action: Action
     }
 
+    const emitError: Met["emitError"] = error => {
+      store.errorHandlers.forEach(handleError => {
+        handleError(error, null)
+      })
+    }
+
     const runOptimisticsOnly = ({
       action,
       prevState,
@@ -757,6 +764,12 @@ export function newStoreDef<
     }
 
     const dispatch: Met["dispatch"] = (initialAction: Action) => {
+      if (store.isDisposed) {
+        $$onDebugMode(() =>
+          console.warn("Attempted to dispatch on disposed store")
+        )
+        return
+      }
       return dispatchInternal({
         action: initialAction,
         setterOrPartialState: null,
@@ -936,6 +949,7 @@ export function newStoreDef<
     }
 
     const handleError: Met["handleError"] = (error, transition) => {
+      if (store.isDisposed) return
       store.errorHandlers.forEach(handleError => {
         handleError(error, transition)
       })
@@ -1315,6 +1329,12 @@ export function newStoreDef<
     // }
 
     const setState: Met["setState"] = (setterOrPartialState, options) => {
+      if (store.isDisposed) {
+        $$onDebugMode(() =>
+          console.warn("Attempted to setState on disposed store")
+        )
+        return
+      }
       const when = labelWhen(new Date())
       dispatchInternal({
         action: {
@@ -1331,6 +1351,7 @@ export function newStoreDef<
     }
 
     function notifyOptimistic(state = store.state) {
+      if (store.isDisposed) return
       const allSetters = Object.values(store.optimisticRegistry.get()).flat()
       store.optimisticState = calculateOptimisticState(allSetters, state)
       store.notify()
@@ -1341,6 +1362,65 @@ export function newStoreDef<
     }
     const waitForBootstrap: Met["waitForBootstrap"] = (timeout = 5000) => {
       return waitForFn(store, ["bootstrap"], timeout)
+    }
+
+    const dispose: Met["dispose"] = () => {
+      if (store.isDisposed) return
+      store.isDisposed = true
+
+      const allTransitionEntries = Object.entries(
+        store.transitions.controllers.values
+      )
+
+      allTransitionEntries.forEach(([_transitionKey, controller]) => {
+        controller?.abort()
+      })
+
+      const cleanupListEntries = Object.entries(store.transitions.cleanUpList)
+
+      cleanupListEntries.forEach(([_transitionKey, cleanupList]) => {
+        cleanupList.forEach(cleanupFn => cleanupFn(null))
+      })
+
+      store.transitions.controllers.values = {}
+      store.events.handlers = {}
+      store.internal.events.handlers = {}
+      store.transitions.events.done.handlers = {}
+      store.transitions.events.error.handlers = {}
+
+      store.observers.clear()
+
+      store.history = []
+      store.historyRedo = []
+
+      store.errorHandlers.clear()
+
+      store.settersRegistry = {}
+
+      const optimisticEntries = Object.entries(store.optimisticRegistry.get())
+      optimisticEntries.forEach(([key, _value]) => {
+        store.optimisticRegistry.clear(key)
+      })
+
+      store.transitionsState.state = {}
+      store.transitionsState.prevState = {}
+
+      store.transitions.cleanUpList = {}
+
+      store.transitions.callbacks.done.clear()
+      store.transitions.callbacks.error.clear()
+
+      store.transitions.meta.values = {}
+
+      store.transitions.state = {}
+
+      store.errors.setState({ bootstrap: null })
+
+      if (derivationsRegistry) {
+        derivationsRegistry.clearCache()
+      }
+
+      $$onDebugMode(() => console.log("Store disposed successfully"))
     }
 
     const methods: Met = {
@@ -1363,9 +1443,18 @@ export function newStoreDef<
       abort,
       waitFor,
       waitForBootstrap,
+      dispose,
+      emitError,
     }
 
     store = mergeObj(subject, store, methods)
+
+    const originalNotify = store.notify
+    store.notify = () => {
+      if (store.isDisposed) return
+      originalNotify()
+    }
+
     const ensureAbortController = createEnsureAbortController(store.transitions)
 
     function construct(

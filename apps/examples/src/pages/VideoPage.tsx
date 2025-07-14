@@ -1,6 +1,6 @@
 import { useRef, useState } from "react"
 import { newStoreDef } from "saphyra"
-import { createStoreUtils } from "saphyra/react"
+import { createStoreUtils, useNewStore } from "saphyra/react"
 import { sleep } from "~/sleep"
 
 type TransitionsStoreState = {
@@ -96,10 +96,14 @@ const TransitionsStore = createStoreUtils<typeof newTransitionsStore>()
  * React
  */
 export function VideoPage() {
-  const transitionsStoreState = useState(() => newTransitionsStore({}))
+  const [transitionsStore, resetStore, isLoading] = useNewStore(() =>
+    newTransitionsStore({})
+  )
 
   return (
-    <TransitionsStore.Context.Provider value={transitionsStoreState}>
+    <TransitionsStore.Context.Provider
+      value={[transitionsStore, resetStore, isLoading]}
+    >
       <TransitionsShowcaseView />
     </TransitionsStore.Context.Provider>
   )

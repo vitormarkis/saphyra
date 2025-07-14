@@ -9,7 +9,7 @@ import { Devtools } from "~/devtools/devtools"
 import invariant from "tiny-invariant"
 import { TextChart } from "~/components/text-chart"
 import { Waterfall } from "~/devtools/waterfall"
-import { createStoreUtils, useBootstrapError } from "saphyra/react"
+import { createStoreUtils, useBootstrapError, useNewStore } from "saphyra/react"
 import { sleep } from "~/lib/common"
 import { randomString } from "~/lib/utils"
 
@@ -81,11 +81,10 @@ export function PokemonPage() {
       }),
     []
   )
-  const pokemonStoreState = useState(instantiateStore)
-  const [pokemonStore] = pokemonStoreState
+  const [pokemonStore, resetStore, isLoading] = useNewStore(instantiateStore)
   const isBootstraping = Pokemon.useTransition(["bootstrap"], pokemonStore)
   const [error, tryAgain] = useBootstrapError(
-    pokemonStoreState,
+    [pokemonStore, resetStore, isLoading],
     instantiateStore
   )
 
@@ -114,7 +113,7 @@ export function PokemonPage() {
     )
 
   return (
-    <Pokemon.Context.Provider value={pokemonStoreState}>
+    <Pokemon.Context.Provider value={[pokemonStore, resetStore, isLoading]}>
       <PokemonPageContent />
     </Pokemon.Context.Provider>
   )
