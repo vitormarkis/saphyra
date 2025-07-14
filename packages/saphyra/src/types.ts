@@ -134,6 +134,7 @@ export type GenericStoreValues<
   optimisticRegistry: OptimisticRegistry<TState>
   transitionsState: TransitionsStateStore<TState>
   name?: string
+  isDisposed: boolean
   onTransitionEndCallbacks: Record<
     string,
     Set<OnTransitionEnd<TState, TEvents>>
@@ -247,6 +248,8 @@ export type GenericStoreMethods<
   cleanUpTransition(transition: Transition, error: unknown | null): void
   waitFor(transition: Transition, timeout?: number): Promise<WaitForResult>
   waitForBootstrap(timeout?: number): Promise<WaitForResult>
+  dispose(): void
+  emitError(error: unknown): void
 }
 
 type UncontrolledState<

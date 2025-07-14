@@ -10,7 +10,12 @@ import { TextChart } from "~/components/text-chart"
 import { CodeEditor } from "~/components/code-editor"
 import { removeCurrentToastsAndRegisterNewToasts } from "./fn/removeCurrentToastsAndRegisterNewToasts"
 import { toastWithResult } from "./fn/toast-with-result"
-import { createStoreUtils, useBootstrapError, useHistory } from "saphyra/react"
+import {
+  createStoreUtils,
+  useBootstrapError,
+  useHistory,
+  useNewStore,
+} from "saphyra/react"
 import { Waterfall } from "~/devtools/waterfall"
 import { noop } from "~/lib/utils"
 
@@ -96,10 +101,12 @@ export function ChangeRolePage() {
     () => newAuthStore({ role: "user", username: "" }, { name: "AuthStore" }),
     []
   )
-  const authStoreState = useState(instantiateStore)
-  const [authStore] = authStoreState
+  const [authStore, resetStore, isLoading] = useNewStore(instantiateStore)
   const isBootstraping = Auth.useTransition(["bootstrap"], authStore)
-  const [error, tryAgain] = useBootstrapError(authStoreState, instantiateStore)
+  const [error, tryAgain] = useBootstrapError(
+    [authStore, resetStore, isLoading],
+    instantiateStore
+  )
 
   // Auth.useErrorHandlers(toastWithSonner, authStore)
 
@@ -130,7 +137,7 @@ export function ChangeRolePage() {
     )
 
   return (
-    <Auth.Context.Provider value={authStoreState}>
+    <Auth.Context.Provider value={[authStore, resetStore, isLoading]}>
       <ChangeRolePageContent />
     </Auth.Context.Provider>
   )

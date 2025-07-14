@@ -22,6 +22,7 @@ import ReactDOM from "react-dom"
 import { useMouse } from "./hooks"
 import { BarType } from "./types"
 import "./waterfall.css"
+import { useNewStore } from "../hooks"
 
 const WaterfallContext = createContext<{
   extractErrorMessage?: (error: unknown) => string
@@ -192,14 +193,13 @@ type WaterfallProps = {
 }
 
 export function Waterfall({ store, extractErrorMessage }: WaterfallProps) {
-  const waterfallState = useState(() =>
+  const [waterfallStore, resetStore, isLoading] = useNewStore(() =>
     newWaterfallStore({
       bars: [],
       distance: 500,
       clearTimeout: 1000,
     })
   )
-  const [waterfallStore] = waterfallState
 
   useEffect(() =>
     store.internal.events.on(
@@ -227,7 +227,7 @@ export function Waterfall({ store, extractErrorMessage }: WaterfallProps) {
 
   return (
     <WaterfallContext.Provider value={{ extractErrorMessage }}>
-      <WF.Context.Provider value={waterfallState}>
+      <WF.Context.Provider value={[waterfallStore, resetStore, isLoading]}>
         <div className="grid grid-rows-[auto_1fr] gap-1 h-full">
           <WaterfallController />
           <WaterfallContent />

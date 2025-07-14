@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { newStoreDef } from "saphyra"
-import { createStoreUtils } from "saphyra/react"
+import { createStoreUtils, useNewStore } from "saphyra/react"
 import { sleep } from "~/sleep"
 
 type MultipleOptimisticUpdatesState = {
@@ -43,7 +43,7 @@ const newStore = newStoreDef<
 const Store = createStoreUtils<typeof newStore>()
 
 export function MultipleOptimisticUpdatesPage() {
-  const [store, setStore] = useState(() =>
+  const [store, resetStore, isLoading] = useNewStore(() =>
     newStore({
       countdown: 0,
       msg: "hello",
@@ -51,7 +51,7 @@ export function MultipleOptimisticUpdatesPage() {
   )
 
   return (
-    <Store.Context.Provider value={[store, setStore]}>
+    <Store.Context.Provider value={[store, resetStore, isLoading]}>
       <Content />
     </Store.Context.Provider>
   )

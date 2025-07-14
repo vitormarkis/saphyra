@@ -17,12 +17,12 @@ import { fetchLikedPosts } from "./fn/fetch-liked-posts"
 import { fetchPosts } from "./fn/fetch-posts"
 import { placeComment } from "./fn/fetch-place-commment"
 import { likePost } from "./fn/like-post"
-import { useHistory } from "saphyra/react"
+import { useHistory, useNewStore } from "saphyra/react"
 import { Waterfall } from "~/devtools/waterfall"
 import { X } from "lucide-react"
 
 export function ExternalDepsPage() {
-  const [postsStore, setPostsStore] = useState(() =>
+  const [postsStore, resetStore, isLoading] = useNewStore(() =>
     newPostsStore(
       {},
       {
@@ -83,7 +83,7 @@ export function ExternalDepsPage() {
   }, [postsStore])
 
   return (
-    <Posts.Context.Provider value={[postsStore, setPostsStore]}>
+    <Posts.Context.Provider value={[postsStore, resetStore, isLoading]}>
       <div className="h-full gap-4 flex flex-col @xl:flex-row overflow-hidden">
         <div
           className={cn(

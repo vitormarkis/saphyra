@@ -4,7 +4,7 @@ import { sleep } from "./sleep"
 import { Devtools } from "~/devtools/devtools"
 import { Waterfall } from "./devtools/waterfall"
 import { newStoreDef } from "saphyra"
-import { createStoreUtils, useHistory } from "saphyra/react"
+import { createStoreUtils, useHistory, useNewStore } from "saphyra/react"
 
 type CounterState = {
   count: number
@@ -65,12 +65,11 @@ const newCount = newStoreDef<CounterState, CounterState, CounterActions>({
 export const Todos = createStoreUtils<typeof newCount>()
 
 export default function App() {
-  const countStoreState = useState(() =>
+  const [homeStore, resetHomeStore, isLoading] = useNewStore(() =>
     newCount({
       count: 0,
     })
   )
-  const [homeStore] = countStoreState
 
   useHistory(homeStore)
 
@@ -79,7 +78,7 @@ export default function App() {
   }, [homeStore])
 
   return (
-    <Todos.Context.Provider value={countStoreState}>
+    <Todos.Context.Provider value={[homeStore, resetHomeStore, isLoading]}>
       <div className="grid grid-rows-[auto_auto_1fr] gap-4 overflow-y-hidden">
         <Content />
         <div className="min-h-[160px]">

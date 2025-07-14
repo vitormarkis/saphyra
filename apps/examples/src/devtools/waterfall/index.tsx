@@ -30,14 +30,13 @@ type WaterfallProps = {
 }
 
 export function Waterfall({ store, extractErrorMessage }: WaterfallProps) {
-  const waterfallState = useState(() =>
+  const [waterfallStore, resetStore, isLoading] = useNewStore(() =>
     newWaterfallStore({
       bars: [],
       distance: 500,
       clearTimeout: 1000,
     })
   )
-  const [waterfallStore] = waterfallState
 
   useEffect(() =>
     store.internal.events.on(
@@ -65,7 +64,7 @@ export function Waterfall({ store, extractErrorMessage }: WaterfallProps) {
 
   return (
     <WaterfallContext.Provider value={{ extractErrorMessage }}>
-      <WF.Context.Provider value={waterfallState}>
+      <WF.Context.Provider value={[waterfallStore, resetStore, isLoading]}>
         <div className="grid grid-rows-[auto_1fr] gap-1 h-full">
           <WaterfallController />
           <WaterfallContent />
@@ -794,6 +793,7 @@ import { MutableRefObject } from "react"
 import { BarType } from "./types"
 import { error } from "console"
 import { extractErrorMessage } from "~/lib/extract-error-message"
+import { useNewStore } from "saphyra/react"
 import { ChevronUp } from "lucide-react"
 
 export const RefContext =

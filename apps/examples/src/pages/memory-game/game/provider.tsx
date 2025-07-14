@@ -7,7 +7,7 @@ import { updateCard } from "./fn/update-card"
 import { handleExpandNode } from "~/lib/utils"
 import { Devtools } from "~/devtools/devtools"
 import { newStoreDef } from "saphyra"
-import { createStoreUtils, useHistory } from "saphyra/react"
+import { createStoreUtils, useHistory, useNewStore } from "saphyra/react"
 
 type CardsContent = readonly [
   string,
@@ -136,9 +136,9 @@ export function MemoryGame({
   ...initialState
 }: MemoryGameProviderProps) {
   const [expandedNodes, setExpandedNodes] = useState(new Set<string>())
-  const memoryGameState = useState(() => newMemoryGame(initialState))
-
-  const [memoryGame] = memoryGameState
+  const [memoryGame, resetStore, isLoading] = useNewStore(() =>
+    newMemoryGame(initialState)
+  )
 
   useEffect(() => {
     Object.assign(window, {
@@ -149,7 +149,7 @@ export function MemoryGame({
   useHistory(memoryGame)
 
   return (
-    <Game.Context.Provider value={memoryGameState}>
+    <Game.Context.Provider value={[memoryGame, resetStore, isLoading]}>
       {children}
       <Devtools
         store={memoryGame}

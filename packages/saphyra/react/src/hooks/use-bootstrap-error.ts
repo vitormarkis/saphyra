@@ -1,9 +1,10 @@
 import { useCallback, useSyncExternalStore } from "react"
-import type { ReactState, SomeStoreGeneric } from "saphyra"
+import type { SomeStoreGeneric } from "saphyra"
 import { exact } from "~/fn/common"
+import { NewStoreReturn } from "../types"
 
 export function useBootstrapError<TStore extends SomeStoreGeneric>(
-  [store, setStore]: ReactState<TStore>,
+  [store, resetStore]: NewStoreReturn<TStore>,
   instantiateStore: () => TStore
 ) {
   const error = useSyncExternalStore(
@@ -13,8 +14,8 @@ export function useBootstrapError<TStore extends SomeStoreGeneric>(
   )
 
   const tryAgain = useCallback(() => {
-    setStore(instantiateStore)
-  }, [setStore, instantiateStore])
+    resetStore(instantiateStore())
+  }, [resetStore, instantiateStore])
 
   return exact([error, tryAgain])
 }

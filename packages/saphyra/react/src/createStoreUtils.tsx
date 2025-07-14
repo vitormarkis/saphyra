@@ -12,7 +12,7 @@ import type {
   TransitionFunctionOptions,
 } from "saphyra"
 import { exact } from "~/fn/common"
-import { StateTuple } from "./types"
+import { NewStoreReturn } from "./types"
 
 function defaultSelector<T>(data: T) {
   return data
@@ -37,7 +37,7 @@ export function createStoreUtils<
     ReturnType<TStoreInstantiator> = ReturnType<TStoreInstantiator>,
 >(store?: TStore) {
   type TState = TStore["state"]
-  const Context = createContext<StateTuple<TStore> | null>(null)
+  const Context = createContext<NewStoreReturn<TStore> | null>(null)
 
   function useStore() {
     const ctx = useContext(Context)
@@ -178,7 +178,7 @@ export type StoreUtils<
   TStore extends
     ReturnType<StoreInstantiatorGeneric> = ReturnType<StoreInstantiatorGeneric>,
 > = {
-  Context: React.Context<StateTuple<TStore> | null>
+  Context: React.Context<NewStoreReturn<TStore> | null>
   useSelector: <R = TState>(selector?: (data: TState) => R, store?: TStore) => R
   useCommittedSelector: <R = TState>(
     selector?: (data: TState) => R,
@@ -189,7 +189,7 @@ export type StoreUtils<
     selector?: (data: TState) => R,
     store?: TStore
   ) => R
-  useStore: () => StateTuple<TStore>
+  useStore: () => NewStoreReturn<TStore>
   useTransition: (transition: Transition, store?: TStore) => boolean
   useErrorHandlers: (handler: StoreErrorHandler, store?: TStore) => void
   useLazyValue: <const TTransition extends any[], TPromiseResult, R>(

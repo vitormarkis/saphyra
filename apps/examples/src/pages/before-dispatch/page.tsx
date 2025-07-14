@@ -15,7 +15,7 @@ import { useSuspenseQuery } from "@tanstack/react-query"
 import { noop } from "lodash"
 import { CSSProperties, ReactNode, Suspense, useState } from "react"
 import invariant from "tiny-invariant"
-import { createStoreUtils } from "saphyra/react"
+import { createStoreUtils, useNewStore } from "saphyra/react"
 import { ClassicAction, newStoreDef } from "saphyra"
 import { runSuccessCallback } from "saphyra"
 import { BaseAction, BeforeDispatch, SomeStoreGeneric } from "saphyra"
@@ -84,10 +84,14 @@ const TransitionsStore = createStoreUtils<typeof newTransitionsStore>()
  * React
  */
 export function BeforeDispatchPage() {
-  const transitionsStoreState = useState(() => newTransitionsStore({}))
+  const [transitionsStore, resetStore, isLoading] = useNewStore(() =>
+    newTransitionsStore({})
+  )
 
   return (
-    <TransitionsStore.Context.Provider value={transitionsStoreState}>
+    <TransitionsStore.Context.Provider
+      value={[transitionsStore, resetStore, isLoading]}
+    >
       <div className="flex flex-col gap-4 h-full overflow-auto">
         <BeforeDispatchView />
       </div>
@@ -445,10 +449,14 @@ type StoreProviderProps = {
 }
 
 export function StoreProvider({ children }: StoreProviderProps) {
-  const storeState = useState(() => newTransitionsStore({}))
+  const [storeState, resetStore, isLoading] = useNewStore(() =>
+    newTransitionsStore({})
+  )
 
   return (
-    <TransitionsStore.Context.Provider value={storeState}>
+    <TransitionsStore.Context.Provider
+      value={[storeState, resetStore, isLoading]}
+    >
       {children}
     </TransitionsStore.Context.Provider>
   )
