@@ -186,6 +186,14 @@ type OnPushToHistoryProps<
   action: TActions
 }
 
+type RunOptimisticUpdateOnProps<TActions extends ActionShape> = {
+  action: TActions
+}
+
+type RunOptimisticUpdateOn<TActions extends ActionShape> = (
+  props: RunOptimisticUpdateOnProps<TActions>
+) => boolean | void
+
 type OnPushToHistory<
   TState extends Record<string, any>,
   TActions extends ActionShape,
@@ -209,6 +217,7 @@ type CreateStoreOptionsConfig<
   TUncontrolledState extends Record<string, any>,
   TDeps,
 > = {
+  runOptimisticUpdateOn?: RunOptimisticUpdateOn<TActions>
   onPushToHistory?: OnPushToHistory<
     TState,
     TActions,
@@ -255,6 +264,11 @@ export type StoreConstructorConfig<TDeps> = {
 }
 
 const BOOTSTRAP_TRANSITION = ["bootstrap"]
+const defaultRunOptimisticUpdateOn = <TActions extends ActionShape>(
+  _props: RunOptimisticUpdateOnProps<TActions>
+) => {
+  return true
+}
 const defaultOnPushToHistory = <
   TState extends Record<string, any>,
   TActions extends ActionShape,
@@ -323,7 +337,10 @@ export function newStoreDef<
     TUncontrolledState,
     TDeps
   >
-  const { onPushToHistory = defaultOnPushToHistory } = globalConfig ?? {}
+  const {
+    onPushToHistory = defaultOnPushToHistory,
+    runOptimisticUpdateOn = defaultRunOptimisticUpdateOn,
+  } = globalConfig ?? {}
 
   // Create derivations registry if derivations are provided
   const derivationsRegistry = derivations
@@ -674,6 +691,8 @@ export function newStoreDef<
       prevState,
       newState,
     }: RunOptimisticsOnlyProps) => {
+      const shouldRunOptimistic = runOptimisticUpdateOn({ action })
+      if (!shouldRunOptimistic) return
       const scheduleOptimistic = createOptimisticScheduler(
         action.transition,
         "notify"

@@ -15,6 +15,8 @@ import { queryClient } from "~/query-client"
 type DebouncedSearchEvents = {}
 
 type DebouncedSearchActions = {
+  $updatesCount?: "multiple" | "few" | "one"
+} & {
   type: "change-name"
   name: string
 }
@@ -34,6 +36,12 @@ const newDebouncedSearch = newStoreDef<
   DebouncedSearchActions,
   DebouncedSearchEvents
 >({
+  config: {
+    runOptimisticUpdateOn({ action }) {
+      if (action.$updatesCount === "multiple") return false
+      return true
+    },
+  },
   onConstruct({ initialProps }) {
     return {
       name: initialProps.initialName ?? "",
@@ -127,6 +135,7 @@ export function DebouncedSearchView({}: DebouncedSearchViewProps) {
         type: "change-name",
         name: newQuery,
         transition: ["debounced-search", "name"],
+        $updatesCount: "multiple",
         beforeDispatch({ transition, createAsync, action, abort, store }) {
           // abort(transition)
           // return action
