@@ -128,7 +128,7 @@ function defaultOnConstruct<
 /**
  * Reducer
  */
-type ReducerProps<
+export type ReducerProps<
   TState extends Record<string, any>,
   TActions extends ActionShape & DefaultActions,
   TEvents extends EventsTuple,
@@ -1278,16 +1278,13 @@ export function newStoreDef<
       setterOrPartialState: SetterOrPartialState<TState> | null
     ): TState | null => {
       const transitionKey = transition.join(":")
-      const setter = setterOrPartialState
-        ? ensureSetter(setterOrPartialState)
-        : null
 
-      if (setter) {
+      if (setterOrPartialState) {
         store.settersRegistry = {
           ...store.settersRegistry,
           [transitionKey]: [
             ...(store.settersRegistry[transitionKey] ?? []),
-            setter,
+            setterOrPartialState,
           ],
         }
       }
