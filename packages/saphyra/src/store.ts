@@ -60,6 +60,7 @@ import { TransitionsStateStore } from "./transitions-state"
 import { DerivationsRegistry } from "./derivations-registry"
 import { waitFor as waitForFn } from "./fn/wait-for"
 import { newAsyncOperation } from "./async-operation"
+import { shallowCompare } from "./helpers/shallow-compare"
 
 export type ExternalProps = Record<string, any> | null
 
@@ -285,6 +286,8 @@ const defaultOnPushToHistory = <
   TUncontrolledState,
   TDeps
 >) => {
+  const lastState = history[history.length - 1]
+  if (shallowCompare(lastState, state)) return history
   return [...history, state]
 }
 
@@ -783,6 +786,22 @@ export function newStoreDef<
       })
     }
 
+    /**
+     * **Primitive explanation:**
+     *
+     * When dispatching an action, this will run the user reducer. The goal
+     * of this reducer run is to extract a list of `setterOrPartialState`.
+     *
+     * These are created when user calls `set` method of the reducer props.
+     *
+     * If there is no transition for this action, I will run these operations immediately
+     * against the current store state.
+     *
+     * If there is a transition for this action, I will add these operations to the
+     * `setterOrPartialState` list of that respective transition.
+     *
+     * This `setterOrPartialState` list is called `settersRegistry`.
+     */
     const dispatchImpl = (
       initialAction: Action,
       rollback: Rollback,
@@ -1171,13 +1190,21 @@ export function newStoreDef<
             diff: createDiff(prevState, newState),
             dispatch: (action: Action) => {
               if (signal.aborted) return
+              const sameTransition =
+                action.transition?.join(":") === transition?.join(":")
               const safeAction = {
                 ...action,
-                transition: rootAction.transition ?? null, // sobreescrevendo transition, deve agrupar varias TODO
+                transition: action.transition ?? rootAction.transition ?? null,
                 onTransitionEnd: () => {}, // it will become a mess if multiple of these run at the same time
               }
-              if (isSync) {
-                actionsQueue.push(safeAction)
+              if (isSync && sameTransition) {
+                // actionsQueue.push(safeAction)
+                const producedState = reducer({
+                  ...context,
+                  action: safeAction,
+                })
+                newState = producedState
+                prevState = futurePrevState
               } else {
                 store.dispatch(safeAction)
               }
