@@ -1348,10 +1348,10 @@ export function newStoreDef<
                 props: OnTransitionEndProps<TState, TEvents>
               ) => {
                 props.setterOrPartialStateList.forEach(setterOrPartialState => {
-                  const setter = mergeSetterWithState(
-                    ensureSetter(setterOrPartialState)
+                  updateTransitionState(
+                    rootAction.transition,
+                    setterOrPartialState
                   )
-                  setReducerHandler(setter)
                 })
 
                 return propsAction.onTransitionEnd?.(props)
