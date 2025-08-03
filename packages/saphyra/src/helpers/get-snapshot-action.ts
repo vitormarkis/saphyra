@@ -8,12 +8,30 @@ import type {
 export function getSnapshotAction<
   TState extends Record<string, any>,
   TEvents extends EventsTuple,
-  TActions extends ClassicAction<TState, ActionShape, TEvents>,
->(action: TActions): ClassicActionRedispatch<TState, TActions, TEvents> {
+  TActions extends ClassicAction<
+    TState,
+    ActionShape,
+    TEvents,
+    TUncontrolledState,
+    TDeps
+  >,
+  TUncontrolledState extends Record<string, any>,
+  TDeps,
+>(
+  action: TActions
+): ClassicActionRedispatch<
+  TState,
+  TActions,
+  TEvents,
+  TUncontrolledState,
+  TDeps
+> {
   const { beforeDispatch: __, ...beforeDispatchAction } = action
   return beforeDispatchAction as ClassicActionRedispatch<
     TState,
     TActions,
-    TEvents
+    TEvents,
+    TUncontrolledState,
+    TDeps
   >
 }

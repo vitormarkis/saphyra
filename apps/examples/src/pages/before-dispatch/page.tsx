@@ -99,8 +99,8 @@ type ExampleFactory = (store: SomeStoreGeneric) => {
   title: string
   description: string
   slug: string
-  action: BaseAction<any, any, any>
-  actionSupport?: BaseAction<any, any, any>
+  action: BaseAction<any, any, any, any, any>
+  actionSupport?: BaseAction<any, any, any, any, any>
   script: string
 }
 

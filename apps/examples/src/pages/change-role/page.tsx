@@ -12,6 +12,7 @@ import { removeCurrentToastsAndRegisterNewToasts } from "./fn/removeCurrentToast
 import { toastWithResult } from "./fn/toast-with-result"
 import { createStoreUtils, useBootstrapError, useHistory } from "saphyra/react"
 import { Waterfall } from "~/devtools/waterfall"
+import { noop } from "~/lib/utils"
 
 export type SelectedRole = "user" | "admin"
 
@@ -40,6 +41,9 @@ const newAuthStore = newStoreDef<
     onPushToHistory({ history, state, transition }) {
       if (!!transition) return [state]
       return [...history, state]
+    },
+    onCommitTransition(props) {
+      noop()
     },
   },
   derivations: {

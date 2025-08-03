@@ -155,7 +155,9 @@ function revalidateList(
   dispatch: Dispatch<
     RevalidationListState,
     RevalidationListActions,
-    EventsTuple
+    EventsTuple,
+    any,
+    any
   >
 ): AsyncPromiseOnFinishProps {
   return {

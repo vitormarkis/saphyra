@@ -35,6 +35,10 @@ import type {
   Transition,
   TransitionNullable,
   DispatchAsync,
+  OnPushToHistory,
+  OnPushToHistoryProps,
+  OnTransitionEndProps,
+  OnCommitTransitionConfig,
 } from "./types"
 import { EventEmitter, EventsTuple } from "./event-emitter"
 import { noop } from "./fn/noop"
@@ -62,6 +66,7 @@ import { waitFor as waitForFn } from "./fn/wait-for"
 import { newAsyncOperation } from "./async-operation"
 import { shallowCompare } from "./helpers/shallow-compare"
 import { PromiseWithResolvers } from "./polyfills/promise-with-resolvers"
+import { randomString } from "./helpers/randomString"
 
 export type ExternalProps = Record<string, any> | null
 
@@ -138,15 +143,21 @@ export type ReducerProps<
 > = {
   prevState: TState
   state: TState
-  action: ClassicAction<TState, TActions, TEvents>
+  action: ClassicAction<TState, TActions, TEvents, TUncontrolledState, TDeps>
   async: AsyncBuilder
   store: SomeStore<TState, TActions, TEvents, TUncontrolledState, TDeps>
   events: EventEmitter<TEvents>
   set: ReducerSet<TState>
   optimistic: ReducerOptimistic<TState>
   diff: Diff<TState>
-  dispatch: Dispatch<TState, TActions, TEvents>
-  dispatchAsync: DispatchAsync<TState, TActions, TEvents>
+  dispatch: Dispatch<TState, TActions, TEvents, TUncontrolledState, TDeps>
+  dispatchAsync: DispatchAsync<
+    TState,
+    TActions,
+    TEvents,
+    TUncontrolledState,
+    TDeps
+  >
   deps: TDeps
 }
 
@@ -174,21 +185,6 @@ export type ExternalPropsFn<TExternalProps> =
   | (() => Promise<TExternalProps>)
   | null
 
-type OnPushToHistoryProps<
-  TState extends Record<string, any>,
-  TActions extends ActionShape,
-  TEvents extends EventsTuple,
-  TUncontrolledState extends Record<string, any>,
-  TDeps,
-> = {
-  history: TState[]
-  state: TState
-  transition: TransitionNullable
-  from: "dispatch" | "set" | "rerender"
-  store: SomeStore<TState, TActions, TEvents, TUncontrolledState, TDeps>
-  action: TActions
-}
-
 type RunOptimisticUpdateOnProps<TActions extends ActionShape> = {
   action: TActions
 }
@@ -196,22 +192,6 @@ type RunOptimisticUpdateOnProps<TActions extends ActionShape> = {
 type RunOptimisticUpdateOn<TActions extends ActionShape> = (
   props: RunOptimisticUpdateOnProps<TActions>
 ) => boolean | void
-
-type OnPushToHistory<
-  TState extends Record<string, any>,
-  TActions extends ActionShape,
-  TEvents extends EventsTuple,
-  TUncontrolledState extends Record<string, any>,
-  TDeps,
-> = (
-  props: OnPushToHistoryProps<
-    TState,
-    TActions,
-    TEvents,
-    TUncontrolledState,
-    TDeps
-  >
-) => TState[]
 
 type CreateStoreOptionsConfig<
   TState extends Record<string, any>,
@@ -222,6 +202,13 @@ type CreateStoreOptionsConfig<
 > = {
   runOptimisticUpdateOn?: RunOptimisticUpdateOn<TActions>
   onPushToHistory?: OnPushToHistory<
+    TState,
+    TActions,
+    TEvents,
+    TUncontrolledState,
+    TDeps
+  >
+  onCommitTransition?: OnCommitTransitionConfig<
     TState,
     TActions,
     TEvents,
@@ -267,6 +254,8 @@ export type StoreConstructorConfig<TDeps> = {
 }
 
 const BOOTSTRAP_TRANSITION = ["bootstrap"]
+const defaultOnCommitTransition = () => {}
+
 const defaultRunOptimisticUpdateOn = <TActions extends ActionShape>(
   _props: RunOptimisticUpdateOnProps<TActions>
 ) => {
@@ -345,6 +334,7 @@ export function newStoreDef<
   const {
     onPushToHistory = defaultOnPushToHistory,
     runOptimisticUpdateOn = defaultRunOptimisticUpdateOn,
+    onCommitTransition = defaultOnCommitTransition,
   } = globalConfig ?? {}
 
   // Create derivations registry if derivations are provided
@@ -356,8 +346,20 @@ export function newStoreDef<
     initialProps: RemoveFunctionProps<RemoveDollarSignProps<TInitialProps>>,
     config: StoreConstructorConfig<TDeps> = {} as StoreConstructorConfig<TDeps>
   ): SomeStore<TState, TActions, TEvents, TUncontrolledState, TDeps> {
-    type Action = ClassicAction<TState, TActions, TEvents>
-    type ActionRedispatch = ClassicActionRedispatch<TState, TActions, TEvents>
+    type Action = ClassicAction<
+      TState,
+      TActions,
+      TEvents,
+      TUncontrolledState,
+      TDeps
+    >
+    type ActionRedispatch = ClassicActionRedispatch<
+      TState,
+      TActions,
+      TEvents,
+      TUncontrolledState,
+      TDeps
+    >
     const subject = createSubject()
     const errorsStore = new ErrorsStore()
     const deps = config.deps ?? ({} as unknown as TDeps)
@@ -520,10 +522,19 @@ export function newStoreDef<
       })
 
       store.optimisticRegistry.clear(transitionKey)
+      onCommitTransition({
+        action,
+        setterOrPartialStateList: setters,
+        state: newStateFromSetters,
+        transition,
+        baseState: store.state,
+        store,
+      })
+      const pushToHistoryCb = action.onPushToHistory ?? onPushToHistory
       const [newState, newHistory] = handleNewStateToHistory({
         state: newStateFromSetters,
         getNewHistoryStack: state =>
-          onPushToHistory({
+          pushToHistoryCb({
             history: store.history,
             state,
             transition,
@@ -548,6 +559,7 @@ export function newStoreDef<
           transition,
           transitionStore: store.transitions,
           aborted: false,
+          setterOrPartialStateList: setters,
         })
       })
       subject.notify()
@@ -687,6 +699,7 @@ export function newStoreDef<
           transition,
           transitionStore: store.transitions,
           aborted: false,
+          setterOrPartialStateList: [],
         })
       })
     }
@@ -816,10 +829,11 @@ export function newStoreDef<
     }
 
     const dispatch: Met["dispatch"] = (initialAction: Action) => {
+      const when = labelWhen(new Date())
       return dispatchInternal({
         action: initialAction,
         setterOrPartialState: null,
-        when: labelWhen(new Date()),
+        when,
       })
     }
 
@@ -900,7 +914,13 @@ export function newStoreDef<
         TUncontrolledState,
         TDeps
       > = {
-        action: getSnapshotAction<TState, TEvents, TActions>(initialAction),
+        action: getSnapshotAction<
+          TState,
+          TEvents,
+          TActions,
+          TUncontrolledState,
+          TDeps
+        >(initialAction),
         meta: store.transitions.meta.get(initialAction.transition),
         transitionStore: store.transitions,
         transition: initialAction.transition,
@@ -926,6 +946,7 @@ export function newStoreDef<
                 transitionStore: store.transitions,
                 error: { code: 20 },
                 aborted: true,
+                setterOrPartialStateList: [],
               })
             }
           ),
@@ -933,7 +954,7 @@ export function newStoreDef<
         store,
       }
 
-      const rootAction = beforeDispatch(opts as any)
+      const rootAction = beforeDispatch(opts as any) as Action
 
       const transitionKey = initialAction?.transition?.join(":")
       if (transitionKey && initialAction?.onTransitionEnd) {
@@ -1011,15 +1032,16 @@ export function newStoreDef<
       } else {
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const _previousState = newState
+        const pushToHistoryCb = rootAction.onPushToHistory ?? onPushToHistory
         const [historyLatestState, newHistory] = handleNewStateToHistory({
           state: newState,
           getNewHistoryStack: state =>
-            onPushToHistory({
+            pushToHistoryCb({
               history: store.history,
               state,
               transition: null,
               from: "dispatch",
-              store,
+              store: store as any,
               action: rootAction,
             }),
         })
@@ -1073,14 +1095,15 @@ export function newStoreDef<
 
     const rerender: Met["rerender"] = () => {
       const when = labelWhen(new Date())
-      const action = { type: "noop" } as TActions
+      const action = { type: "noop" } as Action
       const actionResult = handleAction(action, {
         when,
       })
+      const pushToHistoryCb = action.onPushToHistory ?? onPushToHistory
       const [historyLatestState, newHistory] = handleNewStateToHistory({
         state: actionResult.newState,
         getNewHistoryStack: state =>
-          onPushToHistory({
+          pushToHistoryCb({
             history: store.history,
             state,
             transition: null,
@@ -1217,11 +1240,32 @@ export function newStoreDef<
                 transitionStore: store.transitions,
                 error: { code: 20 },
                 aborted: true,
+                setterOrPartialStateList: [],
               })
             },
           })
           prevState = getStateToUseOnAction(prevState, "prev")
           newState = getStateToUseOnAction(newState, "current")
+          const setReducerHandler = (
+            setterOrPartialState: SetterOrPartialState<TState>
+          ) => {
+            if (signal.aborted) return
+            props?.onSet?.(setterOrPartialState)
+            if (isSync) {
+              if (transition) {
+                const newTransitionState = updateTransitionState(
+                  transition,
+                  setterOrPartialState
+                )
+                assignObjValues(newState, newTransitionState)
+              } else {
+                applySetterOnState(setterOrPartialState, newState)
+              }
+            } else {
+              store.setState(setterOrPartialState, { transition })
+            }
+          }
+
           const dispatchReducerHandler = (action: Action) => {
             if (signal.aborted) return noop
             const sameTransition =
@@ -1266,27 +1310,60 @@ export function newStoreDef<
 
               notifyOptimistic(optimisticStateSource ?? newState)
             },
-            set: setterOrPartialState => {
-              if (signal.aborted) return
-              props?.onSet?.(setterOrPartialState)
-              if (isSync) {
-                if (transition) {
-                  const newTransitionState = updateTransitionState(
-                    transition,
-                    setterOrPartialState
-                  )
-                  assignObjValues(newState, newTransitionState)
-                } else {
-                  applySetterOnState(setterOrPartialState, newState)
-                }
-              } else {
-                store.setState(setterOrPartialState, { transition })
-              }
-            },
+            set: setReducerHandler,
             diff: createDiff(prevState, newState),
             dispatch: dispatchReducerHandler,
             dispatchAsync: async (propsAction, propsSignal) => {
-              return dispatchAsync(propsAction, propsSignal ?? signal)
+              const transition = (() => {
+                if (propsAction.transition) return propsAction.transition
+                if (action.transition) {
+                  /**
+                   * Here we're creating sub branches inside a branch.
+                   * If you create a new subbranch with the same name as the
+                   * branch that you are already in, this branch will never resolve
+                   * since it is awaiting for itself to resolve.
+                   *
+                   * I'm creating a unique id for each temporary sub branch to avoid this issue.
+                   */
+                  const hash = randomString(6)
+                  return [...action.transition, hash]
+                }
+                return rootAction.transition ?? null
+              })()
+
+              const onPushToHistory: OnPushToHistory<
+                TState,
+                TActions,
+                TEvents,
+                TUncontrolledState,
+                TDeps
+              > = (() => {
+                if (propsAction.onPushToHistory)
+                  return propsAction.onPushToHistory
+                return ({ history }) => history
+              })()
+
+              const onTransitionEnd = (
+                props: OnTransitionEndProps<TState, TEvents>
+              ) => {
+                props.setterOrPartialStateList.forEach(setterOrPartialState => {
+                  const setter = mergeSetterWithState(
+                    ensureSetter(setterOrPartialState)
+                  )
+                  setReducerHandler(setter)
+                })
+
+                return propsAction.onTransitionEnd?.(props)
+              }
+
+              const transitionAction: Action = {
+                ...propsAction,
+                transition,
+                onPushToHistory,
+                onTransitionEnd,
+              }
+
+              return dispatchAsync(transitionAction, propsSignal ?? signal)
             },
             deps,
           }

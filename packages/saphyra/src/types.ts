@@ -12,14 +12,20 @@ export type Dispatch<
   TState extends Record<string, any>,
   TActions extends ActionShape,
   TEvents extends EventsTuple,
-> = (action: ClassicAction<TState, TActions, TEvents>) => () => void
+  TUncontrolledState extends Record<string, any>,
+  TDeps,
+> = (
+  action: ClassicAction<TState, TActions, TEvents, TUncontrolledState, TDeps>
+) => () => void
 
 export type DispatchAsync<
   TState extends Record<string, any>,
   TActions extends ActionShape,
   TEvents extends EventsTuple,
+  TUncontrolledState extends Record<string, any>,
+  TDeps,
 > = (
-  action: ClassicAction<TState, TActions, TEvents>,
+  action: ClassicAction<TState, TActions, TEvents, TUncontrolledState, TDeps>,
   signal?: AbortSignal
 ) => Promise<TState>
 
@@ -27,13 +33,21 @@ export type ClassicAction<
   TState extends Record<string, any>,
   TActions extends ActionShape,
   TEvents extends EventsTuple,
-> = TActions & BaseAction<TState, TActions, TEvents>
+  TUncontrolledState extends Record<string, any>,
+  TDeps,
+> = TActions & BaseAction<TState, TActions, TEvents, TUncontrolledState, TDeps>
 
 export type ClassicActionRedispatch<
   TState extends Record<string, any>,
   TActions extends ActionShape,
   TEvents extends EventsTuple,
-> = TActions & Omit<BaseAction<TState, TActions, TEvents>, "beforeDispatch">
+  TUncontrolledState extends Record<string, any>,
+  TDeps,
+> = TActions &
+  Omit<
+    BaseAction<TState, TActions, TEvents, TUncontrolledState, TDeps>,
+    "beforeDispatch"
+  >
 
 export type HistoryExtension<TState> = {
   history: Array<TState>
@@ -170,8 +184,14 @@ export type GenericStoreMethods<
 > = {
   getState(): TState
   getOptimisticState(): TState
-  dispatch: Dispatch<TState, TActions, TEvents>
-  dispatchAsync: DispatchAsync<TState, TActions, TEvents>
+  dispatch: Dispatch<TState, TActions, TEvents, TUncontrolledState, TDeps>
+  dispatchAsync: DispatchAsync<
+    TState,
+    TActions,
+    TEvents,
+    TUncontrolledState,
+    TDeps
+  >
   setState(
     setterOrPartialState: SetterOrPartialState<TState>,
     options?: SetStateOptions
@@ -194,7 +214,10 @@ export type GenericStoreMethods<
     TDeps
   >
   completeTransition(transition: Transition, action: TActions): void
-  commitTransition(transition: TransitionNullable, action: TActions): void
+  commitTransition(
+    transition: TransitionNullable,
+    action: ClassicAction<TState, TActions, TEvents, TUncontrolledState, TDeps>
+  ): void
   handleAction(
     action: TActions,
     props: HandleActionProps<
@@ -253,13 +276,22 @@ export type ActionShape = {
 }
 
 export type BaseAction<
-  TState extends Record<string, any> = any,
-  TActions extends ActionShape = ActionShape,
-  TEvents extends EventsTuple = EventsTuple,
+  TState extends Record<string, any>,
+  TActions extends ActionShape,
+  TEvents extends EventsTuple,
+  TUncontrolledState extends Record<string, any>,
+  TDeps,
 > = {
   transition?: TransitionNullable
   onTransitionEnd?: (props: OnTransitionEndProps<TState, TEvents>) => void
   beforeDispatch?: BeforeDispatch<TState, TActions, TEvents>
+  onPushToHistory?: OnPushToHistory<
+    TState,
+    TActions,
+    TEvents,
+    TUncontrolledState,
+    TDeps
+  >
   controller?: AbortController
 }
 
@@ -282,7 +314,13 @@ export type BeforeDispatchOptions<
   /**
    * The action that is being dispatched, except the key 'beforeDispatch'
    */
-  action: ClassicActionRedispatch<TState, TActions, TEvents>
+  action: ClassicActionRedispatch<
+    TState,
+    TActions,
+    TEvents,
+    TUncontrolledState,
+    TDeps
+  >
   /**
    * The store where the transitions are being orchestrated
    */
@@ -331,7 +369,13 @@ export type BeforeDispatch<
     TUncontrolledState,
     TDeps
   >
-) => ClassicActionRedispatch<TState, TActions, TEvents> | void
+) => ClassicActionRedispatch<
+  TState,
+  TActions,
+  TEvents,
+  TUncontrolledState,
+  TDeps
+> | void
 
 export type OnTransitionEndProps<TState, TEvents extends EventsTuple> = {
   transition: Transition
@@ -341,6 +385,7 @@ export type OnTransitionEndProps<TState, TEvents extends EventsTuple> = {
   events: EventEmitter<TEvents>
   error?: unknown
   aborted?: boolean
+  setterOrPartialStateList: SetterOrPartialState<TState>[]
 }
 
 export type OnTransitionEnd<TState, TEvents extends EventsTuple> = (
@@ -533,3 +578,65 @@ export type AsyncOperation = {
   label?: string | null
   whenReadable: string
 }
+
+export type OnPushToHistoryProps<
+  TState extends Record<string, any>,
+  TActions extends ActionShape,
+  TEvents extends EventsTuple,
+  TUncontrolledState extends Record<string, any>,
+  TDeps,
+> = {
+  history: TState[]
+  state: TState
+  transition: TransitionNullable
+  from: "dispatch" | "set" | "rerender"
+  store: SomeStore<TState, TActions, TEvents, TUncontrolledState, TDeps>
+  action: TActions
+}
+
+export type OnPushToHistory<
+  TState extends Record<string, any>,
+  TActions extends ActionShape,
+  TEvents extends EventsTuple,
+  TUncontrolledState extends Record<string, any>,
+  TDeps,
+> = (
+  props: OnPushToHistoryProps<
+    TState,
+    TActions,
+    TEvents,
+    TUncontrolledState,
+    TDeps
+  >
+) => TState[]
+
+type OnCommitTransitionProps<
+  TState extends Record<string, any>,
+  TActions extends ActionShape,
+  TEvents extends EventsTuple,
+  TUncontrolledState extends Record<string, any>,
+  TDeps,
+> = {
+  action: ClassicAction<TState, TActions, TEvents, TUncontrolledState, TDeps>
+  transition: Transition
+  setterOrPartialStateList: SetterOrPartialState<TState>[]
+  store: SomeStore<TState, TActions, TEvents, TUncontrolledState, TDeps>
+  state: TState
+  baseState: TState
+}
+
+export type OnCommitTransitionConfig<
+  TState extends Record<string, any>,
+  TActions extends ActionShape,
+  TEvents extends EventsTuple,
+  TUncontrolledState extends Record<string, any>,
+  TDeps,
+> = (
+  props: OnCommitTransitionProps<
+    TState,
+    TActions,
+    TEvents,
+    TUncontrolledState,
+    TDeps
+  >
+) => void
