@@ -15,7 +15,6 @@ import { newWaterfallStore, WaterfallState, WaterfallStore, WF } from "./store"
 import { cn } from "~/lib/cn"
 import { SomeStoreGeneric } from "saphyra"
 import { BarSorters } from "./sorters"
-import { ChevronUp } from "lucide-react"
 import React from "react"
 import ReactDOM from "react-dom"
 import { cva, type VariantProps } from "class-variance-authority"
@@ -346,7 +345,10 @@ export function WaterfallTooltip({
               {["[", ...barInfo.transitionName.split(":"), "]"].map(
                 subTransition => {
                   return (
-                    <span className="bg-gray-100 border-gray-200 dark:bg-gray-600 border dark:border-gray-800 text-gray-600 dark:text-gray-200 px-1">
+                    <span
+                      key={`${barInfo.transitionName}-${subTransition}`}
+                      className="bg-gray-100 border-gray-200 dark:bg-gray-600 border dark:border-gray-800 text-gray-600 dark:text-gray-200 px-1"
+                    >
                       {subTransition}
                     </span>
                   )
@@ -792,6 +794,7 @@ import { MutableRefObject } from "react"
 import { BarType } from "./types"
 import { error } from "console"
 import { extractErrorMessage } from "~/lib/extract-error-message"
+import { ChevronUp } from "lucide-react"
 
 export const RefContext =
   createContext<MutableRefObject<HTMLDivElement | null> | null>(null)

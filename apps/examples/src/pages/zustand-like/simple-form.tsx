@@ -29,7 +29,7 @@ const createSimpleForm = newStoreDef<SimpleFormInitialProps, SimpleFormState>({
   },
   reducer({ prevState, state, action, diff, set, async, events }) {
     if (action.type === "submit") {
-      async.promise(async ctx => {
+      async().promise(async ctx => {
         const token = await createSession(state, ctx.signal)
         events.emit("got-token", token)
       })

@@ -9,14 +9,25 @@ import { EventEmitter } from "./event-emitter"
 import { Subject } from "./Subject"
 import { setImmutable } from "./fn/common"
 import { $$onDebugMode } from "./helpers/log"
+import { createAncestor } from "./utils"
 
-export type TransitionsStoreState = Record<string, AsyncOperation[]>
+export type TransitionsStoreState = {
+  transitions: Record<string, AsyncOperation[]>
+  subtransitions: Record<string, number>
+  finishes: Record<string, number>
+}
 
 export const runSuccessCallback: OnFinishTransition = ({
   transitionName,
   transitionStore,
 }) => {
   const doneCallback = transitionStore.callbacks.done.get(transitionName)
+
+  if (!doneCallback) {
+    return
+  }
+
+  transitionStore.allEvents.emit("transition-done-successfully", transitionName)
   doneCallback?.()
   transitionStore.callbacks.done.set(transitionName, null)
   transitionStore.callbacks.error.set(transitionName, null)
@@ -40,6 +51,14 @@ export class TransitionsStore extends Subject {
     done: new EventEmitter(),
     error: new EventEmitter(),
   }
+  allEvents = new EventEmitter<{
+    "start-transition": [transitionName: string]
+    "transition-aborted": [transitionName: string]
+    "transition-done": [transitionName: string]
+    "subtransition-done": [id: string]
+    "finish-done": [id: string]
+    "transition-done-successfully": [transitionName: string]
+  }>()
   meta: {
     get: (transition: TransitionNullable) => Record<string, any>
     values: Record<string, any>
@@ -49,6 +68,13 @@ export class TransitionsStore extends Subject {
     done: new Map<string, (() => void) | null>(),
     error: new Map<string, ((error: unknown) => void) | null>(),
   }
+
+  finishCallbacks = {
+    success: new Map<string, (() => void) | null>(),
+    cleanUps: {} as Record<string, Set<() => void>>,
+    error: new Map<string, ((error: unknown) => void) | null>(),
+  }
+
   cleanUpList: Record<string, Set<(error: unknown | null) => void>> = {}
 
   #shouldLog = true
@@ -58,7 +84,11 @@ export class TransitionsStore extends Subject {
     if (shouldLog !== undefined) {
       this.#shouldLog = shouldLog
     }
-    this.state = {}
+    this.state = {
+      transitions: {},
+      subtransitions: {},
+      finishes: {},
+    }
 
     this.meta = {
       get: this.getMeta.bind(this),
@@ -130,8 +160,8 @@ export class TransitionsStore extends Subject {
 
   get(transition: Transition): AsyncOperation[] {
     const key = transition.join(":")
-    this.state[key] ??= []
-    return this.state[key]
+    this.state.transitions[key] ??= []
+    return this.state.transitions[key]
   }
 
   add(
@@ -139,8 +169,11 @@ export class TransitionsStore extends Subject {
     transitionName: string,
     asyncOperation: AsyncOperation
   ): TransitionsStoreState {
-    state[transitionName] ??= []
-    state[transitionName].push(asyncOperation)
+    state.transitions[transitionName] ??= []
+    state.transitions[transitionName].push(asyncOperation)
+    if (state.transitions[transitionName].length === 1) {
+      this.allEvents.emit("start-transition", transitionName)
+    }
     return state
   }
 
@@ -151,19 +184,21 @@ export class TransitionsStore extends Subject {
   ) {
     const state = { ...this.state }
 
-    let meta = ""
-    const newState = transition.reduce((acc, key) => {
-      key = String(key)
-      if (meta !== "") key = `${meta}:${key}`
-      meta = key
-      return this.add(acc, key, asyncOperation)
-    }, state)
+    const ancestors = createAncestor<string>(transition)
+    const newState = ancestors.reduce(
+      (acc: TransitionsStoreState, ancestor: string[]) => {
+        const key = ancestor.join(":")
+        const result = this.add(acc, key, asyncOperation)
+        return result ?? acc
+      },
+      state
+    )
 
     this.setState(newState)
 
     if (this.#shouldLog) {
       const key = transition?.join(":")
-      const sub = this.state[key] ?? 0
+      const sub = this.state.transitions[key] ?? []
       $$onDebugMode(() =>
         console.log(
           `%c ${this.#prefix} k add: ${key} ${from} [${sub}]`,
@@ -191,17 +226,18 @@ export class TransitionsStore extends Subject {
     functionsToRun: Record<string, VoidFunction[]>
   ): TransitionsStoreState {
     if (!transitionName) return state
-    const oldLength = state[transitionName].length
-    state[transitionName] = state[transitionName].filter(
-      ao => ao !== asyncOperation
-    )
-    const newLength = state[transitionName].length
+    const oldLength = state.transitions[transitionName].length
+    state.transitions[transitionName] = state.transitions[
+      transitionName
+    ].filter(ao => ao !== asyncOperation)
+    const newLength = state.transitions[transitionName].length
     if (oldLength === newLength) debugger
 
-    if (state[transitionName].length <= 0) {
+    if (state.transitions[transitionName].length <= 0) {
       if (transitionName !== null) {
         functionsToRun[transitionName] ??= []
         functionsToRun[transitionName].push(() => {
+          this.allEvents.emit("transition-done", transitionName)
           this.events.done.emit(transitionName)
           options.onFinishTransition({
             transitionName,
@@ -217,7 +253,7 @@ export class TransitionsStore extends Subject {
   clear(transitionName: string | null) {
     if (!transitionName) return
     const state = { ...this.state }
-    state[transitionName] = []
+    state.transitions[transitionName] = []
 
     this.setState(state)
   }
@@ -243,10 +279,10 @@ export class TransitionsStore extends Subject {
     this.setState(newState)
     if (this.#shouldLog) {
       const key = transition?.join(":")
-      const sub = this.state[key] ?? 0
+      const sub = this.state.transitions[key] ?? []
       $$onDebugMode(() =>
         console.log(
-          `%c ${this.#prefix} k done: ${key} ${from} [${sub}]`,
+          `%c ${this.#prefix} k done: ${key} ${from} [${sub.length}]`,
           "color: turquoise"
         )
       )
@@ -256,11 +292,59 @@ export class TransitionsStore extends Subject {
       .forEach(fn => fn())
   }
 
+  setFinishes(finishes: Record<string, number>) {
+    this.state.finishes = finishes
+    this.notify()
+  }
+
+  addFinish(id: string) {
+    const finishes = { ...this.state.finishes }
+    finishes[id] ??= 0
+    finishes[id]++
+    this.setFinishes(finishes)
+  }
+
+  doneFinish(id: string) {
+    if (!(id in this.state.finishes)) {
+      throw new Error(`Finish ${id} not found`)
+    }
+    const finishes = { ...this.state.finishes }
+    finishes[id]--
+    this.setFinishes(finishes)
+    if (finishes[id] === 0) {
+      this.allEvents.emit("finish-done", id)
+    }
+  }
+
+  setSubtransitions(subtransitions: Record<string, number>) {
+    this.state.subtransitions = subtransitions
+    this.notify()
+  }
+
+  addSubtransition(id: string) {
+    const subtransitions = { ...this.state.subtransitions }
+    subtransitions[id] ??= 0
+    subtransitions[id]++
+    this.setSubtransitions(subtransitions)
+  }
+
+  doneSubtransition(id: string) {
+    if (!(id in this.state.subtransitions)) {
+      throw new Error(`Subtransition ${id} not found`)
+    }
+    const subtransitions = { ...this.state.subtransitions }
+    subtransitions[id]--
+    this.setSubtransitions(subtransitions)
+    if (subtransitions[id] === 0) {
+      this.allEvents.emit("subtransition-done", id)
+    }
+  }
+
   isHappeningUnique(transition: TransitionNullable) {
     if (!transition) return false
     const key = transition.join(":")
-    this.state[key] ??= []
-    return this.state[key].length > 0
+    this.state.transitions[key] ??= []
+    return this.state.transitions[key].length > 0
   }
 
   isHappening(transition: TransitionNullable) {

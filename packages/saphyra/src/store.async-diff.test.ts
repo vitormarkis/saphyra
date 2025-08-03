@@ -19,7 +19,7 @@ describe("async-diff", () => {
         }
 
         if (diff(["count"])) {
-          async.promise(async ({ signal }) => {
+          async().promise(async ({ signal }) => {
             await sleep(100, "", signal)
             set({ $data: String(state.count) })
           })
@@ -44,7 +44,7 @@ describe("async-diff", () => {
         }
 
         if (diff(["count"])) {
-          async.promise(async ({ signal }) => {
+          async().promise(async ({ signal }) => {
             await sleep(100, "", signal)
             set({ $data: String(state.count) })
           })
@@ -77,7 +77,7 @@ describe("async-diff", () => {
         }
 
         if (diff(["count"])) {
-          async.promise(async ({ signal }) => {
+          async().promise(async ({ signal }) => {
             await sleep(100, "", signal)
             set({ $data: String(state.count) })
           })
@@ -110,7 +110,7 @@ describe("async-diff", () => {
         }
 
         if (diff(["count"])) {
-          async.promise(async ({ signal }) => {
+          async().promise(async ({ signal }) => {
             await sleep(100, "", signal)
             dispatch({ type: "set-data" })
           })

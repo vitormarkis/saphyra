@@ -52,7 +52,7 @@ const newPokemonStore = newStoreDef<
         `%c 66- ${prefix}-pokemon id changed, firing async ${++count}`,
         "color: fuchsia"
       )
-      async.promise(async ({ signal }) => {
+      async().promise(async ({ signal }) => {
         await sleep(1000, "", signal)
         const pokemon = await getPokemon({
           id: state.currentPokemonId,

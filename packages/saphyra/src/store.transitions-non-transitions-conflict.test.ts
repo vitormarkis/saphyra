@@ -14,7 +14,7 @@ describe("should merge states when resolve transition", () => {
         }
 
         if (action.type === "hover") {
-          async.promise(async () => {
+          async().promise(async () => {
             await new Promise(res => setTimeout(res, 1))
             dispatch({ type: "increment" })
           })
@@ -38,7 +38,7 @@ describe("should merge states when resolve transition", () => {
         }
 
         if (action.type === "increment") {
-          async.promise(async () => {
+          async().promise(async () => {
             await new Promise(res => setTimeout(res, 1))
             dispatch({ type: "increment-sync" })
           })

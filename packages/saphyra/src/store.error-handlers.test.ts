@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test, vi } from "vitest"
 import { newStoreDef } from "./store"
 import { sleep } from "./fn/common"
-import { Async, StoreErrorHandler } from "./types"
+import { StoreErrorHandler } from "./types"
 import { noop } from "./fn/noop"
 
 const createTestStoreWithReducerError = () => {
@@ -22,7 +22,7 @@ const createTestStoreWithAsyncPromiseError = () => {
   return newStoreDef({
     reducer({ state, action, set, async }) {
       if (action.type === "async-promise-error") {
-        async.promise(async ({ signal }) => {
+        async().promise(async ({ signal }) => {
           await sleep(100, undefined, signal)
           throw new Error("Error in async promise")
         })
@@ -39,7 +39,7 @@ const createTestStoreWithAsyncTimerError = () => {
   return newStoreDef({
     reducer({ state, action, set, async }) {
       if (action.type === "async-timer-error") {
-        async.timer(() => {
+        async().timer(() => {
           throw new Error("Error in async timer")
         }, 100)
       }
@@ -84,7 +84,7 @@ const createTestStoreWithNestedAsyncError = () => {
   return newStoreDef({
     reducer({ state, action, set, async, dispatch }) {
       if (action.type === "trigger-nested-error") {
-        async.promise(async ({ signal }) => {
+        async().promise(async ({ signal }) => {
           await sleep(50, undefined, signal)
           dispatch({
             type: "nested-async-error",
@@ -92,7 +92,7 @@ const createTestStoreWithNestedAsyncError = () => {
         })
       }
       if (action.type === "nested-async-error") {
-        async.promise(async ({ signal }) => {
+        async().promise(async ({ signal }) => {
           await sleep(50, undefined, signal)
           throw new Error("Error in nested async operation")
         })
@@ -159,7 +159,7 @@ describe("Error handlers are called in all user land code scenarios", () => {
   })
 
   describe("Async promise errors", () => {
-    test("should call error handler when async.promise throws", async () => {
+    test("should call error handler when async().promise throws", async () => {
       const createStore = createTestStoreWithAsyncPromiseError()
       const store = createStore(
         { count: 0 },
@@ -186,7 +186,7 @@ describe("Error handlers are called in all user land code scenarios", () => {
       const createStore = newStoreDef({
         reducer({ state, action, set: _set, async }) {
           if (action.type === "async-promise-reject") {
-            async.promise(() => {
+            async().promise(() => {
               return Promise.reject(new Error("Promise rejected"))
             })
           }
@@ -216,7 +216,7 @@ describe("Error handlers are called in all user land code scenarios", () => {
   })
 
   describe("Async timer errors", () => {
-    test("should call error handler when async.timer callback throws", async () => {
+    test("should call error handler when async().timer callback throws", async () => {
       const createStore = createTestStoreWithAsyncTimerError()
       const store = createStore(
         { count: 0 },
@@ -243,12 +243,12 @@ describe("Error handlers are called in all user land code scenarios", () => {
       const createStore = newStoreDef({
         reducer({ state, action, set: _set, async }) {
           if (action.type === "timer-string-error") {
-            async.timer(() => {
+            async().timer(() => {
               throw "String error"
             }, 100)
           }
           if (action.type === "timer-object-error") {
-            async.timer(() => {
+            async().timer(() => {
               throw { code: 500, message: "Object error" }
             }, 100)
           }
@@ -431,7 +431,7 @@ describe("Error handlers are called in all user land code scenarios", () => {
         const createStore = newStoreDef({
           reducer({ state, action, async }) {
             if (action.type === "async-action") {
-              async[asyncType as keyof Async](async () => {})
+              async()[asyncType as "promise" | "timer"](async () => {})
             }
             return state
           },

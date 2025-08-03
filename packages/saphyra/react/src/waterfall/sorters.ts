@@ -28,7 +28,7 @@ export const barSorters = {
   transitionName: [
     {
       name: "default",
-      sorter: null,
+      sorter: null as BarSort | null,
     } as const,
     {
       name: "ascending",
@@ -42,7 +42,7 @@ export const barSorters = {
   startedAt: [
     {
       name: "default",
-      sorter: null,
+      sorter: null as BarSort | null,
     } as const,
     {
       name: "ascending",

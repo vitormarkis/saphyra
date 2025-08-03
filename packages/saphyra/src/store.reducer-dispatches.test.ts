@@ -22,7 +22,7 @@ describe("should run reducer dispatch", () => {
     const newStore = newStoreDefTest({
       reducer({ action, state, set, dispatch, async }) {
         if (action.type === "increment") {
-          async.promise(async () => {
+          async().promise(async () => {
             await new Promise(res => setTimeout(res, 1))
             set({ count: 1 })
           })
@@ -109,7 +109,7 @@ describe("should run reducer dispatch", () => {
         }
 
         if (action.type === "increment") {
-          async.timer(() => {
+          async().timer(() => {
             dispatch({ type: "increment-sync" })
             dispatch({ type: "increment-sync" })
           })
@@ -139,7 +139,7 @@ describe("should run reducer dispatch", () => {
         }
 
         if (action.type === "increment") {
-          async.timer(() => {
+          async().timer(() => {
             dispatch({ type: "increment-sync" })
           })
         }

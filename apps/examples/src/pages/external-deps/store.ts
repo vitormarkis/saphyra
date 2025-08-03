@@ -107,7 +107,7 @@ export const newPostsStore = newStoreDef<
         body: action.comment,
         postId: action.postId,
       }
-      async.promise(async ctx => {
+      async().promise(async ctx => {
         await deps.placeComment(newComment, action.postId, ctx.signal)
 
         /** [external-deps.react-query]
@@ -133,18 +133,16 @@ export const newPostsStore = newStoreDef<
             : [...state.likedPosts, action.postId],
         }
       })
-      const label = `Like post [${action.postId}]`
-      async.promise(
-        async ctx => {
+      async()
+        .setName(["like-post", action.postId])
+        .promise(async ctx => {
           const likedPosts = await deps.likePost(
             state.likedPosts,
             action.postId,
             ctx.signal
           )
           set({ likedPosts })
-        },
-        { label }
-      )
+        })
     }
 
     return state
