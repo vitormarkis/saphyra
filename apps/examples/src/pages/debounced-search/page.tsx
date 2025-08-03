@@ -5,12 +5,9 @@ import { CenteredSpinner } from "~/components/CenteredSpinner"
 import { extractErrorMessage } from "~/lib/extract-error-message"
 import { CenteredErrorUnknown } from "~/components/CenteredError"
 import { useCallback, useState, useEffect } from "react"
-import {
-  createStoreUtils,
-  useBootstrapError,
-  WaterfallDevtools,
-} from "saphyra/react"
+import { createStoreUtils, useBootstrapError } from "saphyra/react"
 import { queryClient } from "~/query-client"
+import { Waterfall } from "~/devtools/waterfall"
 
 type DebouncedSearchEvents = {}
 
@@ -132,7 +129,6 @@ export function DebouncedSearchView({}: DebouncedSearchViewProps) {
         type: "change-name",
         name: newQuery,
         transition: ["debounced-search", "name"],
-        $updatesCount: "multiple",
         beforeDispatch({ transition, createAsync, action, abort, store }) {
           // abort(transition)
           // return action
@@ -272,10 +268,9 @@ export function DebouncedSearchView({}: DebouncedSearchViewProps) {
           ))}
         </div>
         <div className="relative flex flex-col gap-4 py-4 overflow-y-scroll basis-0 grow h-full p-2 rounded-md border">
-          <WaterfallDevtools
+          <Waterfall
             store={debouncedSearch}
             extractErrorMessage={extractErrorMessage}
-            buttonPosition="bottom-left"
           />
         </div>
       </div>

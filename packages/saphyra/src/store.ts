@@ -955,6 +955,7 @@ export function newStoreDef<
       }
 
       const rootAction = beforeDispatch(opts as any) as Action
+      asyncOperations.forEach(asyncOperation => asyncOperation.fn?.())
 
       const transitionKey = initialAction?.transition?.join(":")
       if (transitionKey && initialAction?.onTransitionEnd) {
