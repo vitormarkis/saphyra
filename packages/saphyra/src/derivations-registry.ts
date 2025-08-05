@@ -25,7 +25,7 @@ export class DerivationsRegistry<TState> {
     key: string
   ): CachedGetter<TState, any> | undefined {
     const stateTypeGetters = this.getters.get(stateType)
-    if (!stateTypeGetters) {
+    if (!stateTypeGetters || isEmptyMap(stateTypeGetters)) {
       // For transition states, create a new map if it doesn't exist
       if (!stateType.startsWith("transition:")) {
         return undefined
@@ -90,4 +90,8 @@ export class DerivationsRegistry<TState> {
     const committedGetters = this.getters.get("committed")
     return committedGetters ? Array.from(committedGetters.keys()) : []
   }
+}
+
+function isEmptyMap(map: Map<string, any>): boolean {
+  return map.size === 0
 }
