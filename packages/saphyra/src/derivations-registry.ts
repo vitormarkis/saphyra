@@ -19,6 +19,7 @@ export class DerivationsRegistry<TState> {
       this.getters.get("committed")!.set(key, getter)
       this.getters.get("optimistic")!.set(key, getter)
     })
+    this.derivations = derivations
   }
 
   getGetter(
