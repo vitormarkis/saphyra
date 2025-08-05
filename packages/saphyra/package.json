@@ -1,7 +1,7 @@
 {
   "name": "saphyra",
   "description": "A tool for creating declarative stores and managing state that embraces async behavior.",
-  "version": "0.9.0-beta.4",
+  "version": "0.9.1-beta.1",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.mjs",

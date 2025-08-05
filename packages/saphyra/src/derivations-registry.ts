@@ -4,6 +4,7 @@ import { CachedGetter } from "./cached-getter"
 export class DerivationsRegistry<TState> {
   private getters: Map<string, Map<string, CachedGetter<TState, any>>> =
     new Map()
+  private derivations: DerivationsConfig<TState>
 
   constructor(derivations: DerivationsConfig<TState>) {
     // Initialize getters for each state type
@@ -38,21 +39,24 @@ export class DerivationsRegistry<TState> {
 
   getOrCreateGetter(
     stateType: "committed" | "optimistic" | string,
-    key: string,
-    config: DerivationConfig<TState, any[], any>
+    key: string
   ): CachedGetter<TState, any> {
     let stateTypeGetters = this.getters.get(stateType)
-    if (!stateTypeGetters) {
+    const isTransition = !stateTypeGetters || isEmptyMap(stateTypeGetters)
+    if (isTransition) {
       stateTypeGetters = new Map()
       this.getters.set(stateType, stateTypeGetters)
+
+      Object.entries(this.derivations).forEach(([key, config]) => {
+        const getter = new CachedGetter(
+          config as DerivationConfig<TState, any[], any>
+        )
+        stateTypeGetters.set(key, getter)
+      })
     }
 
-    let getter = stateTypeGetters.get(key)
-    if (!getter) {
-      getter = new CachedGetter(config)
-      stateTypeGetters.set(key, getter)
-    }
-
+    const getter = stateTypeGetters.get(key)
+    if (!getter) debugger
     return getter
   }
 
@@ -63,7 +67,7 @@ export class DerivationsRegistry<TState> {
     const derivationKeys = this.getDerivationKeys()
 
     derivationKeys.forEach(key => {
-      const getter = this.getGetter(stateType, key)
+      const getter = this.getOrCreateGetter(stateType, key)
       if (getter) {
         // @ts-expect-error key is keyof of state
         state[key] = () => getter.get(state)
