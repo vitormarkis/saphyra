@@ -86,7 +86,7 @@ export class OptimisticRegistry<TState> {
 
 type SettersRegistry<TState> = Record<
   string,
-  Array<SetterOrPartialState<TState>>
+  Record<string, Array<SetterOrPartialState<TState>>>
 >
 
 export type KeyAbort = `abort::${string}`

@@ -72,12 +72,46 @@ export const newStore = newStoreDef<
   },
 })
 
+/**
+ * Helper function to extract and sort setters from the nested settersRegistry structure.
+ * Returns a flat array of setters ordered by when timestamp.
+ */
+function getOrderedSettersFromRegistry(
+  settersRegistry: Record<string, Record<string, Array<any>>>,
+  transitionKey: string
+): Array<any> {
+  const settersMap = settersRegistry[transitionKey] ?? {}
+
+  /**
+   * Converts a 'when' label back to a sortable timestamp
+   * Format: "30m_45s_123ms" -> numeric timestamp for sorting
+   */
+  function whenToTimestamp(when: string): number {
+    const [minutePart, secondPart, millisecondPart] = when.split("_")
+    const minutes = parseInt(minutePart.replace("m", ""), 10)
+    const seconds = parseInt(secondPart.replace("s", ""), 10)
+    const milliseconds = parseInt(millisecondPart.replace("ms", ""), 10)
+
+    // Create a sortable number: minutes * 60000 + seconds * 1000 + milliseconds
+    return minutes * 60000 + seconds * 1000 + milliseconds
+  }
+
+  // Flatten all setters and sort by when timestamp
+  return Object.entries(settersMap)
+    .sort(([whenA], [whenB]) => whenToTimestamp(whenA) - whenToTimestamp(whenB))
+    .flatMap(([, setters]) => setters)
+}
+
 export function getStoreTransitionInfoShallowCopy(
   store: SomeStoreGeneric,
   transitionName: string
 ) {
   const controller = store.transitions.controllers.values[transitionName]
-  const setters = store.settersRegistry[transitionName]
+  const setters = getOrderedSettersFromRegistry(
+    store.settersRegistry,
+    transitionName
+  )
+
   const doneCallback = store.transitions.callbacks.done.get(transitionName)
   const errorCallback = store.transitions.callbacks.error.get(transitionName)
   const transitionsFromStore = store.transitions.state.transitions
@@ -87,7 +121,7 @@ export function getStoreTransitionInfoShallowCopy(
 
   return {
     controller,
-    setters: setters ? [...setters] : setters,
+    setters: setters.length > 0 ? [...setters] : undefined,
     doneCallback: typeof doneCallback === "function" ? doneCallback : null,
     errorCallback: typeof errorCallback === "function" ? errorCallback : null,
     transitions,

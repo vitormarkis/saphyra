@@ -282,6 +282,34 @@ const defaultOnPushToHistory = <
   return [...history, state]
 }
 
+/**
+ * Converts a 'when' label back to a sortable timestamp
+ * Format: "30m_45s_123ms" -> numeric timestamp for sorting
+ */
+function whenToTimestamp(when: string): number {
+  const [minutePart, secondPart, millisecondPart] = when.split("_")
+  const minutes = parseInt(minutePart.replace("m", ""), 10)
+  const seconds = parseInt(secondPart.replace("s", ""), 10)
+  const milliseconds = parseInt(millisecondPart.replace("ms", ""), 10)
+
+  // Create a sortable number: minutes * 60000 + seconds * 1000 + milliseconds
+  return minutes * 60000 + seconds * 1000 + milliseconds
+}
+
+function getOrderedSettersFromRegistry<TState>(
+  settersRegistry: Record<
+    string,
+    Record<string, Array<SetterOrPartialState<TState>>>
+  >,
+  transitionKey: string
+): Array<SetterOrPartialState<TState>> {
+  const settersMap = settersRegistry[transitionKey] ?? {}
+
+  return Object.entries(settersMap)
+    .sort(([whenA], [whenB]) => whenToTimestamp(whenA) - whenToTimestamp(whenB))
+    .flatMap(([, setters]) => setters)
+}
+
 export function newStoreDef<
   TInitialProps extends Record<string, any>,
   TState extends Record<string, any> = TInitialProps,
@@ -491,8 +519,12 @@ export function newStoreDef<
         throw errorNoTransition()
       }
       const transitionKey = transition.join(":")
-      const setters = store.settersRegistry[transitionKey] ?? []
-      if (!setters) {
+      const setters = getOrderedSettersFromRegistry(
+        store.settersRegistry,
+        transitionKey
+      )
+
+      if (!setters || setters.length === 0) {
         $$onDevMode(() =>
           console.log(
             "No setters found for this transition. It's most likely you didn't use the `set` function in your reducer."
@@ -514,7 +546,7 @@ export function newStoreDef<
 
       store.settersRegistry = {
         ...store.settersRegistry,
-        [transitionKey]: [],
+        [transitionKey]: {},
       }
       updateTransitionState(transition, null)
       store.errors.setState({
@@ -1203,6 +1235,8 @@ export function newStoreDef<
       const { createAsync = defaultInnerCreateAsync } = props ?? {}
 
       const transition = rootAction.transition
+      // Get when from props (created at dispatch time)
+      const { when: dispatchWhen } = props
       const controller = ensureAbortController({
         transition: transition ?? [GENERAL_TRANSITION],
         controller: rootAction.controller,
@@ -1254,15 +1288,18 @@ export function newStoreDef<
             props?.onSet?.(setterOrPartialState)
             if (isSync) {
               if (transition) {
+                // For synchronous calls, use the dispatch when
                 const newTransitionState = updateTransitionState(
                   transition,
-                  setterOrPartialState
+                  setterOrPartialState,
+                  dispatchWhen
                 )
                 assignObjValues(newState, newTransitionState)
               } else {
                 applySetterOnState(setterOrPartialState, newState)
               }
             } else {
+              // For asynchronous calls, let updateTransitionState create its own when
               store.setState(setterOrPartialState, { transition })
             }
           }
@@ -1432,24 +1469,43 @@ export function newStoreDef<
 
     const updateTransitionState = (
       transition: Transition,
-      setterOrPartialState: SetterOrPartialState<TState> | null
+      setterOrPartialState: SetterOrPartialState<TState> | null,
+      when?: string
     ): TState | null => {
       const transitionKey = transition.join(":")
 
       if (setterOrPartialState) {
+        const currentWhen = when ?? labelWhen(new Date())
+
+        // Ensure transition key exists
+        if (!store.settersRegistry[transitionKey]) {
+          store.settersRegistry[transitionKey] = {}
+        }
+
+        // Ensure when key exists
+        if (!store.settersRegistry[transitionKey][currentWhen]) {
+          store.settersRegistry[transitionKey][currentWhen] = []
+        }
+
         store.settersRegistry = {
           ...store.settersRegistry,
-          [transitionKey]: [
-            ...(store.settersRegistry[transitionKey] ?? []),
-            setterOrPartialState,
-          ],
+          [transitionKey]: {
+            ...store.settersRegistry[transitionKey],
+            [currentWhen]: [
+              ...store.settersRegistry[transitionKey][currentWhen],
+              setterOrPartialState,
+            ],
+          },
         }
       }
 
       let returningState: TState | null = null
-      const setters = store.settersRegistry[transitionKey] ?? []
+      const sortedSetters = getOrderedSettersFromRegistry(
+        store.settersRegistry,
+        transitionKey
+      )
 
-      const shouldClear = setters.length === 0
+      const shouldClear = sortedSetters.length === 0
 
       if (shouldClear) {
         store.transitionsState.setState({
