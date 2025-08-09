@@ -4,6 +4,7 @@ import { CachedGetter } from "./cached-getter"
 export class DerivationsRegistry<TState> {
   private getters: Map<string, Map<string, CachedGetter<TState, any>>> =
     new Map()
+  private derivations: DerivationsConfig<TState>
 
   constructor(derivations: DerivationsConfig<TState>) {
     // Initialize getters for each state type
@@ -18,14 +19,15 @@ export class DerivationsRegistry<TState> {
       this.getters.get("committed")!.set(key, getter)
       this.getters.get("optimistic")!.set(key, getter)
     })
+    this.derivations = derivations
   }
 
   getGetter(
     stateType: "committed" | "optimistic" | string,
     key: string
   ): CachedGetter<TState, any> | undefined {
-    const stateTypeGetters = this.getters.get(stateType)
-    if (!stateTypeGetters) {
+    const stateTypeGetters = this.getters.get(stateType)!
+    if (!stateTypeGetters || isEmptyMap(stateTypeGetters)) {
       // For transition states, create a new map if it doesn't exist
       if (!stateType.startsWith("transition:")) {
         return undefined
@@ -38,21 +40,27 @@ export class DerivationsRegistry<TState> {
 
   getOrCreateGetter(
     stateType: "committed" | "optimistic" | string,
-    key: string,
-    config: DerivationConfig<TState, any[], any>
+    key: string
   ): CachedGetter<TState, any> {
-    let stateTypeGetters = this.getters.get(stateType)
-    if (!stateTypeGetters) {
+    let stateTypeGetters = this.getters.get(stateType)!
+    const isTransition = !stateTypeGetters || isEmptyMap(stateTypeGetters)
+    if (isTransition) {
       stateTypeGetters = new Map()
       this.getters.set(stateType, stateTypeGetters)
+
+      Object.entries(this.derivations).forEach(([key, config]) => {
+        const getter = new CachedGetter(
+          config as DerivationConfig<TState, any[], any>
+        )
+        stateTypeGetters.set(key, getter)
+      })
     }
 
-    let getter = stateTypeGetters.get(key)
+    const getter = stateTypeGetters.get(key)
     if (!getter) {
-      getter = new CachedGetter(config)
-      stateTypeGetters.set(key, getter)
+      debugger
+      throw new Error(`Getter for ${key} not found`)
     }
-
     return getter
   }
 
@@ -63,7 +71,7 @@ export class DerivationsRegistry<TState> {
     const derivationKeys = this.getDerivationKeys()
 
     derivationKeys.forEach(key => {
-      const getter = this.getGetter(stateType, key)
+      const getter = this.getOrCreateGetter(stateType, key)
       if (getter) {
         // @ts-expect-error key is keyof of state
         state[key] = () => getter.get(state)
@@ -90,4 +98,8 @@ export class DerivationsRegistry<TState> {
     const committedGetters = this.getters.get("committed")
     return committedGetters ? Array.from(committedGetters.keys()) : []
   }
+}
+
+function isEmptyMap(map: Map<string, any>): boolean {
+  return map.size === 0
 }
