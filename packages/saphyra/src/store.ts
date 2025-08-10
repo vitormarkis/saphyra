@@ -1181,6 +1181,7 @@ export function newStoreDef<
       const setter = ensureSetter(setterOrPartialState)
       const stateFromSetter = setter(state)
       assignObjValues(state, stateFromSetter)
+      noop()
     }
 
     const handleAction = (
@@ -1363,6 +1364,8 @@ export function newStoreDef<
                 onTransitionEnd,
               }
 
+              initiateSubBranchState(store, transition, "is-sub-transition")
+
               return dispatchAsync(transitionAction, propsSignal ?? signal)
             },
             deps,
@@ -1457,8 +1460,13 @@ export function newStoreDef<
         return store.state
       }
 
+      const [parentTransition, subTransition] =
+        getTransitionOrSubBranch(transition)
       const newState = cloneObj(
-        store.transitionsState.get(transition) ?? store.state
+        store.transitionsState.get(parentTransition) ??
+          (subTransition
+            ? store.transitionsState.get(subTransition)
+            : store.state)
       )
       if (setterOrPartialState) {
         applySetterOnState(setterOrPartialState, newState)
@@ -1884,8 +1892,41 @@ const getTransitionState = (
     const parentTransitionKey = transition.join(":")
     const parentTransitionState =
       store.transitionsState.state[parentTransitionKey]
-    if (parentTransitionState) return cloneObj(parentTransitionState)
+    if (parentTransitionState) {
+      const clonedParentTransitionState = cloneObj(parentTransitionState)
+      store.transitionsState.setState({
+        [parentTransitionKey]: clonedParentTransitionState,
+      })
+      return clonedParentTransitionState
+    }
   }
 
-  return store.state
+  return cloneObj(store.state)
+}
+
+function getTransitionOrSubBranch(transition: Transition) {
+  const parentTransition = [...transition]
+
+  const last = parentTransition.pop()
+  const isSubBranch = String(last).startsWith(SUB_BRANCH_PREFIX)
+  if (isSubBranch) {
+    return [transition, parentTransition] as const
+  }
+
+  return [transition, null] as const
+}
+
+function initiateSubBranchState(
+  store: SomeStoreGeneric,
+  transition: Transition,
+  _guard: "is-sub-transition"
+) {
+  const [branchTransition, parentTransition] =
+    getTransitionOrSubBranch(transition)
+
+  const parentState = getTransitionState(store, parentTransition)
+  const branchTransitionKey = branchTransition.join(":")
+  store.transitionsState.setState({
+    [branchTransitionKey]: parentState,
+  })
 }

@@ -54,7 +54,7 @@ describe("diff detection pattern", () => {
 
         if (action.type === "increment-async") {
           async().promise(async () => {
-            await Promise.resolve()
+            await new Promise(resolve => setTimeout(resolve, 1))
             dispatch({ type: "increment" })
           })
         }
@@ -64,10 +64,12 @@ describe("diff detection pattern", () => {
     })
 
     const store = newStore({ count: 0 })
-    Object.assign(globalThis, { store })
+    expect(store.history).toStrictEqual([{ count: 0 }])
 
-    store.dispatch({ type: "increment-batch", transition: ["increment-batch"] })
-    await store.waitFor(["increment-batch"])
+    await store.dispatchAsync({
+      type: "increment-batch",
+      transition: ["increment-batch"],
+    })
 
     expect(store.history).toStrictEqual([
       {
