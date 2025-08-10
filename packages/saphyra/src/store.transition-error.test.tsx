@@ -83,12 +83,8 @@ test("should handle transition error gracefully", async () => {
   expect(spy_completeTransition).toHaveBeenCalledTimes(0)
 
   expect(info_after_error.setters).toStrictEqual({}) // empty because it never reachs the onSuccess
-  expect(info_after_error.doneCallbackList).toStrictEqual(
-    new Map([["increment", null]])
-  )
-  expect(info_after_error.errorCallbackList).toStrictEqual(
-    new Map([["increment", null]])
-  )
+  expect(info_after_error.doneCallbackList).toStrictEqual(new Map())
+  expect(info_after_error.errorCallbackList).toStrictEqual(new Map())
   expect(info_after_error.transitions["increment"]).toBeUndefined()
   expect(info_after_error.state).toEqual(expect.objectContaining({ count: 0 }))
 

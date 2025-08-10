@@ -64,6 +64,7 @@ export class TransitionsStore extends Subject {
   }>()
   meta: {
     get: (transition: TransitionNullable) => Record<string, any>
+    set: (transition: TransitionNullable, meta: Record<string, any>) => void
     values: Record<string, any>
     delete: (transition: string) => void
   }
@@ -96,6 +97,7 @@ export class TransitionsStore extends Subject {
 
     this.meta = {
       get: this.getMeta.bind(this),
+      set: this.setMeta.bind(this),
       values: {},
       delete: (transition: string) => {
         this.meta.values = deleteImmutably(this.meta.values, transition)
@@ -113,17 +115,23 @@ export class TransitionsStore extends Subject {
     }
   }
 
+  private setMeta(transition: TransitionNullable, meta: Record<string, any>) {
+    if (!transition) return
+    const key = transition.join(":")
+    this.meta.values[key] = meta
+  }
+
   private getMeta(transition: TransitionNullable) {
     if (!transition) return {} // TODO
     const key = transition.join(":")
-    this.meta.values[key] ??= {}
+    // this.meta.values[key] ??= {}
     return this.meta.values[key]
   }
 
   cleanup(transitionName: string | null) {
     if (!transitionName) return
-    this.callbacks.done.set(transitionName, null)
-    this.callbacks.error.set(transitionName, null)
+    this.callbacks.done.delete(transitionName)
+    this.callbacks.error.delete(transitionName)
   }
 
   emitError(transition: Transition, error: unknown) {
@@ -131,8 +139,8 @@ export class TransitionsStore extends Subject {
     const errorCallback = this.callbacks.error.get(transitionName)
     errorCallback?.(error)
 
-    this.callbacks.done.set(transitionName, null)
-    this.callbacks.error.set(transitionName, null)
+    this.callbacks.done.delete(transitionName)
+    this.callbacks.error.delete(transitionName)
   }
 
   setController(

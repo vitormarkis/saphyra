@@ -57,7 +57,6 @@ import {
   isSetter,
 } from "./helpers/utils"
 import { defaultErrorHandler } from "./default-error-handler"
-import { setImmutable } from "./fn/common"
 import { mockAsync } from "./helpers/mock-async"
 import { mockEventEmitter } from "./helpers/mock-event-emitter"
 import { $$onDevMode, $$onDebugMode } from "./helpers/log"
@@ -515,12 +514,7 @@ export function newStoreDef<
         cloneObj(store.state)
       )
 
-      store.settersRegistry = deleteImmutably(
-        store.settersRegistry,
-        transitionKey
-      )
       clearTransitionState(transition)
-      store.errors.delete(transitionKey)
 
       store.optimisticRegistry.clear(transitionKey)
       store.transitions.controllers.clear(transitionKey)
@@ -560,24 +554,13 @@ export function newStoreDef<
 
       store.historyRedo = []
 
-      const onTransitionEndCallbacks =
-        store.onTransitionEndCallbacks[transitionKey] ?? new Set()
-      onTransitionEndCallbacks.forEach(onTransitionEnd => {
-        onTransitionEndCallbacks.delete(onTransitionEnd)
-        onTransitionEnd({
-          events: store.events,
-          meta: store.transitions.meta.get(transition),
-          state: newState,
-          transition,
-          transitionStore: store.transitions,
-          aborted: false,
-          setterOrPartialStateList: setters,
-        })
+      performOnTransitionEndCallbacks({
+        newState,
+        setters,
+        store,
+        transition,
+        error: null,
       })
-      store.onTransitionEndCallbacks = deleteImmutably(
-        store.onTransitionEndCallbacks,
-        transitionKey
-      )
       subject.notify()
     }
 
@@ -625,12 +608,22 @@ export function newStoreDef<
       if (transitionKey === "bootstrap") {
         errorsStore.setState({ bootstrap: error })
       }
-      store.settersRegistry = setImmutable(
-        store.settersRegistry,
-        transitionKey,
-        []
-      )
       clearTransitionState(transition)
+      store.errors.delete(transitionKey)
+
+      store.optimisticRegistry.clear(transitionKey)
+      store.transitions.controllers.clear(transitionKey)
+      if (
+        store.transitions.cleanUpList[transitionKey] ||
+        store.transitions.cleanUpList[transitionKey]?.size === 0
+      ) {
+        store.transitions.cleanUpList = deleteImmutably(
+          store.transitions.cleanUpList,
+          transitionKey
+        )
+      }
+      derivationsRegistry?.clear(transition)
+      store.transitions.meta.delete(transitionKey)
 
       if (isNewActionError(error)) {
         noop()
@@ -644,6 +637,14 @@ export function newStoreDef<
       // )
       store.notify()
       $$onDebugMode(() => console.log("66- clearing optimistic"))
+
+      performOnTransitionEndCallbacks({
+        newState: store.state,
+        setters: [],
+        store,
+        transition,
+        error,
+      })
 
       const newActionAbort = isNewActionError(error)
       if (!newActionAbort) {
@@ -920,6 +921,7 @@ export function newStoreDef<
       })
 
       const asyncOperations: AsyncOperation[] = []
+      store.transitions.meta.set(initialAction.transition, {})
       const opts: BeforeDispatchOptions<
         TState,
         TActions,
@@ -1953,4 +1955,41 @@ function initiateSubBranchState(
   store.transitionsState.setState({
     [branchTransitionKey]: parentState,
   })
+}
+
+type PerformOnTransitionEndCallbacksProps<TState> = {
+  store: SomeStoreGeneric
+  transition: Transition
+  newState: TState
+  setters: SetterOrPartialState<TState>[]
+  error: unknown | null
+}
+
+function performOnTransitionEndCallbacks<TState>({
+  newState,
+  setters,
+  store,
+  transition,
+  error,
+}: PerformOnTransitionEndCallbacksProps<TState>) {
+  const transitionKey = transition.join(":")
+  const onTransitionEndCallbacks =
+    store.onTransitionEndCallbacks[transitionKey] ?? new Set()
+  onTransitionEndCallbacks.forEach(onTransitionEnd => {
+    onTransitionEndCallbacks.delete(onTransitionEnd)
+    onTransitionEnd({
+      events: store.events,
+      meta: store.transitions.meta.get(transition),
+      state: newState,
+      transition,
+      transitionStore: store.transitions,
+      aborted: false,
+      setterOrPartialStateList: setters,
+      error,
+    })
+  })
+  store.onTransitionEndCallbacks = deleteImmutably(
+    store.onTransitionEndCallbacks,
+    transitionKey
+  )
 }

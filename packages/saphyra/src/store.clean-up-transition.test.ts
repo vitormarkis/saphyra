@@ -2,7 +2,7 @@ import { describe, expect, test } from "vitest"
 import { newStoreDefTest } from "./test.utils"
 
 describe("ensure proper transition cleanup", () => {
-  test.only("success", async () => {
+  test("success", async () => {
     const newStore = newStoreDefTest({
       derivations: {
         getCount: {
@@ -90,12 +90,23 @@ describe("ensure proper transition cleanup", () => {
     })
 
     const store = newStore({ count: 0 })
-    await store.dispatchAsync({
-      type: "increment",
-      transition: ["incrementkey"],
-    })
+    await store
+      .dispatchAsync({
+        type: "increment",
+        transition: ["incrementkey"],
+      })
+      .catch(() => {})
+
+    // expect error
+    expect(Object.keys(store.errors.state)).to.toContain("incrementkey")
+
+    // ---
 
     expect(Object.keys(store.settersRegistry)).to.not.toContain("incrementkey")
+    expect(store.transitions.callbacks.done.keys()).to.not.toContain(
+      "incrementkey"
+    )
+
     expect(store.transitions.callbacks.error.keys()).to.not.toContain(
       "incrementkey"
     )
@@ -104,33 +115,32 @@ describe("ensure proper transition cleanup", () => {
     expect(Object.keys(store.transitionsState.state)).to.not.toContain(
       "incrementkey"
     )
+    // expect(Object.keys(store.transitionsState.state)).to.not.toContain(
+    //   "incrementkey"
+    // )
     expect(Object.keys(store.transitionsState.prevState)).to.not.toContain(
       "incrementkey"
     )
     expect(Object.keys(store.transitions.state.transitions)).to.not.toContain(
       "incrementkey"
     )
-    expect(Object.keys(store.transitions.meta.values)).to.not.toContain(
-      "incrementkey"
-    )
     expect(store.transitions.controllers.getKeys()).to.not.toContain(
-      "incrementkey"
-    )
-    expect(store.transitions.callbacks.done.keys()).to.not.toContain(
       "incrementkey"
     )
     expect(Object.keys(store.transitions.cleanUpList)).to.not.toContain(
       "incrementkey"
     )
     expect(
-      store.transitions.allEvents.handlers["subtransition-done"].size
-    ).toBe(0)
+      store.transitions.allEvents.handlers["subtransition-done"]
+    ).toBeUndefined()
     expect(Object.keys(store.onTransitionEndCallbacks)).to.not.toContain(
       "incrementkey"
     )
-    expect(Object.keys(store.errors.state)).to.not.toContain("incrementkey")
     expect(
       store.internal.derivationsRegistry.getGetterGroups()
     ).to.not.toContain("transition:incrementkey")
+    expect(Object.keys(store.transitions.meta.values)).to.not.toContain(
+      "incrementkey"
+    )
   })
 })

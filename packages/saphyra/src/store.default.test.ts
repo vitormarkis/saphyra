@@ -183,8 +183,7 @@ describe("before dispatch: default", () => {
       const settersHistory = getSettersHistory()
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const [_completed, _completed2, ...lastSetters] =
-        settersHistory.toReversed()
+      const [_completed, ...lastSetters] = settersHistory.toReversed()
 
       expect(lastSetters).toHaveLength(SETS_PER_ACTION * TIMES)
 
