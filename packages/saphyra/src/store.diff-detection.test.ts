@@ -55,7 +55,7 @@ describe("diff detection pattern", () => {
     store.dispatch({ type: "add-item", transition: ["add-item"] })
     await store.waitFor(["add-item"])
 
-    expect(store.transitions.state.transitions["add-item"]).toHaveLength(0) // transition should be over by now
+    expect(store.transitions.state.transitions["add-item"]).toBeUndefined() // transition should be over by now
     // should be 2, but since all the setters re-run when comitting the transition, it incremented one more time.
     expect(store.getState().data).toBe(3)
     expect(store.getState().processed).toBe(true)

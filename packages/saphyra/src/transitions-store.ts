@@ -10,6 +10,7 @@ import { Subject } from "./Subject"
 import { setImmutable } from "./fn/common"
 import { $$onDebugMode } from "./helpers/log"
 import { createAncestor } from "./utils"
+import { deleteImmutably } from "./helpers/delete-immutably"
 
 export type TransitionsStoreState = {
   transitions: Record<string, AsyncOperation[]>
@@ -29,8 +30,8 @@ export const runSuccessCallback: OnFinishTransition = ({
 
   transitionStore.allEvents.emit("transition-done-successfully", transitionName)
   doneCallback?.()
-  transitionStore.callbacks.done.set(transitionName, null)
-  transitionStore.callbacks.error.set(transitionName, null)
+  transitionStore.callbacks.done.delete(transitionName)
+  transitionStore.callbacks.error.delete(transitionName)
 }
 
 export class TransitionsStore extends Subject {
@@ -45,6 +46,8 @@ export class TransitionsStore extends Subject {
       value: AbortController
     ) => void
     values: Record<string, AbortController>
+    getKeys: () => string[]
+    clear: (transition: string) => void
   }
   state: TransitionsStoreState
   events = {
@@ -62,6 +65,7 @@ export class TransitionsStore extends Subject {
   meta: {
     get: (transition: TransitionNullable) => Record<string, any>
     values: Record<string, any>
+    delete: (transition: string) => void
   }
 
   callbacks = {
@@ -93,12 +97,19 @@ export class TransitionsStore extends Subject {
     this.meta = {
       get: this.getMeta.bind(this),
       values: {},
+      delete: (transition: string) => {
+        this.meta.values = deleteImmutably(this.meta.values, transition)
+      },
     }
 
     this.controllers = {
       get: this.ensureController.bind(this),
       set: this.setController.bind(this),
       values: {},
+      getKeys: () => Object.keys(this.controllers),
+      clear: (transition: string) => {
+        this.controllers = deleteImmutably(this.controllers, transition)
+      },
     }
   }
 
@@ -243,6 +254,11 @@ export class TransitionsStore extends Subject {
             transitionName,
             transitionStore: this,
           })
+          this.state.transitions = deleteImmutably(
+            this.state.transitions,
+            transitionName
+          )
+          this.meta.delete(transitionName)
         })
       }
     }

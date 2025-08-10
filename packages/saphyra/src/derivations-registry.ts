@@ -1,4 +1,4 @@
-import type { DerivationsConfig, DerivationConfig } from "./types"
+import type { DerivationsConfig, DerivationConfig, Transition } from "./types"
 import { CachedGetter } from "./cached-getter"
 
 export class DerivationsRegistry<TState> {
@@ -20,6 +20,15 @@ export class DerivationsRegistry<TState> {
       this.getters.get("optimistic")!.set(key, getter)
     })
     this.derivations = derivations
+  }
+
+  clear(transition: Transition) {
+    const transitionKey = `transition:${transition.join(":")}`
+    this.getters.delete(transitionKey)
+  }
+
+  getGetterGroups() {
+    return new Set([...this.getters.keys()])
   }
 
   getGetter(

@@ -21,6 +21,9 @@ export class EventEmitter<const EventArgs extends EventsTuple = EventsTuple> {
     this.handlers[event].add(handler)
     return () => {
       this.handlers[event]?.delete(handler)
+      if (this.handlers[event]?.size === 0) {
+        delete this.handlers[event]
+      }
     }
   }
 

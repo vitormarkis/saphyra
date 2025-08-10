@@ -96,13 +96,13 @@ export function createAsync<
       async function handlePromise(promise: Promise<T>) {
         if (!transition) throw errorNoTransition()
 
-        const clearSubtransitionDoneEvent = store.transitions.allEvents.on(
-          "subtransition-done",
-          id => {
-            if (label !== id) return
-            clearSubtransitionDoneEvent()
-          }
-        )
+        // const clearSubtransitionDoneEvent = store.transitions.allEvents.on(
+        //   "subtransition-done",
+        //   id => {
+        //     // if (label !== id) return
+        //     clearSubtransitionDoneEvent()
+        //   }
+        // )
 
         const racePromise = PromiseWithResolvers<T>()
 

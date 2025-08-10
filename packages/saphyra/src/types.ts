@@ -5,6 +5,8 @@ import { ErrorsStore } from "./errors-store"
 import { SubjectType } from "./Subject"
 import { TransitionsStateStore } from "./transitions-state"
 import { WaitForResult } from "./fn/wait-for"
+import { DerivationsRegistry } from "./derivations-registry"
+import { deleteImmutably } from "./helpers/delete-immutably"
 
 export type TODO = any
 
@@ -69,7 +71,10 @@ export class OptimisticRegistry<TState> {
   }
 
   clear(key: string) {
-    this.settersOrPartialStateList[key] = []
+    this.settersOrPartialStateList = deleteImmutably(
+      this.settersOrPartialStateList,
+      key
+    )
   }
 
   check(transition: TransitionNullable) {
@@ -81,6 +86,10 @@ export class OptimisticRegistry<TState> {
 
   get() {
     return this.settersOrPartialStateList
+  }
+
+  getKeys() {
+    return Object.keys(this.settersOrPartialStateList)
   }
 }
 
@@ -102,8 +111,9 @@ export type StoreInternalEvents = {
   ]
 }
 
-type StoreInternals = {
+type StoreInternals<TState> = {
   events: EventEmitter<StoreInternalEvents>
+  derivationsRegistry: DerivationsRegistry<TState>
 }
 
 export type GenericStoreValues<
@@ -115,7 +125,7 @@ export type GenericStoreValues<
   deps: TDeps
   errors: ErrorsStore
   events: EventEmitter<TEvents>
-  internal: StoreInternals
+  internal: StoreInternals<TState>
   state: TState
   optimisticState: TState
   errorHandlers: Set<StoreErrorHandler>

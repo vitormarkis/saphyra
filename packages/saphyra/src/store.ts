@@ -69,6 +69,7 @@ import { shallowCompare } from "./helpers/shallow-compare"
 import { PromiseWithResolvers } from "./polyfills/promise-with-resolvers"
 import { randomString } from "./helpers/randomString"
 import { SUB_BRANCH_PREFIX } from "./consts"
+import { deleteImmutably } from "./helpers/delete-immutably"
 
 export type ExternalProps = Record<string, any> | null
 
@@ -378,6 +379,7 @@ export function newStoreDef<
       events: new EventEmitter<TEvents>(),
       internal: {
         events: new EventEmitter<StoreInternalEvents>(),
+        derivationsRegistry,
       },
       history: [],
       historyRedo: [],
@@ -388,9 +390,8 @@ export function newStoreDef<
       optimisticState: {} as TState,
       uncontrolledState: {} as TUncontrolledState,
       transitionsState: new TransitionsStateStore<TState>(),
-      derivationsRegistry,
       onTransitionEndCallbacks: {},
-    } as any
+    } satisfies GenericStoreValues<TState, TEvents, TUncontrolledState, TDeps>
 
     let store = createDebugableShallowCopy(
       storeValues as unknown as SomeStore<
@@ -514,16 +515,25 @@ export function newStoreDef<
         cloneObj(store.state)
       )
 
-      store.settersRegistry = {
-        ...store.settersRegistry,
-        [transitionKey]: [],
-      }
-      updateTransitionState(transition, null)
-      store.errors.setState({
-        [transitionKey]: null,
-      })
+      store.settersRegistry = deleteImmutably(
+        store.settersRegistry,
+        transitionKey
+      )
+      clearTransitionState(transition)
+      store.errors.delete(transitionKey)
 
       store.optimisticRegistry.clear(transitionKey)
+      store.transitions.controllers.clear(transitionKey)
+      if (
+        store.transitions.cleanUpList[transitionKey] ||
+        store.transitions.cleanUpList[transitionKey]?.size === 0
+      ) {
+        store.transitions.cleanUpList = deleteImmutably(
+          store.transitions.cleanUpList,
+          transitionKey
+        )
+      }
+      derivationsRegistry?.clear(transition)
       onCommitTransition({
         action,
         setterOrPartialStateList: setters,
@@ -564,6 +574,10 @@ export function newStoreDef<
           setterOrPartialStateList: setters,
         })
       })
+      store.onTransitionEndCallbacks = deleteImmutably(
+        store.onTransitionEndCallbacks,
+        transitionKey
+      )
       subject.notify()
     }
 
@@ -616,7 +630,7 @@ export function newStoreDef<
         transitionKey,
         []
       )
-      updateTransitionState(transition, null)
+      clearTransitionState(transition)
 
       if (isNewActionError(error)) {
         noop()
@@ -1434,18 +1448,16 @@ export function newStoreDef<
 
     const updateTransitionState = (
       transition: Transition,
-      setterOrPartialState: SetterOrPartialState<TState> | null
+      setterOrPartialState: SetterOrPartialState<TState>
     ): TState | null => {
       const transitionKey = transition.join(":")
 
-      if (setterOrPartialState) {
-        store.settersRegistry = {
-          ...store.settersRegistry,
-          [transitionKey]: [
-            ...(store.settersRegistry[transitionKey] ?? []),
-            setterOrPartialState,
-          ],
-        }
+      store.settersRegistry = {
+        ...store.settersRegistry,
+        [transitionKey]: [
+          ...(store.settersRegistry[transitionKey] ?? []),
+          setterOrPartialState,
+        ],
       }
 
       let returningState: TState | null = null
@@ -1454,9 +1466,7 @@ export function newStoreDef<
       const shouldClear = setters.length === 0
 
       if (shouldClear) {
-        store.transitionsState.setState({
-          [transitionKey]: null,
-        })
+        store.transitionsState.delete(transitionKey)
         return store.state
       }
 
@@ -1471,6 +1481,9 @@ export function newStoreDef<
       if (setterOrPartialState) {
         applySetterOnState(setterOrPartialState, newState)
       }
+      if (newState === null) {
+        throw new Error("State should never be null.")
+      }
       store.transitionsState.setState({
         [transitionKey]: newState,
       })
@@ -1480,6 +1493,17 @@ export function newStoreDef<
       }
 
       return returningState
+    }
+
+    const clearTransitionState = (transition: Transition) => {
+      const transitionKey = transition.join(":")
+
+      store.settersRegistry = deleteImmutably(
+        store.settersRegistry,
+        transitionKey
+      )
+
+      store.transitionsState.delete(transitionKey)
     }
 
     // const handleSetStateTransitionOngoing = (

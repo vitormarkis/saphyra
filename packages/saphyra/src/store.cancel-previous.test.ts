@@ -71,9 +71,7 @@ describe("before dispatch: cancel previous", () => {
     })
 
     await vi.advanceTimersByTimeAsync(1000)
-    expect(store.transitions.cleanUpList[transitionString]).toStrictEqual(
-      new Set()
-    )
+    expect(store.transitions.cleanUpList[transitionString]).toBeUndefined()
     vi.useRealTimers()
   })
 
@@ -111,10 +109,10 @@ describe("before dispatch: cancel previous", () => {
       const info = getStoreTransitionInfoShallowCopy(store, transitionName)
 
       expect(info.controller.signal.aborted).toBe(false)
-      expect(info.setters).toStrictEqual([])
+      expect(info.setters).toBeUndefined()
       expect(info.doneCallback).toBeNull()
       expect(info.errorCallback).toBeNull()
-      expect(info.transitions[transitionName].length).toBe(0)
+      expect(info.transitions[transitionName]).toBeUndefined()
       expect(info.state).toEqual(expect.objectContaining({ count: 1 }))
 
       expect(spy_completeTransition).toHaveBeenCalledTimes(1)
@@ -147,7 +145,7 @@ describe("before dispatch: cancel previous", () => {
       test("before wait", () => {
         const info = getStoreTransitionInfoShallowCopy(store, transitionName)
         expect(info.controller.signal.aborted).toBe(false)
-        expect(info.setters).toStrictEqual([])
+        expect(info.setters).toBeUndefined()
         expect(info.doneCallback).toBeInstanceOf(Function)
         expect(info.errorCallback).toBeInstanceOf(Function)
         expect(info.transitions[transitionName].length).toBe(1)
@@ -163,7 +161,7 @@ describe("before dispatch: cancel previous", () => {
           transitionName
         )
         expect(info_before.controller.signal.aborted).toBe(false)
-        expect(info_before.setters).toStrictEqual([])
+        expect(info_before.setters).toBeUndefined()
         expect(info_before.doneCallback).toBeInstanceOf(Function)
         expect(info_before.errorCallback).toBeInstanceOf(Function)
         expect(info_before.transitions[transitionName].length).toBe(1)
@@ -174,10 +172,10 @@ describe("before dispatch: cancel previous", () => {
         await vi.advanceTimersByTimeAsync(500)
         const info = getStoreTransitionInfoShallowCopy(store, transitionName)
         expect(info.controller.signal.aborted).toBe(false)
-        expect(info.setters).toStrictEqual([])
+        expect(info.setters).toBeUndefined()
         expect(info.doneCallback).toBeNull()
         expect(info.errorCallback).toBeNull()
-        expect(info.transitions[transitionName].length).toBe(0)
+        expect(info.transitions[transitionName]).toBeUndefined()
         expect(info.state).toEqual(expect.objectContaining({ count: 1 }))
         expect(spy_completeTransition).toHaveBeenCalledTimes(1)
 
