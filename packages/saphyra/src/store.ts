@@ -39,6 +39,7 @@ import type {
   OnPushToHistoryProps,
   OnTransitionEndProps,
   OnCommitTransitionConfig,
+  SomeStoreGeneric,
 } from "./types"
 import { EventEmitter, EventsTuple } from "./event-emitter"
 import { noop } from "./fn/noop"
@@ -67,6 +68,7 @@ import { newAsyncOperation } from "./async-operation"
 import { shallowCompare } from "./helpers/shallow-compare"
 import { PromiseWithResolvers } from "./polyfills/promise-with-resolvers"
 import { randomString } from "./helpers/randomString"
+import { SUB_BRANCH_PREFIX } from "./consts"
 
 export type ExternalProps = Record<string, any> | null
 
@@ -862,14 +864,11 @@ export function newStoreDef<
       let newState = cloneObj(store.state)
       let prevState: TState | null = null
       if (initialAction.transition) {
-        const transitionKey = initialAction.transition.join(":")
-        const getTransitionState = () =>
-          cloneObj(store.transitionsState.state[transitionKey] ?? store.state)
-        prevState = getTransitionState()
+        prevState = getTransitionState(store, initialAction.transition)
         if (setterOrPartialState) {
           updateTransitionState(initialAction.transition, setterOrPartialState)
         }
-        newState = getTransitionState()
+        newState = getTransitionState(store, initialAction.transition)
       } else {
         if (setterOrPartialState) {
           const setter = mergeSetterWithState(
@@ -1326,7 +1325,7 @@ export function newStoreDef<
                    *
                    * I'm creating a unique id for each temporary sub branch to avoid this issue.
                    */
-                  const hash = randomString(6)
+                  const hash = `${SUB_BRANCH_PREFIX}${randomString(6)}`
                   return [...action.transition, hash]
                 }
                 return rootAction.transition ?? null
@@ -1867,4 +1866,26 @@ function createOnConstructStore<
   //     return store.setState(...args)
   //   },
   // }
+}
+
+const getTransitionState = (
+  store: SomeStoreGeneric,
+  transition: Transition
+) => {
+  transition = [...transition]
+  const transitionKey = transition.join(":")
+  const transitionState = store.transitionsState.state[transitionKey]
+  if (transitionState) return cloneObj(transitionState)
+
+  // might be sub branch, use parent branch state as origin
+  const last = transition.pop()
+  const isSubBranch = String(last).startsWith(SUB_BRANCH_PREFIX)
+  if (isSubBranch) {
+    const parentTransitionKey = transition.join(":")
+    const parentTransitionState =
+      store.transitionsState.state[parentTransitionKey]
+    if (parentTransitionState) return cloneObj(parentTransitionState)
+  }
+
+  return store.state
 }
