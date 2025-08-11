@@ -28,7 +28,8 @@ export type DispatchAsync<
   TDeps,
 > = (
   action: ClassicAction<TState, TActions, TEvents, TUncontrolledState, TDeps>,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  parentTransition?: TransitionNullable
 ) => Promise<TState>
 
 export type ClassicAction<
@@ -137,6 +138,7 @@ export type GenericStoreValues<
     string,
     Set<OnTransitionEnd<TState, TEvents>>
   >
+  parentTransitionRegistry: Record<string, TransitionNullable>
 } & TransitionsExtension &
   HistoryExtension<TState> &
   UncontrolledState<TUncontrolledState>

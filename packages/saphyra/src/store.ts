@@ -390,6 +390,7 @@ export function newStoreDef<
       uncontrolledState: {} as TUncontrolledState,
       transitionsState: new TransitionsStateStore<TState>(),
       onTransitionEndCallbacks: {},
+      parentTransitionRegistry: {},
     } satisfies GenericStoreValues<TState, TEvents, TUncontrolledState, TDeps>
 
     let store = createDebugableShallowCopy(
@@ -624,6 +625,11 @@ export function newStoreDef<
       }
       derivationsRegistry?.clear(transition)
       store.transitions.meta.delete(transitionKey)
+
+      store.parentTransitionRegistry = deleteImmutably(
+        store.parentTransitionRegistry,
+        transitionKey
+      )
 
       if (isNewActionError(error)) {
         noop()
@@ -1332,7 +1338,12 @@ export function newStoreDef<
             dispatch: dispatchReducerHandler,
             dispatchAsync: async (propsAction, propsSignal) => {
               const transition = (() => {
-                if (propsAction.transition) return propsAction.transition
+                if (propsAction.transition) {
+                  return [
+                    ...(action.transition ?? []),
+                    ...propsAction.transition,
+                  ]
+                }
                 if (action.transition) {
                   /**
                    * Here we're creating sub branches inside a branch.
@@ -1345,7 +1356,9 @@ export function newStoreDef<
                   const hash = `${SUB_BRANCH_PREFIX}${randomString(6)}`
                   return [...action.transition, hash]
                 }
-                return rootAction.transition ?? null
+                // Create a hash when there's no propsAction.transition and no action.transition
+                const hash = `${SUB_BRANCH_PREFIX}${randomString(6)}`
+                return [hash]
               })()
 
               const onPushToHistory: OnPushToHistory<
@@ -1380,7 +1393,12 @@ export function newStoreDef<
                 onTransitionEnd,
               }
 
-              initiateSubBranchState(store, transition, "is-sub-transition")
+              initiateSubBranchState({
+                store,
+                subBranchTransition: transition,
+                parentTransition: action.transition,
+                _guard: "is-sub-transition",
+              })
 
               return dispatchAsync(transitionAction, propsSignal ?? signal)
             },
@@ -1472,12 +1490,11 @@ export function newStoreDef<
         return store.state
       }
 
-      const [parentTransition, subTransition] =
-        getTransitionOrSubBranch(transition)
+      const parentTransition = store.parentTransitionRegistry[transitionKey]
       const newState = cloneObj(
-        store.transitionsState.get(parentTransition) ??
-          (subTransition
-            ? store.transitionsState.get(subTransition)
+        store.transitionsState.get(transition) ??
+          (parentTransition
+            ? store.transitionsState.get(parentTransition)
             : store.state)
       )
       if (setterOrPartialState) {
@@ -1930,30 +1947,30 @@ const getTransitionState = (
   return cloneObj(store.state)
 }
 
-function getTransitionOrSubBranch(transition: Transition) {
-  const parentTransition = [...transition]
-
-  const last = parentTransition.pop()
-  const isSubBranch = String(last).startsWith(SUB_BRANCH_PREFIX)
-  if (isSubBranch) {
-    return [transition, parentTransition] as const
-  }
-
-  return [transition, null] as const
+type InitiateSubBranchStateProps = {
+  store: SomeStoreGeneric
+  subBranchTransition: Transition
+  parentTransition: TransitionNullable
+  _guard: "is-sub-transition"
 }
 
-function initiateSubBranchState(
-  store: SomeStoreGeneric,
-  transition: Transition,
-  _guard: "is-sub-transition"
-) {
-  const [branchTransition, parentTransition] =
-    getTransitionOrSubBranch(transition)
+function initiateSubBranchState({
+  parentTransition,
+  store,
+  subBranchTransition,
+}: InitiateSubBranchStateProps) {
+  const parentState = parentTransition
+    ? getTransitionState(store, parentTransition)
+    : cloneObj(store.state)
 
-  const parentState = getTransitionState(store, parentTransition)
-  const branchTransitionKey = branchTransition.join(":")
+  const subBranchTransitionKey = subBranchTransition.join(":")
+
+  if (parentTransition) {
+    store.parentTransitionRegistry[subBranchTransitionKey] = parentTransition
+  }
+
   store.transitionsState.setState({
-    [branchTransitionKey]: parentState,
+    [subBranchTransitionKey]: parentState,
   })
 }
 
