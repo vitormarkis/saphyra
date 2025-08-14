@@ -144,7 +144,6 @@ export type HandleActionProps<
     >
   ) => Async
   onSet?: (setterOrPartialState: SetterOrPartialState<TState>) => void
-  optimisticStateSource?: TState
 }
 
 export type GenericStoreMethods<

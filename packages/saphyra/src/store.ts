@@ -1087,7 +1087,7 @@ export function newStoreDef<
         TDeps
       >
     ): { newState: TState; prevState: TState; optimisticState: TState } => {
-      const { when, optimisticStateSource } = props
+      const { when } = props
       let newState = cloneObj(props?.state ?? store.state)
       let prevState = props?.prevState ?? store.state
       const optimisticState = cloneObj(
@@ -1149,7 +1149,7 @@ export function newStoreDef<
               )
               applySetterOnState(setterOrPartialState, optimisticState)
 
-              notifyOptimistic(optimisticStateSource ?? newState)
+              notifyOptimistic()
             },
             set: setterOrPartialState => {
               if (signal.aborted) return
@@ -1237,7 +1237,7 @@ export function newStoreDef<
 
       isSync = false
 
-      notifyOptimistic(optimisticStateSource ?? newState)
+      notifyOptimistic()
 
       return {
         newState,
@@ -1349,9 +1349,9 @@ export function newStoreDef<
       return () => createStore(initialProps, config)
     }
 
-    function notifyOptimistic(state = store.state) {
+    function notifyOptimistic() {
       const allSetters = Object.values(store.optimisticRegistry.get()).flat()
-      store.optimisticState = calculateOptimisticState(allSetters, state)
+      store.optimisticState = calculateOptimisticState(allSetters, store.state)
       store.notify()
     }
 
