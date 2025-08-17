@@ -7,7 +7,6 @@ import {
 } from "react"
 import { NewStoreReturn } from "../types"
 import { SomeStoreGeneric } from "~/types"
-import { WaitForResult } from "~/fn/wait-for"
 
 const useIsBootstrapping = (store: SomeStoreGeneric) =>
   useSyncExternalStore(
@@ -25,23 +24,16 @@ export function useNewStore<Store extends SomeStoreGeneric>(
   const isBootstrapping = useIsBootstrapping(currentStore)
 
   const resetStore = useCallback(
-    async (newStore: Store): Promise<WaitForResult> => {
+    (newStore: Store) => {
       if (newStore === currentStore) {
-        const error = new Error("New store is the same as the current store")
-        currentStore.emitError(error)
-        return { success: false, reason: "error", error }
+        throw new Error("New store is the same as the current store")
       }
 
       if (newStore.isDisposed) {
-        const error = new Error(
-          "Invalid operation: New store is already disposed"
-        )
-        currentStore.emitError(error)
-        return { success: false, reason: "error", error }
+        throw new Error("Invalid operation: New store is already disposed")
       }
 
       setStore(newStore)
-      return newStore.waitForBootstrap()
     },
     [currentStore]
   )
@@ -53,11 +45,11 @@ export function useNewStore<Store extends SomeStoreGeneric>(
     [currentStore]
   )
 
-  const isLoading = isInitialStore
-    ? "initial-store-loading"
-    : isBootstrapping
-      ? "new-store-loading"
-      : false
+  const isLoading = isBootstrapping
+    ? isInitialStore
+      ? "initial-store-loading"
+      : "new-store-loading"
+    : false
 
   return [currentStore, resetStore, isLoading]
 }

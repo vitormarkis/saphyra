@@ -21,7 +21,7 @@ it("should not apply changes when set state asynchronously (outside of the callb
   const newStore = newStoreDefTest({
     reducer({ action, state, set, async }) {
       if (action.type === "increment") {
-        async.promise(async () => {
+        async().promise(async () => {
           await new Promise(res => setTimeout(res, 1))
           set({ count: 1 })
         })
@@ -41,7 +41,7 @@ it("should not apply changes when set state asynchronously (inside of the callba
   const newStore = newStoreDefTest({
     reducer({ action, state, set, async }) {
       if (action.type === "increment") {
-        async.promise(async () => {
+        async().promise(async () => {
           await new Promise(res => setTimeout(res, 1))
           set({ count: 1 })
           throw new Error("test")
@@ -82,7 +82,7 @@ it("should not apply changes when set state based on async derivation", async ()
   const newStore = newStoreDefTest({
     reducer({ action, state, set, async }) {
       if (action.type === "increment") {
-        async.promise(async () => {
+        async().promise(async () => {
           await new Promise(res => setTimeout(res, 1))
           set({ count: 1 })
         })

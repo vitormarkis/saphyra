@@ -32,7 +32,7 @@ describe("diff detection pattern", () => {
         // them runned the setter to create a new version of the state
         // which caused them to have different `data` references
         if (prevState.data !== state.data) {
-          async.promise(async () => {
+          async().promise(async () => {
             await new Promise(resolve => setTimeout(resolve, 1))
             // this `set` is async, it will run the reducer again, but with which state?
             // It'll get the state from the `transition state`, which didn't updated
@@ -55,7 +55,7 @@ describe("diff detection pattern", () => {
     store.dispatch({ type: "add-item", transition: ["add-item"] })
     await store.waitFor(["add-item"])
 
-    expect(store.transitions.state["add-item"]).toHaveLength(0) // transition should be over by now
+    expect(store.transitions.state.transitions["add-item"]).toBeUndefined() // transition should be over by now
     // should be 2, but since all the setters re-run when comitting the transition, it incremented one more time.
     expect(store.getState().data).toBe(3)
     expect(store.getState().processed).toBe(true)

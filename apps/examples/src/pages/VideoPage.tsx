@@ -47,14 +47,14 @@ const newTransitionsStore = newStoreDef<
     store,
   }) {
     if (action.type === "increment-many") {
-      async.promise(async ({ signal }) => {
+      async().promise(async ({ signal }) => {
         await sleep(2000, "many", signal)
         set(s => ({ count: s.count + 10 }))
       })
     }
 
     if (action.type === "fetch-albums") {
-      async.promise(async ({ signal }) => {
+      async().promise(async ({ signal }) => {
         const response = await fetch(
           "https://jsonplaceholder.typicode.com/albums",
           {
@@ -67,7 +67,7 @@ const newTransitionsStore = newStoreDef<
     }
 
     if (action.type === "fetch-todos") {
-      async.promise(async ({ signal }) => {
+      async().promise(async ({ signal }) => {
         const response = await fetch(
           "https://jsonplaceholder.typicode.com/todos",
           {
@@ -80,7 +80,7 @@ const newTransitionsStore = newStoreDef<
     }
 
     if (action.type === "increment-some") {
-      async.promise(async ctx => {
+      async().promise(async ctx => {
         await sleep(900, "some", ctx.signal)
         set(s => ({ count: s.count + 4 }))
       })

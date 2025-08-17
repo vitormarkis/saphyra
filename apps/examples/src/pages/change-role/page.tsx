@@ -17,6 +17,7 @@ import {
   useNewStore,
 } from "saphyra/react"
 import { Waterfall } from "~/devtools/waterfall"
+import { noop } from "~/lib/utils"
 
 export type SelectedRole = "user" | "admin"
 
@@ -46,6 +47,9 @@ const newAuthStore = newStoreDef<
       if (!!transition) return [state]
       return [...history, state]
     },
+    onCommitTransition(props) {
+      noop()
+    },
   },
   derivations: {
     getFirstPermission: {
@@ -64,28 +68,26 @@ const newAuthStore = newStoreDef<
   reducer({ prevState, state, action, diff, set, async, events, optimistic }) {
     if (action?.type === "change-role") {
       optimistic({ role: action.role })
-      async.promise(
-        async ({ signal }) => {
+      async()
+        .setName("role-request")
+        .promise(async ({ signal }) => {
           const role = await fetchRole({ roleName: action.role, signal })
           events.emit("got-role", role)
           set({ role })
-        },
-        { label: "role request" }
-      )
+        })
     }
 
     if (prevState.role !== state.role) {
-      async.promise(
-        async ({ signal }) => {
+      async()
+        .setName("fetch-permissions")
+        .promise(async ({ signal }) => {
           const permissions = await fetchPermissions({
             role: state.role,
             signal,
           })
           events.emit("got-permissions", permissions)
           set({ $permissions: permissions })
-        },
-        { label: "Fetch permissions" }
-      )
+        })
     }
 
     return state

@@ -2,6 +2,7 @@ import { Subject } from "~/Subject"
 import { cloneObj, mergeObj } from "./helpers/obj-descriptors"
 import { SetterOrPartialState, Transition } from "./types"
 import { ensureSetter } from "./helpers/utils"
+import { deleteImmutably } from "./helpers/delete-immutably"
 
 type TransitionsStateState<TState> = Record<string, TState | null>
 
@@ -13,6 +14,12 @@ export class TransitionsStateStore<TState> extends Subject {
     super()
     this.state = {}
     this.prevState = {}
+  }
+
+  delete(key: string) {
+    this.state = deleteImmutably(this.state, key)
+    this.prevState = deleteImmutably(this.prevState, key)
+    this.notify()
   }
 
   setState(

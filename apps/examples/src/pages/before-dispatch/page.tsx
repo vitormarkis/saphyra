@@ -53,7 +53,7 @@ const newTransitionsStore = newStoreDef<
   }),
   reducer({ state, action, async, set }) {
     if (action.type === "fetch-albums") {
-      async.promise(async ({ signal }) => {
+      async().promise(async ({ signal }) => {
         const endpoint = "https://jsonplaceholder.typicode.com/albums"
         const response = await fetch(endpoint, {
           signal,
@@ -64,7 +64,7 @@ const newTransitionsStore = newStoreDef<
     }
 
     if (action.type === "fetch-todos") {
-      async.promise(async ({ signal }) => {
+      async().promise(async ({ signal }) => {
         const endpoint = "https://jsonplaceholder.typicode.com/todos"
         const response = await fetch(endpoint, {
           signal,
@@ -103,8 +103,8 @@ type ExampleFactory = (store: SomeStoreGeneric) => {
   title: string
   description: string
   slug: string
-  action: BaseAction<any, any, any>
-  actionSupport?: BaseAction<any, any, any>
+  action: BaseAction<any, any, any, any, any>
+  actionSupport?: BaseAction<any, any, any, any, any>
   script: string
 }
 
@@ -212,14 +212,14 @@ const EXAMPLES_FACTORY: ExampleFactory[] = [
       beforeDispatch({ action, transition, abort, createAsync, store }) {
         const async = createAsync()
         abort(transition)
-        async.timer(() => store.dispatch(action), 500)
+        async().timer(() => store.dispatch(action), 500)
       },
     },
     script: `
       beforeDispatch({ transition, abort, createAsync, store, action }) {
         const async = createAsync()
         abort(transition)
-        async.timer(() => store.dispatch(action), 500)
+        async().timer(() => store.dispatch(action), 500)
       }
     `,
   }),

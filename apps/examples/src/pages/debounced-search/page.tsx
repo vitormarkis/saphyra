@@ -4,18 +4,16 @@ import { newStoreDef } from "saphyra"
 import { CenteredSpinner } from "~/components/CenteredSpinner"
 import { extractErrorMessage } from "~/lib/extract-error-message"
 import { CenteredErrorUnknown } from "~/components/CenteredError"
-import { useCallback, useState, useEffect } from "react"
-import {
-  createStoreUtils,
-  useBootstrapError,
-  useNewStore,
-  WaterfallDevtools,
-} from "saphyra/react"
+import { useCallback, useEffect } from "react"
+import { createStoreUtils, useBootstrapError, useNewStore } from "saphyra/react"
 import { queryClient } from "~/query-client"
+import { Waterfall } from "~/devtools/waterfall"
 
 type DebouncedSearchEvents = {}
 
 type DebouncedSearchActions = {
+  $updatesCount?: "multiple" | "few" | "one"
+} & {
   type: "change-name"
   name: string
 }
@@ -35,6 +33,12 @@ const newDebouncedSearch = newStoreDef<
   DebouncedSearchActions,
   DebouncedSearchEvents
 >({
+  config: {
+    runOptimisticUpdateOn({ action }) {
+      if (action.$updatesCount === "multiple") return false
+      return true
+    },
+  },
   onConstruct({ initialProps }) {
     return {
       name: initialProps.initialName ?? "",
@@ -54,15 +58,12 @@ const newDebouncedSearch = newStoreDef<
       if (cachedUsers) {
         set({ $users: cachedUsers })
       } else {
-        async.promise(
-          async ({ signal }) => {
+        async()
+          .setName(`q: [${action.name}]`)
+          .promise(async ({ signal }) => {
             const users = await listUsers(state.name, signal)
             set({ $users: users })
-          },
-          {
-            label: `q: [${action.name}]`,
-          }
-        )
+          })
       }
     }
 
@@ -142,7 +143,7 @@ export function DebouncedSearchView({}: DebouncedSearchViewProps) {
             return action
           }
 
-          async.timer(() => store.dispatch(action), 500, {
+          async().timer(() => store.dispatch(action), 500, {
             label: `d [${action.name}]`,
           })
         },
@@ -267,10 +268,9 @@ export function DebouncedSearchView({}: DebouncedSearchViewProps) {
           ))}
         </div>
         <div className="relative flex flex-col gap-4 py-4 overflow-y-scroll basis-0 grow h-full p-2 rounded-md border">
-          <WaterfallDevtools
+          <Waterfall
             store={debouncedSearch}
             extractErrorMessage={extractErrorMessage}
-            buttonPosition="bottom-left"
           />
         </div>
       </div>

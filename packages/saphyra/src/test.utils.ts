@@ -44,14 +44,14 @@ export const newStore = newStoreDef<
     }
 
     if (action.type === "increment-async") {
-      async.promise(async ctx => {
+      async().promise(async ctx => {
         await sleep(1000, undefined, ctx.signal)
         set(s => ({ count: s.count + 1 }))
       })
     }
 
     if (action.type === "increment-async-error") {
-      async.promise(async ctx => {
+      async().promise(async ctx => {
         await sleep(1000, undefined, ctx.signal)
         throw new Error("Error while incrementing")
       })
@@ -80,7 +80,7 @@ export function getStoreTransitionInfoShallowCopy(
   const setters = store.settersRegistry[transitionName]
   const doneCallback = store.transitions.callbacks.done.get(transitionName)
   const errorCallback = store.transitions.callbacks.error.get(transitionName)
-  const transitionsFromStore = store.transitions.state
+  const transitionsFromStore = store.transitions.state.transitions
   const state = store.getState()
   const transitions = transitionsFromStore ? cloneObj(transitionsFromStore) : {}
   delete transitions.bootstrap
@@ -101,7 +101,7 @@ export function getStoreTransitionInfoSourceShallowCopy(
   const setters = { ...store.settersRegistry }
   const doneCallbackList = new Map(store.transitions.callbacks.done)
   const errorCallbackList = new Map(store.transitions.callbacks.error)
-  const transitions = { ...store.transitions.state }
+  const transitions = { ...store.transitions.state.transitions }
   const state = cloneObj(store.getState())
 
   return {

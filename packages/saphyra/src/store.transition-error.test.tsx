@@ -82,16 +82,10 @@ test("should handle transition error gracefully", async () => {
   // ensure all the main entities were reseted
   expect(spy_completeTransition).toHaveBeenCalledTimes(0)
 
-  expect(info_after_error.setters).toStrictEqual({
-    increment: [],
-  }) // empty because it never reachs the onSuccess
-  expect(info_after_error.doneCallbackList).toStrictEqual(
-    new Map([["increment", null]])
-  )
-  expect(info_after_error.errorCallbackList).toStrictEqual(
-    new Map([["increment", null]])
-  )
-  expect(info_after_error.transitions["increment"].length).toBe(0)
+  expect(info_after_error.setters).toStrictEqual({}) // empty because it never reachs the onSuccess
+  expect(info_after_error.doneCallbackList).toStrictEqual(new Map())
+  expect(info_after_error.errorCallbackList).toStrictEqual(new Map())
+  expect(info_after_error.transitions["increment"]).toBeUndefined()
   expect(info_after_error.state).toEqual(expect.objectContaining({ count: 0 }))
 
   expect(spy_emitError).toHaveBeenCalledTimes(1)
