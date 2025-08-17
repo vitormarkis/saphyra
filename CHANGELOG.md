@@ -1,3 +1,8 @@
+### v0.10.0
+- Add `useNewStore` hook from "saphyra/react"
+  - This hook is used to instantiate new Saphyra store.
+  - Clean up the store when the component is unmounted.
+
 ### v0.7.4
 - \[Internal\] Track how many sub transitions are happening via a list of `AsyncOperation` objects.
   - This is a way better way to handle subtransitions since it's easier to debug because you have detailed info of the subtransition that is happening, where it started, when it started and when it should end.
