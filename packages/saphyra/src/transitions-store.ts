@@ -326,6 +326,8 @@ export class TransitionsStore extends Subject {
     finishes[id] ??= 0
     finishes[id]++
     this.setFinishes(finishes)
+
+    return () => this.doneFinish(id)
   }
 
   doneFinish(id: string) {

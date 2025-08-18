@@ -3,8 +3,147 @@ import { useEffect, useState } from "react"
 import { sleep } from "./sleep"
 import { Devtools } from "~/devtools/devtools"
 import { Waterfall } from "./devtools/waterfall"
-import { newStoreDef } from "saphyra"
+import {
+  AsyncOperation,
+  AsyncPromiseOnFinishProps,
+  newAsyncOperation,
+  newStoreDef,
+  SomeStoreGeneric,
+  Transition,
+} from "saphyra"
 import { createStoreUtils, useHistory, useNewStore } from "saphyra/react"
+import { createClassModel, Handlers } from "./new-class-model"
+import { noop } from "./lib/utils"
+
+type Event =
+  | {
+      type: "wrap-promise"
+      config: {
+        label: string
+      }
+      promiseFn: (ctx: { signal: AbortSignal }) => Promise<any>
+      onFinish: AsyncPromiseOnFinishProps
+    }
+  | {
+      type: "got-new-async-operation"
+      asyncOperation: AsyncOperation
+    }
+  | {
+      type: "process-promise"
+      when: number
+      promiseFn: (ctx: { signal: AbortSignal }) => Promise<any>
+      asyncOperation: AsyncOperation
+    }
+  | {
+      type: "process-promise-with-finish-id"
+      onFinishId: string
+    }
+
+type State = {
+  asyncOperation: AsyncOperation | null
+  keysToAdd: Set<{
+    transition: Transition
+    asyncOperation: AsyncOperation
+    label: string
+  }>
+  cleanUpsFinish: Set<string>
+}
+
+type Deps = {
+  store: SomeStoreGeneric
+  transition: Transition
+  onAsyncOperation: (asyncOperation: AsyncOperation) => void
+  from: string
+}
+
+const counterModel = ({ onAsyncOperation, store, transition, from }: Deps) =>
+  createClassModel<Event, State>(
+    {
+      asyncOperation: null,
+      keysToAdd: new Set(),
+      cleanUpsFinish: new Set(),
+    },
+    ({ event, emit, prevState, state }) => {
+      state.cleanUpsFinish = (() => {
+        if (event.type === "process-promise-with-finish-id") {
+          state.cleanUpsFinish.add(event.onFinishId)
+          return new Set(state.cleanUpsFinish)
+        }
+        return state.cleanUpsFinish
+      })()
+
+      state.keysToAdd = (() => {
+        if (event.type === "process-promise") {
+          state.keysToAdd.add({
+            asyncOperation: event.asyncOperation,
+            label: `async-promise/${from}`,
+            transition,
+          })
+          return new Set(state.keysToAdd)
+        }
+        return state.keysToAdd
+      })()
+
+      if (event.type === "wrap-promise") {
+        const { config, promiseFn, onFinish } = event
+        const when = Date.now()
+        const fn = () => {
+          emit({
+            type: "process-promise",
+            when,
+            promiseFn,
+            asyncOperation,
+          })
+
+          // onFinish handle
+          const onFinishId = Array.isArray(onFinish?.id)
+            ? onFinish.id.join(":")
+            : onFinish?.id
+
+          emit({
+            type: "process-promise-with-finish-id",
+            onFinishId,
+          })
+        }
+        const asyncOperation = newAsyncOperation({
+          fn,
+          when,
+          type: "promise",
+          label: config?.label ?? null,
+        })
+
+        state.asyncOperation = asyncOperation
+      }
+
+      if (event.type === "$finish") {
+        if (state.cleanUpsFinish.size > 0) {
+          state.cleanUpsFinish.forEach(id => {
+            state.cleanUpsFinish.delete(id)
+            const cleanUpList = store.transitions.finishCallbacks.cleanUps[id]
+            cleanUpList?.forEach(cleanUp => cleanUp())
+          })
+        }
+
+        if (!prevState.asyncOperation && !!state.asyncOperation) {
+          onAsyncOperation(state.asyncOperation)
+          state.asyncOperation = null
+        }
+
+        if (prevState.keysToAdd.size > 0) {
+          state.keysToAdd.forEach(key => {
+            state.keysToAdd.delete(key)
+            store.transitions.doneKey(
+              key.transition,
+              key.asyncOperation,
+              { onFinishTransition: noop },
+              key.label
+            )
+          })
+        }
+      }
+    }
+  )
+Object.assign(window, { counterModel })
 
 type CounterState = {
   count: number

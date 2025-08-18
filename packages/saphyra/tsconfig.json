@@ -27,5 +27,5 @@
     },
     "allowSyntheticDefaultImports": true
   },
-  "include": ["src", "react/src"]
+  "include": ["src", "react/src", "../../apps/examples/src/new-class-model.ts"]
 }
