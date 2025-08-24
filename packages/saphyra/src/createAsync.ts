@@ -222,7 +222,7 @@ export function createAsync<
       store.transitions.addKey(
         transition,
         asyncOperation,
-        `async-timer/${from}`
+        `async-setTimeout/${from}`
       )
       cleanUpList.add(cleanUp)
       const when = labelWhen(new Date())
@@ -236,7 +236,7 @@ export function createAsync<
             transition,
             asyncOperation,
             { onFinishTransition: runSuccessCallback },
-            "async-timer/on-success"
+            "async-setTimeout/on-success"
           )
         } catch (error) {
           store.transitions.emitError(transition, error)
@@ -257,7 +257,7 @@ export function createAsync<
           transition,
           asyncOperation,
           { onFinishTransition: () => {} },
-          `async-timer/${aborted ? "cancel" : "on-error"}`
+          `async-setTimeout/${aborted ? "cancel" : "on-error"}`
         )
       }
     }
@@ -284,7 +284,7 @@ export function createAsync<
 
       return {
         promise,
-        timer,
+        setTimeout,
       }
     }
 
@@ -302,7 +302,7 @@ export function createAsync<
       return {}
     }
 
-    const timer = (callback: () => void, time?: number) => {
+    const setTimeout = (callback: () => void, time?: number) => {
       wrapTimeout(callback, time, {
         label: _name ?? undefined,
       })
@@ -313,7 +313,7 @@ export function createAsync<
 
       return {
         promise,
-        timer,
+        setTimeout,
         onFinish,
       }
     }
@@ -321,7 +321,7 @@ export function createAsync<
     return {
       onFinish,
       promise,
-      timer,
+      setTimeout,
       setName,
     }
   }

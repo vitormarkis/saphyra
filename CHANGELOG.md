@@ -1,3 +1,6 @@
+### v0.11.0
+- Rename `async().timer` to `async().setTimeout`
+
 ### v0.10.0
 - Add `useNewStore` hook from "saphyra/react"
   - This hook is used to instantiate new Saphyra store.

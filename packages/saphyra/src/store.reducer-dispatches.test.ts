@@ -109,7 +109,7 @@ describe("should run reducer dispatch", () => {
         }
 
         if (action.type === "increment") {
-          async().timer(() => {
+          async().setTimeout(() => {
             dispatch({ type: "increment-sync" })
             dispatch({ type: "increment-sync" })
           })
@@ -139,7 +139,7 @@ describe("should run reducer dispatch", () => {
         }
 
         if (action.type === "increment") {
-          async().timer(() => {
+          async().setTimeout(() => {
             dispatch({ type: "increment-sync" })
           })
         }

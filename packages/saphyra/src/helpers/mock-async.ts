@@ -2,17 +2,17 @@ import { AsyncBuilder } from "../types"
 
 export const mockAsync: () => AsyncBuilder = () => () => ({
   promise: () => {},
-  timer: () => {},
+  setTimeout: () => {},
   setName: _name => ({
     onFinish: _props => ({
       promise: () => {},
-      timer: () => {},
+      setTimeout: () => {},
     }),
     promise: () => {},
-    timer: () => {},
+    setTimeout: () => {},
   }),
   onFinish: _props => ({
     promise: () => {},
-    timer: () => {},
+    setTimeout: () => {},
   }),
 })

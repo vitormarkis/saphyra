@@ -59,7 +59,7 @@ const newDebouncedSearch = newStoreDef<
         set({ $users: cachedUsers })
       } else {
         async()
-          .setName(`q: [${action.name}]`)
+          .setName(`query: [${action.name}]`)
           .promise(async ({ signal }) => {
             const users = await listUsers(state.name, signal)
             set({ $users: users })
@@ -143,9 +143,9 @@ export function DebouncedSearchView({}: DebouncedSearchViewProps) {
             return action
           }
 
-          async().timer(() => store.dispatch(action), 500, {
-            label: `d [${action.name}]`,
-          })
+          async()
+            .setName(`d [${action.name}]`)
+            .timer(() => store.dispatch(action), 500)
         },
       })
     },

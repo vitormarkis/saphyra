@@ -430,7 +430,7 @@ export type AsyncTimerConfig = {
 //     promise: (props: AsyncPromiseProps) => Promise<T>,
 //     config?: AsyncPromiseConfig
 //   ): void
-//   timer(callback: () => void, time?: number, config?: AsyncTimerConfig): void
+//   setTimeout(callback: () => void, time?: number, config?: AsyncTimerConfig): void
 // }
 
 export type OnFinishId = string | StringSerializable[]
@@ -449,8 +449,8 @@ export type AsyncModule = {
   setName: (name: string | StringSerializable[]) => Omit<AsyncModule, "setName">
   onFinish: (
     props: AsyncPromiseOnFinishProps
-  ) => Pick<AsyncModule, "promise" | "timer">
-  timer: (
+  ) => Pick<AsyncModule, "promise" | "setTimeout">
+  setTimeout: (
     callback: () => void,
     time?: number,
     config?: AsyncTimerConfig

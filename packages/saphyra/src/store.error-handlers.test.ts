@@ -39,7 +39,7 @@ const createTestStoreWithAsyncTimerError = () => {
   return newStoreDef({
     reducer({ state, action, set, async }) {
       if (action.type === "async-timer-error") {
-        async().timer(() => {
+        async().setTimeout(() => {
           throw new Error("Error in async timer")
         }, 100)
       }
@@ -243,12 +243,12 @@ describe("Error handlers are called in all user land code scenarios", () => {
       const createStore = newStoreDef({
         reducer({ state, action, set: _set, async }) {
           if (action.type === "timer-string-error") {
-            async().timer(() => {
+            async().setTimeout(() => {
               throw "String error"
             }, 100)
           }
           if (action.type === "timer-object-error") {
-            async().timer(() => {
+            async().setTimeout(() => {
               throw { code: 500, message: "Object error" }
             }, 100)
           }
@@ -425,13 +425,13 @@ describe("Error handlers are called in all user land code scenarios", () => {
   })
 
   describe("Internal Saphyra errors", () => {
-    test.each([{ asyncType: "promise" }, { asyncType: "timer" }])(
+    test.each([{ asyncType: "promise" }, { asyncType: "setTimeout" }])(
       "should call error handler when async.$asyncType is used without transition",
       ({ asyncType }) => {
         const createStore = newStoreDef({
           reducer({ state, action, async }) {
             if (action.type === "async-action") {
-              async()[asyncType as "promise" | "timer"](async () => {})
+              async()[asyncType as "promise" | "setTimeout"](async () => {})
             }
             return state
           },
