@@ -1318,7 +1318,7 @@ export function newStoreDef<
             if (isSync && sameTransition) {
               // actionsQueue.push(safeAction)
               const producedState = reducer({
-                ...context,
+                ...contextFn(newState),
                 action: safeAction,
               })
               newState = producedState
@@ -1327,13 +1327,15 @@ export function newStoreDef<
               store.dispatch(safeAction)
             }
           }
-          const context: ReducerProps<
+          const contextFn: (
+            prevState: TState
+          ) => ReducerProps<
             TState,
             TActions,
             TEvents,
             TUncontrolledState,
             TDeps
-          > = {
+          > = prevState => ({
             prevState,
             state: newState,
             action,
@@ -1421,7 +1423,7 @@ export function newStoreDef<
               return dispatchAsync(transitionAction, propsSignal ?? signal)
             },
             deps,
-          }
+          })
           const reducer: Reducer<
             TState,
             TActions,
@@ -1452,7 +1454,7 @@ export function newStoreDef<
             }
             return userReducer(props)
           }
-          const producedState = reducer(context)
+          const producedState = reducer(contextFn(prevState))
           // looks redundant but user might return prev state
           // if (transition)
           //   store.transitionsState.prevState[transition.join(":")] = newState
