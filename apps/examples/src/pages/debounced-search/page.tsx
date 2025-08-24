@@ -74,7 +74,13 @@ const newDebouncedSearch = newStoreDef<
 const DebouncedSearch = createStoreUtils<typeof newDebouncedSearch>()
 
 export function DebouncedSearchPage() {
-  const instantiateStore = useCallback(() => newDebouncedSearch({}), [])
+  const instantiateStore = useCallback(
+    () =>
+      newDebouncedSearch({
+        initialName: "James",
+      }),
+    []
+  )
 
   const [debouncedSearchStore, resetStore, isLoading] =
     useNewStore(instantiateStore)

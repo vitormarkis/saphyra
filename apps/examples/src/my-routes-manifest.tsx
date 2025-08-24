@@ -8,6 +8,8 @@ import { PokemonPage } from "~/pages/pokemon/page"
 import { BeforeDispatchPage } from "./pages/before-dispatch/page"
 import { DebouncedSearchPage } from "./pages/debounced-search/page"
 import { MultipleOptimisticUpdatesPage } from "./pages/multiple-optimistic-updates/page"
+// @ts-ignore
+import { DeclarativePage } from "./pages/declarative/page.jsx"
 
 export const myRoutesManifest = [
   {
@@ -49,5 +51,9 @@ export const myRoutesManifest = [
   {
     path: "/pokemon",
     element: <PokemonPage />,
+  },
+  {
+    path: "/declarative",
+    element: <DeclarativePage />,
   },
 ]
