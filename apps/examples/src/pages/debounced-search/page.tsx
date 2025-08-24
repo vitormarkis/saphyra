@@ -145,7 +145,7 @@ export function DebouncedSearchView({}: DebouncedSearchViewProps) {
 
           async()
             .setName(`d [${action.name}]`)
-            .timer(() => store.dispatch(action), 500)
+            .setTimeout(() => store.dispatch(action), 500)
         },
       })
     },

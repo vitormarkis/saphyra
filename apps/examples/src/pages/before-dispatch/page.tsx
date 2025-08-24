@@ -212,14 +212,14 @@ const EXAMPLES_FACTORY: ExampleFactory[] = [
       beforeDispatch({ action, transition, abort, createAsync, store }) {
         const async = createAsync()
         abort(transition)
-        async().timer(() => store.dispatch(action), 500)
+        async().setTimeout(() => store.dispatch(action), 500)
       },
     },
     script: `
       beforeDispatch({ transition, abort, createAsync, store, action }) {
         const async = createAsync()
         abort(transition)
-        async().timer(() => store.dispatch(action), 500)
+        async().setTimeout(() => store.dispatch(action), 500)
       }
     `,
   }),

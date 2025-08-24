@@ -196,7 +196,7 @@ function cancelPrevious({
   abort(transition)
   async()
     .setName("d")
-    .timer(() => {
+    .setTimeout(() => {
       store.dispatch(action)
     }, 400)
 }

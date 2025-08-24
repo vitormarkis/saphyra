@@ -235,7 +235,7 @@ export function Post({ post }: PostProps) {
                 }
 
                 const async = createAsync()
-                return async().timer(() => store.dispatch(action), 200, {
+                return async().setTimeout(() => store.dispatch(action), 200, {
                   label: "debounce",
                 })
               },
