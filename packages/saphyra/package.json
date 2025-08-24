@@ -44,9 +44,8 @@
     "pr": "prettier --write src",
     "test": "vitest --config vitest.config.ts --silent",
     "test:debug": "vitest --config vitest.config.ts --inspect-brk --browser --no-file-parallelism",
-    "build": "npm run build:js && npm run build:css",
+    "build": "npm run build:js",
     "build:js": "tsup",
-    "build:css": "npx postcss react/src/waterfall/waterfall.css -o dist/waterfall.css",
     "build-vite": "vite build",
     "check-types": "npm run check",
     "prettier": "prettier --write src react"
