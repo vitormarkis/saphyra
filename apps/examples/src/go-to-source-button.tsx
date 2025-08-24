@@ -9,11 +9,11 @@ const showProvider = new Set(["/memory-game"])
 export function GoToSourceButton({}: GoToSourceButtonProps) {
   const { pathname } = useLocation()
   const href = showProvider.has(pathname)
-    ? "https://github.com/vitormarkis/saphyra/blob/main/src/pages$$$/game/provider.tsx"
-    : "https://github.com/vitormarkis/saphyra/blob/main/src/pages$$$/page.tsx"
+    ? "https://github.com/vitormarkis/saphyra/blob/main/apps/examples/src/pages$$$/page.tsx"
+    : "https://github.com/vitormarkis/saphyra/blob/main/apps/examples/src/pages$$$/page.tsx"
   const finalHref =
     pathname === "/"
-      ? "https://github.com/vitormarkis/saphyra/blob/main/src/App.tsx"
+      ? "https://github.com/vitormarkis/saphyra/blob/main/apps/examples/src/App.tsx"
       : href.replace("$$$", pathname)
   const posthog = usePostHog()
 
