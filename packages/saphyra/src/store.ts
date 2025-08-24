@@ -1245,7 +1245,6 @@ export function newStoreDef<
       })
       const signal = controller.signal
 
-      let isSync = true
       const actionsQueue: Action[] = [rootAction]
 
       const getStateToUseOnAction = createGetStateToUseOnAction(
@@ -1256,6 +1255,7 @@ export function newStoreDef<
 
       try {
         const asyncOperations: AsyncOperation[] = []
+        let isSync = true
         for (const action of actionsQueue) {
           const futurePrevState = cloneObj(newState)
           const async: AsyncBuilder = createAsync({
@@ -1455,6 +1455,7 @@ export function newStoreDef<
           newState = producedState
           prevState = futurePrevState
         }
+        isSync = false
         asyncOperations.forEach(asyncOperation => asyncOperation.fn?.())
       } catch (error) {
         if (!transition) {
@@ -1468,8 +1469,6 @@ export function newStoreDef<
           }
         }
       }
-
-      isSync = false
 
       notifyOptimistic()
 
