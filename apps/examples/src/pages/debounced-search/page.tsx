@@ -12,8 +12,6 @@ import { Waterfall } from "~/devtools/waterfall"
 type DebouncedSearchEvents = {}
 
 type DebouncedSearchActions = {
-  $updatesCount?: "multiple" | "few" | "one"
-} & {
   type: "change-name"
   name: string
 }
@@ -33,12 +31,6 @@ const newDebouncedSearch = newStoreDef<
   DebouncedSearchActions,
   DebouncedSearchEvents
 >({
-  config: {
-    runOptimisticUpdateOn({ action }) {
-      if (action.$updatesCount === "multiple") return false
-      return true
-    },
-  },
   onConstruct({ initialProps }) {
     return {
       name: initialProps.initialName ?? "",
@@ -114,7 +106,7 @@ export function DebouncedSearchView({}: DebouncedSearchViewProps) {
     Object.assign(window, { debouncedSearch })
   }, [debouncedSearch])
 
-  const optimisticState = DebouncedSearch.useSelector()
+  const users = DebouncedSearch.useSelector(s => s.$users)
   const query = DebouncedSearch.useSelector(s => s.name)
 
   DebouncedSearch.useErrorHandlers(error => {
@@ -132,19 +124,19 @@ export function DebouncedSearchView({}: DebouncedSearchViewProps) {
         beforeDispatch({ transition, createAsync, action, abort, store }) {
           // abort(transition)
           // return action
-          const async = createAsync()
           abort(transition)
 
-          const cachedUsers = queryClient.getQueryData<any[]>(
+          const hasCache = queryClient.getQueryData<any[]>(
             getUserListQueryOptions({ name: action.name }).queryKey
           )
 
-          if (cachedUsers) {
+          if (hasCache) {
             return action
           }
 
+          const async = createAsync()
           async()
-            .setName(`d [${action.name}]`)
+            .setName(`debounce [${action.name}]`)
             .setTimeout(() => store.dispatch(action), 500)
         },
       })
@@ -156,6 +148,7 @@ export function DebouncedSearchView({}: DebouncedSearchViewProps) {
     <div className="flex flex-col overflow-y-hidden p-1">
       {import.meta.env.DEV === true && (
         <button
+          style={{ width: "fit-content" }}
           onClick={() => {
             function dispatchingThenCancelling() {
               action("e")
@@ -215,7 +208,7 @@ export function DebouncedSearchView({}: DebouncedSearchViewProps) {
             typingSlowly()
           }}
         >
-          Test
+          Showcase
         </button>
       )}
       <label
@@ -244,7 +237,7 @@ export function DebouncedSearchView({}: DebouncedSearchViewProps) {
           )}
         >
           {isLoading && <div className="absolute z-10 inset-0 bg-black/30" />}
-          {optimisticState.$users.map(user => (
+          {users.map(user => (
             <article
               key={user.id}
               className="flex gap-1"
