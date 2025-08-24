@@ -530,6 +530,10 @@ export function newStoreDef<
         )
       }
       derivationsRegistry?.clear(transition)
+      store.parentTransitionRegistry = deleteImmutably(
+        store.parentTransitionRegistry,
+        transitionKey
+      )
       onCommitTransition({
         action,
         setterOrPartialStateList: setters,
@@ -935,7 +939,7 @@ export function newStoreDef<
       rollback.add(initialAbort.rollback)
 
       const initialController = ensureAbortController({
-        transition: initialAction.transition ?? [GENERAL_TRANSITION],
+        transition: initialAction.transition ?? [GENERAL_TRANSITION()],
         controller: initialAction.controller,
       })
 
@@ -1240,7 +1244,7 @@ export function newStoreDef<
 
       const transition = rootAction.transition
       const controller = ensureAbortController({
-        transition: transition ?? [GENERAL_TRANSITION],
+        transition: transition ?? [GENERAL_TRANSITION()],
         controller: rootAction.controller,
       })
       const signal = controller.signal

@@ -1,7 +1,9 @@
 import React, { useEffect } from "react"
 import { newStoreDef } from "saphyra"
 import { createStoreUtils, useNewStore } from "saphyra/react"
+import { toast } from "sonner"
 import { cn } from "~/lib/cn"
+import { extractErrorMessage } from "~/lib/extract-error-message"
 
 type ResizeDebouncedState = {
   $width: number
@@ -10,9 +12,21 @@ type ResizeDebouncedState = {
 
 type ResizeDebouncedActions =
   | {
+      type: "resize-async"
+      payload: {
+        width: number
+      }
+    }
+  | {
+      type: "new-width"
+      payload: {
+        width: number
+      }
+    }
+  | {
       type: "resize"
       payload: {
-        offset: number
+        width: number
       }
     }
   | {
@@ -27,24 +41,34 @@ const newStore = newStoreDef<
   ResizeDebouncedState,
   ResizeDebouncedActions
 >({
-  reducer({ prevState, state, action, set, async, optimistic }) {
-    set({
-      $width: (() => {
-        if (action.type === "resize") {
-          const { offset } = action.payload
-          if (typeof state.$initialWidth !== "number")
-            throw new Error("Initial width is not set")
-          return state.$initialWidth + offset
-        }
-        return state.$width ?? 200
-      })(),
-    })
+  reducer({ prevState, state, action, set, async, dispatchAsync, store }) {
+    if (action.type === "resize") {
+      async().promise(async () => {
+        await new Promise(resolve => setTimeout(resolve))
+        await dispatchAsync({
+          type: "resize-async",
+          payload: { width: action.payload.width },
+          transition: ["random"],
+        })
+      })
+    }
+
+    if (action.type === "resize-async") {
+      async().promise(async () => {
+        await new Promise(resolve => setTimeout(resolve))
+        dispatchAsync({
+          type: "new-width",
+          payload: { width: action.payload.width },
+        })
+      })
+    }
 
     set({
-      $initialWidth: (() => {
-        if (action.type === "start-resize") return state.$width
-        if (action.type === "end-resize") return null
-        return state.$initialWidth ?? null
+      $width: (() => {
+        if (action.type === "new-width") {
+          return action.payload.width
+        }
+        return state.$width ?? 200
       })(),
     })
 
@@ -62,6 +86,10 @@ export function ResizeDebouncedPage() {
       resizeDebounced: store,
     })
   }, [store])
+
+  Store.useErrorHandlers(error => {
+    toast.error(extractErrorMessage(error))
+  }, store)
 
   return (
     <Store.Context.Provider value={[store, resetStore, isLoading]}>
@@ -118,20 +146,28 @@ const Handle = React.forwardRef<React.ElementRef<"i">, HandleProps>(
         )}
         onMouseDown={e => {
           const startX = e.clientX
-
-          // Initialize the resize operation
-          store.dispatch({ type: "start-resize" })
+          const startWidth = store.state.$width
 
           const onMove = (e: MouseEvent) => {
             const dragDistance = e.clientX - startX
+            const width = startWidth + dragDistance
+
             store.dispatch({
               type: "resize",
-              payload: { offset: dragDistance },
-              // transition: ["resize"],
+              payload: {
+                width,
+              },
+              transition: ["resize"],
+              beforeDispatch({ createAsync, transition, store, action }) {
+                const async = createAsync()
+                store.abort(transition)
+                // return action
+                async().setTimeout(() => store.dispatch(action), 400)
+              },
             })
           }
           const onUp = () => {
-            store.dispatch({ type: "end-resize" })
+            // store.dispatch({ type: "end-resize" })
             document.removeEventListener("mousemove", onMove)
             document.removeEventListener("mouseup", onUp)
           }

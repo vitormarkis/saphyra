@@ -108,7 +108,7 @@ describe("before dispatch: cancel previous", () => {
       await vi.advanceTimersByTimeAsync(1000)
       const info = getStoreTransitionInfoShallowCopy(store, transitionName)
 
-      expect(info.controller.signal.aborted).toBe(false)
+      expect(info.controller).toBeUndefined()
       expect(info.setters).toBeUndefined()
       expect(info.doneCallback).toBeNull()
       expect(info.errorCallback).toBeNull()
@@ -171,7 +171,7 @@ describe("before dispatch: cancel previous", () => {
         // await vi.advanceTimersByTimeAsync(1000 -> 500) // TODO
         await vi.advanceTimersByTimeAsync(500)
         const info = getStoreTransitionInfoShallowCopy(store, transitionName)
-        expect(info.controller.signal.aborted).toBe(false)
+        expect(info.controller).toBeUndefined()
         expect(info.setters).toBeUndefined()
         expect(info.doneCallback).toBeNull()
         expect(info.errorCallback).toBeNull()

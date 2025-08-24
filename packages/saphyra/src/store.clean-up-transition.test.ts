@@ -91,6 +91,42 @@ describe("ensure proper transition cleanup", () => {
     ensureAllCleanUp(store, ["incrementkey"], { expectError: true })
   })
 
+  test("dispatch async", async () => {
+    const newStore = newStoreDefTest({
+      derivations: {
+        getCount: {
+          selectors: [s => s.count],
+          evaluator: s => s.count,
+        },
+      },
+      reducer({ state, action, async, dispatchAsync, set }) {
+        if (action.type === "increment-impl") {
+          set(s => ({ count: s.count + 1 }))
+        }
+        if (action.type === "increment") {
+          async().promise(async () => {
+            await dispatchAsync({
+              type: "increment-impl",
+              transition: ["nested"],
+            })
+          })
+        }
+
+        return state
+      },
+    })
+
+    const store = newStore({ count: 0 })
+    await store
+      .dispatchAsync({
+        type: "increment",
+        transition: ["incrementkey"],
+      })
+      .catch(() => {})
+
+    ensureAllCleanUp(store, ["incrementkey"], { expectError: false })
+  })
+
   test("ensure cleaning up nested dispatch async", () => {
     // CONTROLLERS ARE NOT BEING CLEANED UP
   })
@@ -142,6 +178,9 @@ function ensureAllCleanUp(
   expect(store.transitions.controllers.getKeys()).to.not.toContain(
     transitionKey
   )
+  expect(Object.keys(store.transitions.controllers.values)).to.not.toContain(
+    transitionKey
+  )
   expect(Object.keys(store.transitions.cleanUpList)).to.not.toContain(
     transitionKey
   )
@@ -154,6 +193,7 @@ function ensureAllCleanUp(
   expect(store.internal.derivationsRegistry.getGetterGroups()).to.not.toContain(
     `transition:${transitionKey}`
   )
+  expect(store.parentTransitionRegistry).toStrictEqual({})
   expect(Object.keys(store.parentTransitionRegistry)).to.not.toContain(
     transitionKey
   )

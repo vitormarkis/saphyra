@@ -108,9 +108,12 @@ export class TransitionsStore extends Subject {
       get: this.ensureController.bind(this),
       set: this.setController.bind(this),
       values: {},
-      getKeys: () => Object.keys(this.controllers),
+      getKeys: () => Object.keys(this.controllers.values),
       clear: (transition: string) => {
-        this.controllers = deleteImmutably(this.controllers, transition)
+        this.controllers.values = deleteImmutably(
+          this.controllers.values,
+          transition
+        )
       },
     }
   }
@@ -159,8 +162,8 @@ export class TransitionsStore extends Subject {
     const transitionName =
       typeof transition === "string" ? transition : transition.join(":")
     if (!this.controllers.values[transitionName]) {
-      this.controllers = setImmutable(
-        this.controllers,
+      this.controllers.values = setImmutable(
+        this.controllers.values,
         transitionName,
         new AbortController()
       )

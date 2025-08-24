@@ -42,7 +42,7 @@ describe("before dispatch: default", () => {
       })
 
       const info = getStoreTransitionInfoShallowCopy(store, transitionName)
-      expect(info.controller.signal.aborted).toBe(false)
+      expect(info.controller).toBeUndefined()
       expect(info.setters).toBeUndefined()
       expect(info.doneCallback).toBeNull()
       expect(info.errorCallback).toBeNull()
@@ -65,7 +65,7 @@ describe("before dispatch: default", () => {
       })
 
       const info = getStoreTransitionInfoShallowCopy(store, transitionName)
-      expect(info.controller.signal.aborted).toBe(false)
+      expect(info.controller).toBeUndefined()
       expect(info.setters).toBeUndefined()
       expect(info.doneCallback).toBeNull()
       expect(info.errorCallback).toBeNull()
@@ -190,7 +190,7 @@ describe("before dispatch: default", () => {
       const info = getStoreTransitionInfoShallowCopy(store, transitionName)
 
       expect(lastSetters).toHaveLength(3)
-      expect(info.controller.signal.aborted).toBe(false)
+      expect(info.controller).toBeUndefined()
       expect(info.setters).toBeUndefined()
       expect(info.doneCallback).toBeNull()
       expect(info.errorCallback).toBeNull()
