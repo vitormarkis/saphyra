@@ -8,6 +8,7 @@ import { useCallback, useEffect } from "react"
 import { createStoreUtils, useBootstrapError, useNewStore } from "saphyra/react"
 import { queryClient } from "~/query-client"
 import { Waterfall } from "~/devtools/waterfall"
+import { Button } from "~/components/ui/button"
 
 type DebouncedSearchEvents = {}
 
@@ -147,7 +148,7 @@ export function DebouncedSearchView({}: DebouncedSearchViewProps) {
   return (
     <div className="flex flex-col overflow-y-hidden p-1">
       {import.meta.env.DEV === true && (
-        <button
+        <Button
           style={{ width: "fit-content" }}
           onClick={() => {
             function dispatchingThenCancelling() {
@@ -209,7 +210,7 @@ export function DebouncedSearchView({}: DebouncedSearchViewProps) {
           }}
         >
           Showcase
-        </button>
+        </Button>
       )}
       <label
         htmlFor="name"

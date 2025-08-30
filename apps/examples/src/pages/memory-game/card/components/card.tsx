@@ -1,3 +1,4 @@
+import { Button } from "~/components/ui/button"
 import { Game } from "../../game/provider"
 import { useMemoryCard } from "../hooks"
 
@@ -8,7 +9,7 @@ export function MemoryGameCard({}: MemoryGameCardProps) {
   const cardId = useMemoryCard(s => s.id)
 
   return (
-    <button
+    <Button
       onClick={() => {
         memoryGame.dispatch({
           type: "tap-card",
@@ -20,7 +21,7 @@ export function MemoryGameCard({}: MemoryGameCardProps) {
       <span className="scale-[2.3]">
         <MemoryGameCardContent />
       </span>
-    </button>
+    </Button>
   )
 }
 

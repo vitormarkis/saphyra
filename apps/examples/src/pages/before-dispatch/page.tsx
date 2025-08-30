@@ -24,6 +24,7 @@ import { formatScript } from "~/lib/prettify-code"
 import { Theme } from "~/theme"
 import { CodeEditor } from "~/components/code-editor"
 import { TextChart } from "~/components/text-chart"
+import { Button } from "~/components/ui/button"
 
 type TransitionsStoreState = {
   count: number
@@ -502,7 +503,7 @@ export function Example({ createExample }: ExampleProps) {
       </Suspense>
       <div className="grid gap-2">
         {example.actionSupport && (
-          <button
+          <Button
             onClick={() => {
               invariant(example.actionSupport)
               store.dispatch({
@@ -517,9 +518,9 @@ export function Example({ createExample }: ExampleProps) {
             )}
           >
             Click 🎉
-          </button>
+          </Button>
         )}
-        <button
+        <Button
           onClick={() => {
             store.dispatch({
               ...(example.action as any),
@@ -533,7 +534,7 @@ export function Example({ createExample }: ExampleProps) {
           )}
         >
           Submit
-        </button>
+        </Button>
       </div>
     </div>
   )

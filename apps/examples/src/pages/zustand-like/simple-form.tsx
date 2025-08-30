@@ -4,6 +4,7 @@ import { newStoreDef } from "saphyra"
 import { createSession } from "~/pages/zustand-like/fn/create-session"
 import { Devtools } from "~/devtools/devtools"
 import { createStoreUtils, useNewStore } from "saphyra/react"
+import { Button } from "~/components/ui/button"
 
 type SimpleFormInitialProps = {
   fullName: string
@@ -125,7 +126,7 @@ export function SimpleFormView({ onGetToken }: SimpleFormViewProps) {
           })
         }
       />
-      <button>Submit</button>
+      <Button>Submit</Button>
     </form>
   )
 }

@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { newStoreDef } from "saphyra"
 import { createStoreUtils, useNewStore } from "saphyra/react"
+import { Button } from "~/components/ui/button"
 import { sleep } from "~/sleep"
 
 type MultipleOptimisticUpdatesState = {
@@ -64,13 +65,13 @@ function Content() {
   return (
     <div className="flex flex-col">
       <pre>{JSON.stringify({ loading }, null, 2)}</pre>
-      <button
+      <Button
         onClick={() => {
           store.dispatch({ type: "fire", transition: ["fire"] })
         }}
       >
         Fire
-      </button>
+      </Button>
       <pre>{JSON.stringify(state, null, 2)}</pre>
     </div>
   )

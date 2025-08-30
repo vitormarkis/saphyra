@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-input,
+input:not([type="checkbox"]),
 select {
   @apply border border-slate-400 h-9 text-black px-2 rounded-sm ring-2 ring-red-500;
 }
@@ -15,10 +15,6 @@ body {
 
 fieldset {
   @apply border border-solid border-gray-300 p-3 rounded-md;
-}
-
-button {
-  @apply bg-blue-500 text-white border border-blue-600 hover:bg-blue-600 hover:border-blue-700 focus:outline-none font-medium text-sm transition-[background-color] px-4 h-7 rounded-sm outline-none whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-blue-500 disabled:hover:border-blue-600;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -34,7 +30,7 @@ button {
     @apply bg-gray-950 text-white border-gray-800;
   }
 
-  input,
+  input:not([type="checkbox"]),
   select {
     @apply border border-slate-600 h-9 text-white bg-gray-700 ring-0 focus:ring-1 outline-none focus:outline-none ring-blue-600;
   }

@@ -10,6 +10,9 @@ import { newRevalidationListStore, RevalidationList } from "./store"
 import { INITIAL_TODOS } from "./consts"
 import { toast } from "sonner"
 import { cancelPrevious, preventNextOne } from "./before-dispatches"
+import { Checkbox } from "~/components/ui/checkbox"
+import { Button } from "~/components/ui/button"
+import { settingsStore, SettingsStore } from "./settings-store"
 
 export function RevalidationListPage() {
   const [displayingContent, setDisplayingContent] = useState(true)
@@ -35,15 +38,55 @@ export function RevalidationListPage() {
     <RevalidationList.Context.Provider
       value={[revalidationListStore, setRevalidationListStore, isBootstraping]}
     >
-      <button
-        className="w-fit absolute top-6 left-1/2 -translate-x-1/2"
-        onClick={() => setDisplayingContent(prev => !prev)}
-      >
-        Toggle content visibility
-      </button>
+      <div className="absolute top-6 left-0 right-0 z-40">
+        <div className="flex items-center gap-4 px-8">
+          <label
+            htmlFor="optimistic"
+            className="flex flex-col items-center gap-1"
+          >
+            <span className="text-center h-12 inline-grid place-items-center">
+              Optimistic
+            </span>
+            <Checkbox
+              checked={SettingsStore.useSelector(s => s.optimistic)}
+              onCheckedChange={value => {
+                settingsStore.setState({
+                  optimistic: !!value,
+                })
+              }}
+            />
+          </label>
+          <label
+            htmlFor="optimistic"
+            className="flex flex-col items-center gap-1"
+          >
+            <span className="text-center h-12 inline-grid place-items-center">
+              Error
+              <br />
+              sometimes
+            </span>
+            <Checkbox
+              checked={SettingsStore.useSelector(s => s.errorSometimes)}
+              onCheckedChange={value => {
+                settingsStore.setState({
+                  errorSometimes: !!value,
+                })
+              }}
+            />
+          </label>
+        </div>
+        <div className="flex justify-center">
+          <Button
+            className="w-fit"
+            onClick={() => setDisplayingContent(prev => !prev)}
+          >
+            Toggle content visibility
+          </Button>
+        </div>
+      </div>
       <div
         className={cn(
-          "h-full gap-4 flex flex-col @xl:flex-row overflow-hidden mt-6"
+          "h-full gap-4 flex flex-col @xl:flex-row overflow-hidden pt-24"
         )}
       >
         <div

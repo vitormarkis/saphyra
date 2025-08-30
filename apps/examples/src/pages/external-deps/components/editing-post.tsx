@@ -9,6 +9,7 @@ import {
   postsController,
   PostsController,
 } from "~/pages/external-deps/store.controller"
+import { Button } from "~/components/ui/button"
 
 type EditingPostProps = {}
 
@@ -160,13 +161,13 @@ export function EditingPost({}: EditingPostProps) {
           </label>
 
           <div className="flex justify-between">
-            <button onClick={() => closeModal()}>Cancel</button>
-            <button
+            <Button onClick={() => closeModal()}>Cancel</Button>
+            <Button
               disabled={isPlacingComment}
               type="submit"
             >
               Post
-            </button>
+            </Button>
           </div>
         </form>
       </div>

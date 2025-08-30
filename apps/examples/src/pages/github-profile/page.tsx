@@ -2,6 +2,7 @@ import { createStoreUtils } from "saphyra/react"
 import { newStoreDef } from "saphyra"
 import { GithubProfile } from "./types"
 import { Devtools } from "~/devtools/devtools"
+import { Button } from "~/components/ui/button"
 
 type UserStoreInitialProps = {
   username: string
@@ -71,12 +72,12 @@ export function GithubProfilePage() {
             })
           }}
         />
-        <button
+        <Button
           disabled={isFetchingUser}
           type="submit"
         >
           Fetch user
-        </button>
+        </Button>
         <Devtools store={userStore} />
       </form>
     </div>

@@ -1,3 +1,5 @@
+import { Button } from "./ui/button"
+
 type ErrorPageProps = {
   error: unknown
   tryAgain: () => void
@@ -16,12 +18,12 @@ export function ErrorPage({ error, tryAgain }: ErrorPageProps) {
             This is intended! Just click try again!
           </span>
         </div>
-        <button
+        <Button
           onClick={tryAgain}
           className="bg-red-500 text-white border border-red-600 hover:bg-red-600 hover:border-red-700 focus:outline-none font-medium text-sm transition-all px-4 h-7 rounded-sm outline-none whitespace-nowrap"
         >
           Try again
-        </button>
+        </Button>
       </div>
     </div>
   )

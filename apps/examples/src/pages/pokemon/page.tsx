@@ -12,6 +12,7 @@ import { Waterfall } from "~/devtools/waterfall"
 import { createStoreUtils, useBootstrapError, useNewStore } from "saphyra/react"
 import { sleep } from "~/lib/common"
 import { randomString } from "~/lib/utils"
+import { Button } from "~/components/ui/button"
 
 type PokemonState = {
   currentPokemonId: number
@@ -186,7 +187,7 @@ export function PokemonPageContent({}: PokemonPageContentProps) {
           isLoadingNewPokemon && "border-amber-400"
         )}
       >
-        <button
+        <Button
           onClick={() =>
             store.dispatch({
               type: "fetch-pokemon",
@@ -197,9 +198,9 @@ export function PokemonPageContent({}: PokemonPageContentProps) {
           }
         >
           Prev
-        </button>
+        </Button>
         {currentPokemonId}
-        <button
+        <Button
           onClick={() =>
             store.dispatch({
               type: "fetch-pokemon",
@@ -210,7 +211,7 @@ export function PokemonPageContent({}: PokemonPageContentProps) {
           }
         >
           Next
-        </button>
+        </Button>
       </div>
       <div className="h-full grid grid-cols-2 gap-4">
         <Devtools store={store} />

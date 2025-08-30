@@ -1,5 +1,6 @@
 import { createStoreUtils } from "saphyra/react"
 import { newStoreDef } from "saphyra"
+import { Button } from "~/components/ui/button"
 
 type SimpleForm = {
   name: string
@@ -28,7 +29,7 @@ export function ZustandLikePage() {
         <InputName />
         <InputEmail />
         <InputPassword />
-        <button>Submit</button>
+        <Button>Submit</Button>
       </form>
       <div className="flex-1">
         <StateDisplay />

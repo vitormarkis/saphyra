@@ -14,6 +14,7 @@ import {
   toggleTodoDisabledInDb,
 } from "./fn/fake-todos-db"
 import { noop } from "~/lib/utils"
+import { settingsStore } from "./settings-store"
 
 type RevalidationListState = {
   todos: TodoType[]
@@ -38,14 +39,6 @@ type RevalidationListActions =
       type: "revalidate-todos"
     }
 
-async function revalidateTodoList(
-  signal: AbortSignal,
-  onNewTodos: (todos: TodoType[]) => void
-) {
-  const todos = await getTodosFromDb(signal)
-  onNewTodos(todos)
-}
-
 export const newRevalidationListStore = newStoreDef<
   RevalidationListInitialProps,
   RevalidationListState,
@@ -60,20 +53,8 @@ export const newRevalidationListStore = newStoreDef<
     const todos = await getTodosFromDb(signal)
     return { todos }
   },
-  reducer({
-    prevState,
-    state,
-    action,
-    set,
-    diff,
-    async,
-    dispatch,
-    dispatchAsync,
-    deps,
-    optimistic,
-    store,
-    // optimisticState,
-  }) {
+  reducer({ state, action, set, diff, async, dispatch, optimistic }) {
+    const settings = settingsStore.getState()
     if (action.type === "revalidate-todos") {
       async()
         .setName("fetch na api")
@@ -84,60 +65,46 @@ export const newRevalidationListStore = newStoreDef<
     }
 
     if (action.type === "toggle-todo") {
-      // const optimisticCompleted = !state.$completedTodos.includes(action.todoId)
-      // optimistic(s => ({
-      //   todos: s.todos.map(todo =>
-      //     todo.id === action.todoId
-      //       ? { ...todo, completed: optimisticCompleted }
-      //       : todo
-      //   ),
-      // }))
+      if (settings.optimistic) {
+        const optimisticCompleted = !state.$completedTodos.includes(
+          action.todoId
+        )
+        optimistic(s => ({
+          todos: s.todos.map(todo =>
+            todo.id === action.todoId
+              ? { ...todo, completed: optimisticCompleted }
+              : todo
+          ),
+        }))
+      }
 
       async()
         .setName("complete")
         .onFinish(revalidateList(dispatch))
         .promise(async ctx => {
           await toggleTodoInDb(action.todoId, ctx.signal)
-          // const todos = await getTodosFromDb(ctx.signal)
-          // set({ todos })
-          // await dispatchAsync(
-          //   {
-          //     type: "revalidate-todos",
-          //     transition: ["revalidate-todo-list"],
-          //     beforeDispatch: cancelPrevious,
-          //   },
-          //   ctx.signal
-          // )
         })
     }
 
     if (action.type === "toggle-disabled") {
-      // const optimisticDisabled = !state.todos.find(
-      //   todo => todo.id === action.todoId
-      // )?.disabled
+      if (settings.optimistic) {
+        const optimisticDisabled = !state.todos.find(
+          todo => todo.id === action.todoId
+        )?.disabled
 
-      // optimistic(s => ({
-      //   todos: s.todos.map(todo =>
-      //     todo.id === action.todoId
-      //       ? { ...todo, disabled: optimisticDisabled }
-      //       : todo
-      //   ),
-      // }))
+        optimistic(s => ({
+          todos: s.todos.map(todo =>
+            todo.id === action.todoId
+              ? { ...todo, disabled: optimisticDisabled }
+              : todo
+          ),
+        }))
+      }
       async()
         .setName("disabled")
         .onFinish(revalidateList(dispatch))
         .promise(async ctx => {
           await toggleTodoDisabledInDb(action.todoId, ctx.signal)
-          // const todos = await getTodosFromDb(ctx.signal)
-          // set({ todos })
-          // await dispatchAsync(
-          //   {
-          //     type: "revalidate-todos",
-          //     transition: ["revalidate-todo-list"],
-          //     beforeDispatch: cancelPrevious,
-          //   },
-          //   ctx.signal
-          // )
         })
     }
 

@@ -1,6 +1,7 @@
 import { useRef, useState } from "react"
 import { newStoreDef } from "saphyra"
 import { createStoreUtils, useNewStore } from "saphyra/react"
+import { Button } from "~/components/ui/button"
 import { sleep } from "~/sleep"
 
 type TransitionsStoreState = {
@@ -122,7 +123,7 @@ export function TransitionsShowcaseView({}: TransitionsShowcaseViewProps) {
 
   return (
     <div className="container-1 min-h-screen flex-wrap gap-2 grid place-items-center">
-      <button
+      <Button
         onClick={() => {
           transitionsStore.dispatch({
             type: "fetch-albums",
@@ -135,7 +136,7 @@ export function TransitionsShowcaseView({}: TransitionsShowcaseViewProps) {
         }}
       >
         Fetch
-      </button>
+      </Button>
       {/* <pre>{JSON.stringify({ isLoading: isLoading }, null, 2)}</pre> */}
     </div>
   )

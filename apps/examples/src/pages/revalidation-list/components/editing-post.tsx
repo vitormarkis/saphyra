@@ -1,6 +1,7 @@
 import { Spinner } from "@blueprintjs/core"
 import { useCallback, useState } from "react"
 import { toast } from "sonner"
+import { Button } from "~/components/ui/button"
 import { useCallbackOnKeyDown } from "~/hooks/use-callback-on-keydown"
 import { cn } from "~/lib/cn"
 import { getCommentsLazyOptions } from "~/pages/external-deps/lazy-values-options/get-comments-lazy-options"
@@ -157,13 +158,13 @@ export function EditingPost({}: EditingPostProps) {
           </label>
 
           <div className="flex justify-between">
-            <button onClick={() => closeModal()}>Cancel</button>
-            <button
+            <Button onClick={() => closeModal()}>Cancel</Button>
+            <Button
               disabled={isPlacingComment}
               type="submit"
             >
               Post
-            </button>
+            </Button>
           </div>
         </form>
       </div>

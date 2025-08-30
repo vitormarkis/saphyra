@@ -5,6 +5,7 @@ import { Devtools } from "~/devtools/devtools"
 import { Waterfall } from "./devtools/waterfall"
 import { newStoreDef } from "saphyra"
 import { createStoreUtils, useHistory, useNewStore } from "saphyra/react"
+import { Button } from "./components/ui/button"
 
 type CounterState = {
   count: number
@@ -106,7 +107,7 @@ export function Content() {
       </span>
       <div className="flex gap-4">
         <div className="flex gap-2 @2xl:flex-row flex-col">
-          <button
+          <Button
             onClick={() => {
               todosStore.dispatch({
                 type: "increment",
@@ -114,8 +115,8 @@ export function Content() {
             }}
           >
             Increment
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={() => {
               todosStore.dispatch({
                 type: "decrement",
@@ -123,8 +124,8 @@ export function Content() {
             }}
           >
             Decrement
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={async () => {
               todosStore.dispatch({
                 type: "increment-ten",
@@ -137,8 +138,8 @@ export function Content() {
             }}
           >
             Increment (10) [async]
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={() => {
               todosStore.dispatch({
                 type: "increment-three",
@@ -147,7 +148,7 @@ export function Content() {
             }}
           >
             Increment (3) [async]
-          </button>
+          </Button>
         </div>
         <div className="flex">{isTransitioning && <Spinner size={14} />}</div>
       </div>

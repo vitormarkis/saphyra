@@ -2,6 +2,7 @@ import { createStoreUtils, useNewStore } from "saphyra/react"
 import { useEffect, useState } from "react"
 import { newStoreDef } from "saphyra"
 import { createSession } from "~/pages/zustand-like/fn/create-session"
+import { Button } from "~/components/ui/button"
 
 type SimpleFormEvents = {
   "got-token": [token: string]
@@ -122,7 +123,7 @@ export function SimpleFormView({ onGetToken }: SimpleFormViewProps) {
           })
         }
       />
-      <button>Submit</button>
+      <Button>Submit</Button>
     </form>
   )
 }
