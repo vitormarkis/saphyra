@@ -62,14 +62,16 @@ export function createAsync<
       label,
     })
 
-    return (status: "cancelled" | "fail" | "success", error?: unknown) =>
+    return (status: "cancelled" | "fail" | "success", error?: unknown) => {
       completeBar(id, status, error)
+    }
   }
 
   const wrapPromise = <T>(
     promiseFn: (props: AsyncPromiseProps) => Promise<T>,
     config?: AsyncPromiseConfig,
-    onFinish?: AsyncPromiseOnFinishProps
+    onFinish?: AsyncPromiseOnFinishProps,
+    emitBar?: boolean
   ) => {
     const when = Date.now()
     const fn = () => {
@@ -106,7 +108,9 @@ export function createAsync<
 
         const racePromise = PromiseWithResolvers<T>()
 
-        const finishBar = newBar(transitionString, labelWhen(new Date()), label)
+        const finishBar = emitBar
+          ? newBar(transitionString, labelWhen(new Date()), label)
+          : () => {}
 
         const cleanUp = (error: unknown) => {
           // if (onSuccess) {
@@ -149,6 +153,9 @@ export function createAsync<
               store.transitions.state.finishes[onFinishId]
             const isLast = () => getFinishesCount() === 0
             const resolver = PromiseWithResolvers<void>()
+            const finishOnFinishBar = onFinishId
+              ? newBar(transitionString, labelWhen(new Date()), onFinishId)
+              : () => {}
             const finishCleanUp = onFinishFn?.(
               isLast,
               () => resolver.resolve(),
@@ -168,10 +175,18 @@ export function createAsync<
                   resolver.reject()
                 })
                 await resolver.promise
+                  .then(() => {
+                    finishOnFinishBar("success")
+                  })
+                  .catch(() => {
+                    finishOnFinishBar("fail")
+                  })
               },
               {
                 label: onFinishId,
-              }
+              },
+              undefined,
+              false
             )
           }
           finishBar("success")
@@ -208,7 +223,8 @@ export function createAsync<
   const wrapTimeout = (
     callback: () => void,
     time = 0,
-    config?: AsyncTimerConfig
+    config?: AsyncTimerConfig,
+    emitBar?: boolean
   ) => {
     const when = Date.now()
     const fn = () => {
@@ -226,7 +242,9 @@ export function createAsync<
       )
       cleanUpList.add(cleanUp)
       const when = labelWhen(new Date())
-      const finishBar = newBar(transitionString, when, label)
+      const finishBar = emitBar
+        ? newBar(transitionString, when, label)
+        : () => {}
       const timerId = setTimeout(() => {
         try {
           callback()
@@ -296,16 +314,22 @@ export function createAsync<
         {
           label: _name ?? undefined,
         },
-        onFinishObj
+        onFinishObj,
+        true
       )
 
       return {}
     }
 
     const setTimeout = (callback: () => void, time?: number) => {
-      wrapTimeout(callback, time, {
-        label: _name ?? undefined,
-      })
+      wrapTimeout(
+        callback,
+        time,
+        {
+          label: _name ?? undefined,
+        },
+        true
+      )
     }
 
     const setName: AsyncModule["setName"] = name => {

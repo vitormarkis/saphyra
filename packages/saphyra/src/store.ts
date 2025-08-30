@@ -970,6 +970,7 @@ export function newStoreDef<
             transition ?? initialAction.transition,
             signal ?? initialController.signal,
             asyncOp => {
+              if (signal.aborted) debugger
               asyncOperations.push(asyncOp)
             },
             "before-dispatch-async",
@@ -1268,7 +1269,11 @@ export function newStoreDef<
             transition: action.transition,
             signal,
             onAsyncOperation: asyncOp => {
-              asyncOperations.push(asyncOp)
+              if (isSync) {
+                asyncOperations.push(asyncOp)
+              } else {
+                asyncOp.fn?.()
+              }
             },
             from: "action",
             onAbort: () => {
@@ -1307,7 +1312,7 @@ export function newStoreDef<
             }
           }
 
-          const dispatchReducerHandler = (action: Action) => {
+          const dispatchReducerHandler = (action: Action): (() => void) => {
             if (signal.aborted) return noop
             const sameTransition =
               action.transition?.join(":") === transition?.join(":")
@@ -1324,7 +1329,7 @@ export function newStoreDef<
               newState = producedState
               prevState = futurePrevState
             } else {
-              store.dispatch(safeAction)
+              return store.dispatch(safeAction)
             }
           }
           const contextFn: (
@@ -2090,21 +2095,24 @@ function performOnTransitionEndCallbacks<TState>({
   const transitionKey = transition.join(":")
   const onTransitionEndCallbacks =
     store.onTransitionEndCallbacks[transitionKey] ?? new Set()
+  const isAborted = isNewActionError(error)
   onTransitionEndCallbacks.forEach(onTransitionEnd => {
-    onTransitionEndCallbacks.delete(onTransitionEnd)
+    if (!isAborted) onTransitionEndCallbacks.delete(onTransitionEnd)
     onTransitionEnd({
       events: store.events,
       meta: store.transitions.meta.get(transition),
       state: newState,
       transition,
       transitionStore: store.transitions,
-      aborted: false,
+      aborted: isAborted,
       setterOrPartialStateList: setters,
       error,
     })
   })
-  store.onTransitionEndCallbacks = deleteImmutably(
-    store.onTransitionEndCallbacks,
-    transitionKey
-  )
+  if (!isAborted) {
+    store.onTransitionEndCallbacks = deleteImmutably(
+      store.onTransitionEndCallbacks,
+      transitionKey
+    )
+  }
 }

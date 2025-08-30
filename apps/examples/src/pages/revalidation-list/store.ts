@@ -13,6 +13,7 @@ import {
   toggleTodoInDb,
   toggleTodoDisabledInDb,
 } from "./fn/fake-todos-db"
+import { noop } from "~/lib/utils"
 
 type RevalidationListState = {
   todos: TodoType[]
@@ -50,6 +51,11 @@ export const newRevalidationListStore = newStoreDef<
   RevalidationListState,
   RevalidationListActions
 >({
+  config: {
+    onCommitTransition(props) {
+      noop()
+    },
+  },
   async onConstruct({ signal }) {
     const todos = await getTodosFromDb(signal)
     return { todos }
@@ -78,6 +84,7 @@ export const newRevalidationListStore = newStoreDef<
     }
 
     if (action.type === "toggle-todo") {
+      const todoIndex = state.todos.findIndex(todo => todo.id === action.todoId)
       // const optimisticCompleted = !state.$completedTodos.includes(action.todoId)
       // optimistic(s => ({
       //   todos: s.todos.map(todo =>
@@ -89,7 +96,7 @@ export const newRevalidationListStore = newStoreDef<
 
       async()
         .setName("complete")
-        .onFinish(revalidateList(dispatch))
+        .onFinish(revalidateList(dispatch, todoIndex))
         .promise(async ctx => {
           await toggleTodoInDb(action.todoId, ctx.signal)
           // const todos = await getTodosFromDb(ctx.signal)
@@ -106,6 +113,7 @@ export const newRevalidationListStore = newStoreDef<
     }
 
     if (action.type === "toggle-disabled") {
+      const todoIndex = state.todos.findIndex(todo => todo.id === action.todoId)
       // const optimisticDisabled = !state.todos.find(
       //   todo => todo.id === action.todoId
       // )?.disabled
@@ -119,7 +127,7 @@ export const newRevalidationListStore = newStoreDef<
       // }))
       async()
         .setName("disabled")
-        .onFinish(revalidateList(dispatch))
+        .onFinish(revalidateList(dispatch, todoIndex))
         .promise(async ctx => {
           await toggleTodoDisabledInDb(action.todoId, ctx.signal)
           // const todos = await getTodosFromDb(ctx.signal)
@@ -136,15 +144,15 @@ export const newRevalidationListStore = newStoreDef<
     }
 
     if (diff(["todos"])) {
-      set(s => ({ $todosById: groupByKey(s.todos, "id") }))
+      set({ $todosById: groupByKey(state.todos, "id") })
     }
 
     if (diff(["todos"])) {
-      set(s => ({
-        $completedTodos: s.todos
+      set({
+        $completedTodos: state.todos
           .filter(todo => todo.completed)
           .map(todo => todo.id),
-      }))
+      })
     }
 
     return state
@@ -158,14 +166,16 @@ function revalidateList(
     EventsTuple,
     any,
     any
-  >
+  >,
+  todoIndex: number
 ): AsyncPromiseOnFinishProps {
+  const groupingIndex = Math.floor(todoIndex / 3)
   return {
-    id: ["revalidating"],
+    id: ["revalidating", groupingIndex],
     fn: (isLast, resolve, reject) => {
-      return dispatch({
+      const cleanUp = dispatch({
         type: "revalidate-todos",
-        transition: ["revalidate-todo-list"],
+        transition: ["revalidate-todo-list", groupingIndex],
         beforeDispatch: ({ action }) => {
           if (!isLast()) return
           return action
@@ -178,25 +188,12 @@ function revalidateList(
           return resolve(true)
         },
       })
+      return () => {
+        cleanUp()
+      }
     },
   }
 }
 
 export const RevalidationList =
   createStoreUtils<typeof newRevalidationListStore>()
-
-function cancelPrevious({
-  store,
-  abort,
-  transition,
-  action,
-  createAsync,
-}: BeforeDispatchOptions<any, any, any, any, any>) {
-  const async = createAsync()
-  abort(transition)
-  async()
-    .setName("d")
-    .setTimeout(() => {
-      store.dispatch(action)
-    }, 400)
-}

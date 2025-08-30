@@ -9,7 +9,7 @@ import { Waterfall } from "~/devtools/waterfall"
 import { newRevalidationListStore, RevalidationList } from "./store"
 import { INITIAL_TODOS } from "./consts"
 import { toast } from "sonner"
-import { cancelPrevious } from "./before-dispatches"
+import { cancelPrevious, preventNextOne } from "./before-dispatches"
 
 export function RevalidationListPage() {
   const [displayingContent, setDisplayingContent] = useState(true)
@@ -123,7 +123,7 @@ export function Todo({ todoId }: TodoProps) {
               todoId: todo.id,
               disabled: !todo.disabled,
               transition: ["todo", todo.id, "toggle-disabled"],
-              beforeDispatch: cancelPrevious,
+              beforeDispatch: preventNextOne,
               onTransitionEnd({ error, transition, aborted }) {
                 if (aborted) return
                 if (error) {
