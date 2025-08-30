@@ -84,7 +84,6 @@ export const newRevalidationListStore = newStoreDef<
     }
 
     if (action.type === "toggle-todo") {
-      const todoIndex = state.todos.findIndex(todo => todo.id === action.todoId)
       // const optimisticCompleted = !state.$completedTodos.includes(action.todoId)
       // optimistic(s => ({
       //   todos: s.todos.map(todo =>
@@ -96,7 +95,7 @@ export const newRevalidationListStore = newStoreDef<
 
       async()
         .setName("complete")
-        .onFinish(revalidateList(dispatch, todoIndex))
+        .onFinish(revalidateList(dispatch))
         .promise(async ctx => {
           await toggleTodoInDb(action.todoId, ctx.signal)
           // const todos = await getTodosFromDb(ctx.signal)
@@ -113,7 +112,6 @@ export const newRevalidationListStore = newStoreDef<
     }
 
     if (action.type === "toggle-disabled") {
-      const todoIndex = state.todos.findIndex(todo => todo.id === action.todoId)
       // const optimisticDisabled = !state.todos.find(
       //   todo => todo.id === action.todoId
       // )?.disabled
@@ -127,7 +125,7 @@ export const newRevalidationListStore = newStoreDef<
       // }))
       async()
         .setName("disabled")
-        .onFinish(revalidateList(dispatch, todoIndex))
+        .onFinish(revalidateList(dispatch))
         .promise(async ctx => {
           await toggleTodoDisabledInDb(action.todoId, ctx.signal)
           // const todos = await getTodosFromDb(ctx.signal)
@@ -166,16 +164,14 @@ function revalidateList(
     EventsTuple,
     any,
     any
-  >,
-  todoIndex: number
+  >
 ): AsyncPromiseOnFinishProps {
-  const groupingIndex = Math.floor(todoIndex / 3)
   return {
-    id: ["revalidating", groupingIndex],
+    id: ["revalidating"],
     fn: (isLast, resolve, reject) => {
       const cleanUp = dispatch({
         type: "revalidate-todos",
-        transition: ["revalidate-todo-list", groupingIndex],
+        transition: ["revalidate-todo-list"],
         beforeDispatch: ({ action }) => {
           if (!isLast()) return
           return action
