@@ -57,7 +57,7 @@ export const newRevalidationListStore = newStoreDef<
     const settings = settingsStore.getState()
     if (action.type === "revalidate-todos") {
       async()
-        .setName("fetch na api")
+        .setName("fetch() hitting API")
         .promise(async ctx => {
           const todos = await getTodosFromDb(ctx.signal)
           set({ todos })
@@ -79,7 +79,7 @@ export const newRevalidationListStore = newStoreDef<
       }
 
       async()
-        .setName("complete")
+        .setName("toggle-todo")
         .onFinish(revalidateList(dispatch))
         .promise(async ctx => {
           await toggleTodoInDb(action.todoId, ctx.signal)
@@ -101,7 +101,7 @@ export const newRevalidationListStore = newStoreDef<
         }))
       }
       async()
-        .setName("disabled")
+        .setName("toggle-disabled-todo")
         .onFinish(revalidateList(dispatch))
         .promise(async ctx => {
           await toggleTodoDisabledInDb(action.todoId, ctx.signal)
