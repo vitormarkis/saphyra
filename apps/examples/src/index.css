@@ -32,7 +32,7 @@ fieldset {
 
   input:not([type="checkbox"]),
   select {
-    @apply border border-slate-600 h-9 text-white bg-gray-700 ring-0 focus:ring-1 outline-none focus:outline-none ring-blue-600;
+    @apply border border-slate-600 h-6 text-white px-2 rounded-md bg-gray-700 ring-0 outline-none focus:outline-none ring-blue-600;
   }
 
   ::-webkit-scrollbar-corner {
