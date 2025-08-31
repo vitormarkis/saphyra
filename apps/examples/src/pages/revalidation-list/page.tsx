@@ -13,6 +13,7 @@ import { cancelPrevious, preventNextOne } from "./before-dispatches"
 import { Checkbox } from "~/components/ui/checkbox"
 import { Button } from "~/components/ui/button"
 import { settingsStore, SettingsStore } from "./settings-store"
+import { toastWithRetry } from "./on-transition-ends"
 
 export function RevalidationListPage() {
   const [displayingContent, setDisplayingContent] = useState(true)
@@ -176,21 +177,14 @@ export function Todo({ todoId }: TodoProps) {
         {/* {isPending && <Spinner size={16} />} */}
         <div
           role="button"
-          onClick={() => {
+          onClick={function tryAgain() {
             revalidationStore.dispatch({
               type: "toggle-disabled",
               todoId: todo.id,
               disabled: !todo.disabled,
               transition: ["todo", todo.id, "toggle-disabled"],
               beforeDispatch: preventNextOne,
-              onTransitionEnd({ error, transition, aborted }) {
-                if (aborted) return
-                if (error) {
-                  return toastWithSonner(error, transition)
-                }
-
-                // toast.success(todo.disabled ? "Todo enabled" : "Todo disabled")
-              },
+              onTransitionEnd: toastWithRetry(tryAgain),
             })
           }}
           className={cn(
@@ -209,7 +203,7 @@ export function Todo({ todoId }: TodoProps) {
       <div className="flex-shrink-0">
         <div
           role="button"
-          onClick={() => {
+          onClick={function tryAgain() {
             if (todo.disabled) return
 
             revalidationStore.dispatch({
@@ -218,14 +212,7 @@ export function Todo({ todoId }: TodoProps) {
               completed: !todo.completed,
               transition: ["todo", todo.id, "toggle"],
               beforeDispatch: preventNextOne,
-              onTransitionEnd({ error, transition, aborted }) {
-                if (aborted) return
-                if (error) {
-                  return toastWithSonner(error, transition)
-                }
-
-                // toast.success("Todo toggled")
-              },
+              onTransitionEnd: toastWithRetry(tryAgain),
             })
           }}
           className={cn(

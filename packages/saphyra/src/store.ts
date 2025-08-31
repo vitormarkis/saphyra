@@ -368,9 +368,10 @@ export function newStoreDef<
 
     const storeValues: GenericStoreValues<
       TState,
-      TEvents,
+      TActions,
       TUncontrolledState,
-      TDeps
+      TDeps,
+      TEvents
     > = {
       deps,
       errors: errorsStore,
@@ -392,7 +393,13 @@ export function newStoreDef<
       onTransitionEndCallbacks: {},
       parentTransitionRegistry: {},
       isDisposed: false,
-    } satisfies GenericStoreValues<TState, TEvents, TUncontrolledState, TDeps>
+    } satisfies GenericStoreValues<
+      TState,
+      TActions,
+      TUncontrolledState,
+      TDeps,
+      TEvents
+    >
 
     let store = createDebugableShallowCopy(
       storeValues as unknown as SomeStore<
@@ -967,6 +974,7 @@ export function newStoreDef<
                 error: { code: 20 },
                 aborted: true,
                 setterOrPartialStateList: [],
+                store,
               })
             }
           ),
@@ -1268,6 +1276,7 @@ export function newStoreDef<
                 error: { code: 20 },
                 aborted: true,
                 setterOrPartialStateList: [],
+                store,
               })
             },
           })
@@ -1381,7 +1390,13 @@ export function newStoreDef<
               })()
 
               const onTransitionEnd = (
-                props: OnTransitionEndProps<TState, TEvents>
+                props: OnTransitionEndProps<
+                  TState,
+                  TActions,
+                  TUncontrolledState,
+                  TDeps,
+                  TEvents
+                >
               ) => {
                 props.setterOrPartialStateList.forEach(setterOrPartialState => {
                   if (!rootAction.transition) {
@@ -2093,6 +2108,7 @@ function performOnTransitionEndCallbacks<TState>({
       aborted: isAborted,
       setterOrPartialStateList: setters,
       error,
+      store,
     })
   })
   if (!isAborted) {

@@ -6,7 +6,7 @@ export function toastWithResult({
   error,
   events,
   meta,
-}: OnTransitionEndProps<any, any>) {
+}: OnTransitionEndProps<any, any, any, any, any>) {
   if (error) {
     events.clear("got-role")
     events.clear("got-permissions")

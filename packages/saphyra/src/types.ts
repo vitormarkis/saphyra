@@ -118,10 +118,11 @@ type StoreInternals<TState> = {
 }
 
 export type GenericStoreValues<
-  TState,
-  TEvents extends EventsTuple,
+  TState extends Record<string, any>,
+  TActions extends ActionShape,
   TUncontrolledState extends Record<string, any>,
   TDeps,
+  TEvents extends EventsTuple,
 > = {
   deps: TDeps
   errors: ErrorsStore
@@ -137,7 +138,7 @@ export type GenericStoreValues<
   isDisposed: boolean
   onTransitionEndCallbacks: Record<
     string,
-    Set<OnTransitionEnd<TState, TEvents>>
+    Set<OnTransitionEnd<TState, TActions, TUncontrolledState, TDeps, TEvents>>
   >
   parentTransitionRegistry: Record<string, TransitionNullable>
 } & TransitionsExtension &
@@ -263,7 +264,7 @@ export type SomeStore<
   TEvents extends EventsTuple,
   TUncontrolledState extends Record<string, any>,
   TDeps,
-> = GenericStoreValues<TState, TEvents, TUncontrolledState, TDeps> &
+> = GenericStoreValues<TState, TActions, TUncontrolledState, TDeps, TEvents> &
   GenericStoreMethods<TState, TActions, TEvents, TUncontrolledState, TDeps> &
   SubjectType
 
@@ -297,7 +298,15 @@ export type BaseAction<
   TDeps,
 > = {
   transition?: TransitionNullable
-  onTransitionEnd?: (props: OnTransitionEndProps<TState, TEvents>) => void
+  onTransitionEnd?: (
+    props: OnTransitionEndProps<
+      TState,
+      TActions,
+      TUncontrolledState,
+      TDeps,
+      TEvents
+    >
+  ) => void
   beforeDispatch?: BeforeDispatch<TState, TActions, TEvents>
   onPushToHistory?: OnPushToHistory<
     TState,
@@ -391,7 +400,13 @@ export type BeforeDispatch<
   TDeps
 > | void
 
-export type OnTransitionEndProps<TState, TEvents extends EventsTuple> = {
+export type OnTransitionEndProps<
+  TState extends Record<string, any>,
+  TActions extends ActionShape,
+  TUncontrolledState extends Record<string, any>,
+  TDeps,
+  TEvents extends EventsTuple,
+> = {
   transition: Transition
   transitionStore: TransitionsStore
   state: TState
@@ -400,10 +415,23 @@ export type OnTransitionEndProps<TState, TEvents extends EventsTuple> = {
   error?: unknown
   aborted?: boolean
   setterOrPartialStateList: SetterOrPartialState<TState>[]
+  store: SomeStore<TState, TActions, TEvents, TUncontrolledState, TDeps>
 }
 
-export type OnTransitionEnd<TState, TEvents extends EventsTuple> = (
-  props: OnTransitionEndProps<TState, TEvents>
+export type OnTransitionEnd<
+  TState extends Record<string, any>,
+  TActions extends ActionShape,
+  TUncontrolledState extends Record<string, any>,
+  TDeps,
+  TEvents extends EventsTuple,
+> = (
+  props: OnTransitionEndProps<
+    TState,
+    TActions,
+    TUncontrolledState,
+    TDeps,
+    TEvents
+  >
 ) => void
 
 export type SetterOrPartialState<TState> = Setter<TState> | Partial<TState>
