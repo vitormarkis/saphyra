@@ -111,13 +111,45 @@ export function RevalidationListPage() {
               }}
             />
           </label>
+          <label
+            htmlFor="manualRevalidation"
+            className="flex flex-col items-center gap-1"
+          >
+            <span className="text-center h-12 inline-grid place-items-center">
+              Manual
+              <br />
+              revalidation
+            </span>
+            <div className="flex gap-2 items-center">
+              <Checkbox
+                checked={SettingsStore.useSelector(s => s.manualRevalidation)}
+                onCheckedChange={value => {
+                  settingsStore.setState({
+                    manualRevalidation: !!value,
+                  })
+                }}
+              />
+              <Button
+                disabled={SettingsStore.useSelector(s => !s.manualRevalidation)}
+                className="size-6 p-0"
+                onClick={() => {
+                  revalidationListStore.dispatch({
+                    type: "revalidate-todos",
+                    transition: ["revalidate-todo-list"],
+                  })
+                }}
+              >
+                R
+              </Button>
+            </div>
+          </label>
         </div>
         <div className="flex justify-center">
           <Button
             className="w-fit"
             onClick={() => setDisplayingContent(prev => !prev)}
           >
-            Toggle content visibility
+            Expand waterfall
           </Button>
         </div>
       </div>

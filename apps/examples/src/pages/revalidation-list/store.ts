@@ -81,7 +81,11 @@ export const newRevalidationListStore = newStoreDef<
 
       async()
         .setName("toggle-todo")
-        .onFinish(revalidateList(dispatch, todoIndex))
+        .onFinish(
+          settings.manualRevalidation
+            ? undefined
+            : revalidateList(dispatch, todoIndex)
+        )
         .promise(async ctx => {
           await toggleTodoInDb(action.todoId, ctx.signal)
         })
@@ -102,7 +106,11 @@ export const newRevalidationListStore = newStoreDef<
       }
       async()
         .setName("toggle-disabled-todo")
-        .onFinish(revalidateList(dispatch, todoIndex))
+        .onFinish(
+          settings.manualRevalidation
+            ? undefined
+            : revalidateList(dispatch, todoIndex)
+        )
         .promise(async ctx => {
           await toggleTodoDisabledInDb(action.todoId, ctx.signal)
         })

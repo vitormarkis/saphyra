@@ -482,7 +482,7 @@ export type AsyncPromiseOnFinishProps = {
 export type AsyncModule = {
   setName: (name: string | StringSerializable[]) => Omit<AsyncModule, "setName">
   onFinish: (
-    props: AsyncPromiseOnFinishProps
+    props?: AsyncPromiseOnFinishProps | undefined
   ) => Pick<AsyncModule, "promise" | "setTimeout">
   setTimeout: (
     callback: () => void,
