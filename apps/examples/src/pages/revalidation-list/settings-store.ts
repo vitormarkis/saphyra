@@ -7,7 +7,18 @@ type SettingsState = {
   errorAlways: boolean
 }
 
-const newSettingsStore = newStoreDef<SettingsState>()
+const newSettingsStore = newStoreDef<SettingsState>({
+  reducer({ state, set, diff }) {
+    if (diff(["errorAlways"])) {
+      if (state.errorAlways) set({ errorSometimes: false })
+    }
+    if (diff(["errorSometimes"])) {
+      if (state.errorSometimes) set({ errorAlways: false })
+    }
+
+    return state
+  },
+})
 
 const INITIAL_STATE = {
   optimistic: false,
