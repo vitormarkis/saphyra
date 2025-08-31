@@ -26,8 +26,6 @@ export function RevalidationListPage() {
       )
     )
 
-  RevalidationList.useErrorHandlers(toastWithSonner, revalidationListStore)
-
   useHistory(revalidationListStore)
 
   useEffect(() => {
@@ -70,6 +68,24 @@ export function RevalidationListPage() {
               onCheckedChange={value => {
                 settingsStore.setState({
                   errorSometimes: !!value,
+                })
+              }}
+            />
+          </label>
+          <label
+            htmlFor="errorAlways"
+            className="flex flex-col items-center gap-1"
+          >
+            <span className="text-center h-12 inline-grid place-items-center">
+              Error
+              <br />
+              always
+            </span>
+            <Checkbox
+              checked={SettingsStore.useSelector(s => s.errorAlways)}
+              onCheckedChange={value => {
+                settingsStore.setState({
+                  errorAlways: !!value,
                 })
               }}
             />
@@ -201,7 +217,7 @@ export function Todo({ todoId }: TodoProps) {
               todoId: todo.id,
               completed: !todo.completed,
               transition: ["todo", todo.id, "toggle"],
-              beforeDispatch: cancelPrevious,
+              beforeDispatch: preventNextOne,
               onTransitionEnd({ error, transition, aborted }) {
                 if (aborted) return
                 if (error) {

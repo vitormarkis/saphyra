@@ -715,20 +715,6 @@ export function newStoreDef<
       store.transitions.callbacks.error.set(transitionString, error => {
         invariant(action.transition, "NSTH: a transition")
         cleanUpTransition(action.transition, error)
-        // store.internal.events.emit("transition-completed", {
-        //   id: internalTransitionId,
-        //   status: "fail",
-        // })
-        action.onTransitionEnd?.({
-          error,
-          events: store.events,
-          meta: store.transitions.meta.get(transition),
-          state: store.state,
-          transition,
-          transitionStore: store.transitions,
-          aborted: false,
-          setterOrPartialStateList: [],
-        })
       })
     }
 

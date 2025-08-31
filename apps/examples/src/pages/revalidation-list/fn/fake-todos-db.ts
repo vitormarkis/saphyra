@@ -1,5 +1,6 @@
 import { range } from "~/lib/range"
 import { TodoType } from "../types"
+import { settingsStore } from "../settings-store"
 
 export let FAKE_TODOS_DB: TodoType[] = [
   {
@@ -113,9 +114,17 @@ export async function getTodosFromDb(signal: AbortSignal): Promise<TodoType[]> {
 
 export async function toggleTodoInDb(todoId: number, signal: AbortSignal) {
   await new Promise(resolve => setTimeout(resolve, range(200, 600)))
+  const settings = settingsStore.getState()
 
   if (signal.aborted) {
     throw new Error("Aborted")
+  }
+
+  if (settings.errorSometimes || settings.errorAlways) {
+    const should = settings.errorAlways || Math.random() > 0.7
+    if (should) {
+      throw new Error("Error while toggling todo")
+    }
   }
 
   const todo = FAKE_TODOS_DB.find(todo => todo.id === todoId)
@@ -133,9 +142,16 @@ export async function toggleTodoDisabledInDb(
   signal: AbortSignal
 ) {
   await new Promise(resolve => setTimeout(resolve, range(200, 600)))
-
+  const settings = settingsStore.getState()
   if (signal.aborted) {
     throw new Error("Aborted")
+  }
+
+  if (settings.errorSometimes || settings.errorAlways) {
+    const should = settings.errorAlways || Math.random() > 0.7
+    if (should) {
+      throw new Error("Error while toggling todo disabled")
+    }
   }
 
   const todo = FAKE_TODOS_DB.find(todo => todo.id === todoId)
