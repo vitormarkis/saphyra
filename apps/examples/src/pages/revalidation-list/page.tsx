@@ -123,7 +123,7 @@ export function RevalidationListPage() {
       </div>
       <div
         className={cn(
-          "h-full gap-4 flex flex-col @xl:flex-row overflow-hidden pt-24"
+          "h-full gap-4 flex flex-col @xl:flex-row overflow-hidden pt-32"
         )}
       >
         <div

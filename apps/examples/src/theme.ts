@@ -5,7 +5,13 @@ type Theme = {
   theme: "light" | "dark"
 }
 
-const newThemeStore = newStoreDef<Theme, Theme>()
+const newThemeStore = newStoreDef<Theme, Theme>({
+  reducer() {
+    return {
+      theme: "light",
+    }
+  },
+})
 
 export const themeStore = newThemeStore({ theme: "light" })
 

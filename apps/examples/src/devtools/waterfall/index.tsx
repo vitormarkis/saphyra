@@ -64,7 +64,7 @@ export function Waterfall({ store, extractErrorMessage }: WaterfallProps) {
   return (
     <WaterfallContext.Provider value={{ extractErrorMessage }}>
       <WF.Context.Provider value={[waterfallStore, resetStore, isLoading]}>
-        <div className="grid grid-rows-[auto_1fr] gap-1 h-full">
+        <div className="flex flex-col grow gap-2">
           <WaterfallController />
           <WaterfallContent />
         </div>
@@ -120,7 +120,7 @@ export function WaterfallController({}: WaterfallControllerProps) {
         />
       </div>
 
-      <div className="flex gap-2">
+      <div className="flex gap-2 items-center">
         <input
           type="text"
           value={localClearTimeout}
@@ -160,19 +160,16 @@ export function WaterfallController({}: WaterfallControllerProps) {
           }}
         />
 
-        <div className=" border bg-gray-100 dark:bg-gray-900 border-gray-200 dark:border-gray-800/70 p-0.5">
-          <div
-            role="button"
-            className="h-6 px-2 grid place-items-center aspect-square  hover:cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-800 transition-all"
-            onClick={() => {
-              waterfallStore.dispatch({
-                type: "reset",
-              })
-            }}
-          >
-            Clear
-          </div>
-        </div>
+        <Button
+          className="h-6"
+          onClick={() => {
+            waterfallStore.dispatch({
+              type: "reset",
+            })
+          }}
+        >
+          Clear
+        </Button>
       </div>
     </div>
   )
@@ -229,7 +226,7 @@ function WaterfallContent() {
   }, [updateConfig, displayingBarsIdList.length])
 
   return (
-    <div className="border border-gray-200 dark:border-gray-800/70 p-0.5 bg-gray-100 dark:bg-gray-900 overflow-y-auto overflow-x-hidden">
+    <div className="border border-gray-200 dark:border-gray-800/70 p-0.5 bg-gray-100 dark:bg-gray-900 overflow-y-auto overflow-x-hidden h-0 grow">
       <div className="grid grid-cols-[auto_1fr] gap-0.5">
         <div className="grid grid-cols-subgrid col-span-2 row-span-1 gap-0.5">
           <SorterHeader property="transitionName">name</SorterHeader>
@@ -794,6 +791,7 @@ import { error } from "console"
 import { extractErrorMessage } from "~/lib/extract-error-message"
 import { useNewStore } from "saphyra/react"
 import { ChevronUp } from "lucide-react"
+import { Button } from "~/components/ui/button"
 
 export const RefContext =
   createContext<MutableRefObject<HTMLDivElement | null> | null>(null)

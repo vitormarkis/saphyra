@@ -4,7 +4,7 @@
 
 input:not([type="checkbox"]),
 select {
-  @apply border border-slate-400 h-9 text-black px-2 rounded-sm ring-2 ring-red-500;
+  @apply border border-slate-400 h-6 text-black px-2 rounded-md focus-visible:ring-2;
 }
 
 body {
