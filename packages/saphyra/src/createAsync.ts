@@ -147,7 +147,8 @@ export function createAsync<
             const cleanUpList =
               store.transitions.finishCallbacks.cleanUps[onFinishId]
 
-            cleanUpList?.forEach(cleanUp => cleanUp())
+            // @ts-expect-error - TODO: fix this
+            cleanUpList?.forEach(cleanUp => cleanUp(transition))
           }
 
           if (label) store.transitions.addSubtransition(label)
@@ -382,8 +383,11 @@ const createRunOnFinishCallback = ({
     )
     store.transitions.finishCallbacks.cleanUps[onFinishId] ??= new Set()
     store.transitions.finishCallbacks.cleanUps[onFinishId].add(
-      function listener() {
-        finishCleanUp?.()
+      // @ts-expect-error - TODO: fix this
+      function listener(incomingTransition: Transition) {
+        // @ts-expect-error - TODO: fix this
+        finishCleanUp?.(incomingTransition)
+        // @ts-expect-error - TODO: fix this
         cleanUpList.delete(listener)
       }
     )

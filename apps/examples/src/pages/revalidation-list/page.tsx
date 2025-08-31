@@ -1,4 +1,4 @@
-import { Spinner } from "@blueprintjs/core"
+import { Icon, Spinner } from "@blueprintjs/core"
 import { useEffect, useState, useSyncExternalStore } from "react"
 import { Devtools } from "~/devtools/devtools"
 import { cn } from "~/lib/cn"
@@ -14,6 +14,12 @@ import { Checkbox } from "~/components/ui/checkbox"
 import { Button } from "~/components/ui/button"
 import { settingsStore, SettingsStore } from "./settings-store"
 import { toastWithRetry } from "./on-transition-ends"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "~/components/ui/tooltip"
 
 export function RevalidationListPage() {
   const [displayingContent, setDisplayingContent] = useState(true)
@@ -43,7 +49,7 @@ export function RevalidationListPage() {
             htmlFor="optimistic"
             className="flex flex-col items-center gap-1"
           >
-            <span className="text-center h-12 inline-grid place-items-center">
+            <span className="text-center h-16 center self-center inline-grid place-items-center">
               Optimistic
             </span>
             <Checkbox
@@ -59,7 +65,7 @@ export function RevalidationListPage() {
             htmlFor="optimistic"
             className="flex flex-col items-center gap-1"
           >
-            <span className="text-center h-12 inline-grid place-items-center">
+            <span className="text-center h-16 center self-center inline-grid place-items-center">
               Error
               <br />
               sometimes
@@ -77,7 +83,7 @@ export function RevalidationListPage() {
             htmlFor="errorAlways"
             className="flex flex-col items-center gap-1"
           >
-            <span className="text-center h-12 inline-grid place-items-center">
+            <span className="text-center h-16 center self-center inline-grid place-items-center">
               Error
               <br />
               always
@@ -95,27 +101,46 @@ export function RevalidationListPage() {
             htmlFor="revalidateInDifferentBatches"
             className="flex flex-col items-center gap-1"
           >
-            <span className="text-center h-12 inline-grid place-items-center">
+            <span className="text-center h-16 center self-center inline-grid place-items-center">
               Revalidate in
               <br />
               batches of 2 rows
             </span>
-            <Checkbox
-              checked={SettingsStore.useSelector(
-                s => s.revalidateInDifferentBatches
-              )}
-              onCheckedChange={value => {
-                settingsStore.setState({
-                  revalidateInDifferentBatches: !!value,
-                })
-              }}
-            />
+
+            <div className="flex items-center gap-2">
+              <Checkbox
+                checked={SettingsStore.useSelector(
+                  s => s.revalidateInDifferentBatches
+                )}
+                onCheckedChange={value => {
+                  settingsStore.setState({
+                    revalidateInDifferentBatches: !!value,
+                  })
+                }}
+              />
+              <TooltipProvider delayDuration={0}>
+                <Tooltip>
+                  <TooltipTrigger>
+                    <Icon icon="info-sign" />
+                  </TooltipTrigger>
+                  <TooltipContent
+                    side="right"
+                    className="bg-background border rounded-lg"
+                  >
+                    <p className="text-xs bg-background text-foreground max-w-[200px]">
+                      Toggle enabled and complete for each row and see what
+                      happens
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
           </label>
           <label
             htmlFor="manualRevalidation"
             className="flex flex-col items-center gap-1"
           >
-            <span className="text-center h-12 inline-grid place-items-center">
+            <span className="text-center h-16 center self-center inline-grid place-items-center">
               Manual
               <br />
               revalidation
@@ -143,8 +168,44 @@ export function RevalidationListPage() {
               </Button>
             </div>
           </label>
+          <label
+            htmlFor="prefixPairs"
+            className="flex flex-col items-center gap-1 "
+          >
+            <span className="text-center h-16 center self-center inline-grid place-items-center max-w-[150px]">
+              [Async Effect] <br />
+              Prefix to-dos when completing pairs
+            </span>
+            <div className="flex items-center gap-2">
+              <Checkbox
+                checked={SettingsStore.useSelector(s => s.prefixPairs)}
+                onCheckedChange={value => {
+                  settingsStore.setState({
+                    prefixPairs: !!value,
+                  })
+                }}
+              />
+              <TooltipProvider delayDuration={0}>
+                <Tooltip>
+                  <TooltipTrigger>
+                    <Icon icon="info-sign" />
+                  </TooltipTrigger>
+                  <TooltipContent
+                    side="right"
+                    className="bg-background border rounded-lg"
+                  >
+                    <p className="text-xs bg-background text-foreground max-w-[200px]">
+                      When you complete two unpaired todos, an client-side async
+                      effect will run to pair them. Once paired, they're locked
+                      and titles reflect the connection.
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+          </label>
         </div>
-        <div className="flex justify-center">
+        <div className="flex justify-center pt-4">
           <Button
             className="w-fit"
             onClick={() => setDisplayingContent(prev => !prev)}
@@ -155,7 +216,7 @@ export function RevalidationListPage() {
       </div>
       <div
         className={cn(
-          "h-full gap-4 flex flex-col @xl:flex-row overflow-hidden pt-32"
+          "h-full gap-4 flex flex-col @xl:flex-row overflow-hidden pt-40"
         )}
       >
         <div

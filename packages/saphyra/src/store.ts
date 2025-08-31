@@ -161,6 +161,7 @@ export type ReducerProps<
     TDeps
   >
   deps: TDeps
+  isOptimistic: boolean
 }
 
 export type Reducer<
@@ -366,6 +367,54 @@ export function newStoreDef<
     const errorsStore = new ErrorsStore()
     const deps = config.deps ?? ({} as unknown as TDeps)
 
+    const updateTransitionState = (
+      transition: Transition,
+      setterOrPartialState: SetterOrPartialState<TState>
+    ): TState | null => {
+      const transitionKey = transition.join(":")
+
+      store.settersRegistry = {
+        ...store.settersRegistry,
+        [transitionKey]: [
+          ...(store.settersRegistry[transitionKey] ?? []),
+          setterOrPartialState,
+        ],
+      }
+
+      let returningState: TState | null = null
+      const setters = store.settersRegistry[transitionKey] ?? []
+
+      const shouldClear = setters.length === 0
+
+      if (shouldClear) {
+        store.transitionsState.delete(transitionKey)
+        return store.state
+      }
+
+      const parentTransition = store.parentTransitionRegistry[transitionKey]
+      const newState = cloneObj(
+        store.transitionsState.get(transition) ??
+          (parentTransition
+            ? (store.transitionsState.get(parentTransition) ?? store.state)
+            : store.state)
+      )
+      if (setterOrPartialState) {
+        applySetterOnState(setterOrPartialState, newState)
+      }
+      if (newState === null) {
+        throw new Error("State should never be null.")
+      }
+      store.transitionsState.setState({
+        [transitionKey]: newState,
+      })
+
+      if (transitionKey === transitionKey) {
+        returningState = newState
+      }
+
+      return returningState
+    }
+
     const storeValues: GenericStoreValues<
       TState,
       TActions,
@@ -380,6 +429,7 @@ export function newStoreDef<
       internal: {
         events: new EventEmitter<StoreInternalEvents>(),
         derivationsRegistry,
+        updateTransitionState,
       },
       history: [],
       historyRedo: [],
@@ -474,6 +524,7 @@ export function newStoreDef<
             dispatch: () => noop,
             dispatchAsync: () => Promise.resolve(newState),
             deps,
+            isOptimistic: true,
           }) as TState
           const derivedStatePlusDerivations = applySettersListToState({
             state: derivedState,
@@ -762,6 +813,7 @@ export function newStoreDef<
         dispatch: () => noop,
         dispatchAsync: () => Promise.resolve(newState),
         deps,
+        isOptimistic: true,
       }
 
       const transitionString = action.transition?.join(":")
@@ -1429,6 +1481,7 @@ export function newStoreDef<
               return dispatchAsync(transitionAction, propsSignal ?? signal)
             },
             deps,
+            isOptimistic: false,
           })
           const reducer: Reducer<
             TState,
@@ -1489,54 +1542,6 @@ export function newStoreDef<
         prevState,
         optimisticState,
       }
-    }
-
-    const updateTransitionState = (
-      transition: Transition,
-      setterOrPartialState: SetterOrPartialState<TState>
-    ): TState | null => {
-      const transitionKey = transition.join(":")
-
-      store.settersRegistry = {
-        ...store.settersRegistry,
-        [transitionKey]: [
-          ...(store.settersRegistry[transitionKey] ?? []),
-          setterOrPartialState,
-        ],
-      }
-
-      let returningState: TState | null = null
-      const setters = store.settersRegistry[transitionKey] ?? []
-
-      const shouldClear = setters.length === 0
-
-      if (shouldClear) {
-        store.transitionsState.delete(transitionKey)
-        return store.state
-      }
-
-      const parentTransition = store.parentTransitionRegistry[transitionKey]
-      const newState = cloneObj(
-        store.transitionsState.get(transition) ??
-          (parentTransition
-            ? (store.transitionsState.get(parentTransition) ?? store.state)
-            : store.state)
-      )
-      if (setterOrPartialState) {
-        applySetterOnState(setterOrPartialState, newState)
-      }
-      if (newState === null) {
-        throw new Error("State should never be null.")
-      }
-      store.transitionsState.setState({
-        [transitionKey]: newState,
-      })
-
-      if (transitionKey === transitionKey) {
-        returningState = newState
-      }
-
-      return returningState
     }
 
     const clearTransitionState = (transition: Transition) => {

@@ -3,4 +3,5 @@ export type TodoType = {
   title: string
   completed: boolean
   disabled: boolean
+  prefixed: boolean
 }

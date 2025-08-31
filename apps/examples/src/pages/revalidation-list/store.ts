@@ -1,9 +1,15 @@
 import {
+  assignObjValues,
   AsyncPromiseOnFinishProps,
   BeforeDispatchOptions,
   Dispatch,
   EventsTuple,
+  InnerReducerSet,
   newStoreDef,
+  ReducerSet,
+  SetterOrPartialState,
+  SomeStoreGeneric,
+  Transition,
 } from "saphyra"
 import { createStoreUtils } from "saphyra/react"
 import { TodoType } from "./types"
@@ -12,9 +18,11 @@ import {
   getTodosFromDb,
   toggleTodoInDb,
   toggleTodoDisabledInDb,
+  prefixPairsInDb,
 } from "./fn/fake-todos-db"
 import { noop } from "~/lib/utils"
 import { settingsStore } from "./settings-store"
+import { preventNextOne } from "./before-dispatches"
 
 type RevalidationListState = {
   todos: TodoType[]
@@ -38,6 +46,10 @@ type RevalidationListActions =
   | {
       type: "revalidate-todos"
     }
+  | {
+      type: "prefix-pairs"
+      pairIds: [number, number]
+    }
 
 export const newRevalidationListStore = newStoreDef<
   RevalidationListInitialProps,
@@ -53,7 +65,18 @@ export const newRevalidationListStore = newStoreDef<
     const todos = await getTodosFromDb(signal)
     return { todos }
   },
-  reducer({ state, action, set, diff, async, dispatch, optimistic }) {
+  reducer({
+    state,
+    action,
+    set,
+    diff,
+    async,
+    dispatch,
+    dispatchAsync,
+    optimistic,
+    store,
+    isOptimistic,
+  }) {
     const settings = settingsStore.getState()
     if (action.type === "revalidate-todos") {
       async()
@@ -84,10 +107,23 @@ export const newRevalidationListStore = newStoreDef<
         .onFinish(
           settings.manualRevalidation
             ? undefined
-            : revalidateList(dispatch, todoIndex)
+            : revalidateList(
+                dispatch,
+                set,
+                todoIndex,
+                store,
+                action.transition!,
+                undefined,
+                state
+              )
         )
         .promise(async ctx => {
           await toggleTodoInDb(action.todoId, ctx.signal)
+          // set(s => ({
+          //   completingTodos: s.completingTodos.includes(action.todoId)
+          //     ? s.completingTodos.filter(todoId => todoId !== action.todoId)
+          //     : [...s.completingTodos, action.todoId],
+          // }))
         })
     }
 
@@ -109,10 +145,39 @@ export const newRevalidationListStore = newStoreDef<
         .onFinish(
           settings.manualRevalidation
             ? undefined
-            : revalidateList(dispatch, todoIndex)
+            : revalidateList(
+                dispatch,
+                set,
+                todoIndex,
+                store,
+                action.transition!,
+                undefined,
+                state
+              )
         )
         .promise(async ctx => {
           await toggleTodoDisabledInDb(action.todoId, ctx.signal)
+        })
+    }
+
+    if (action.type === "prefix-pairs") {
+      async()
+        .setName("prefix-pairs")
+        .onFinish(
+          settings.manualRevalidation
+            ? undefined
+            : revalidateList(
+                dispatch,
+                set,
+                action.pairIds[0],
+                store,
+                action.transition!,
+                Math.random().toString().slice(2, 10),
+                state
+              )
+        )
+        .promise(async ctx => {
+          await prefixPairsInDb(action.pairIds, ctx.signal).catch()
         })
     }
 
@@ -128,6 +193,42 @@ export const newRevalidationListStore = newStoreDef<
       })
     }
 
+    // Async Effects
+    if (settings.prefixPairs) {
+      if (diff(["$completedTodos"])) {
+        const pairs = state.$completedTodos
+          .map(todoId => state.$todosById[todoId])
+          .filter(nonNullable)
+          .filter(todo => !todo.prefixed)
+          .map(todo => todo.id)
+          .reduce((acc, todoId, idx) => {
+            const groupingIdx = Math.floor(idx / 2)
+            acc[groupingIdx] ??= []
+            acc[groupingIdx].push(todoId)
+            return acc
+          }, [] as number[][])
+
+        const tuples = Object.values(pairs).filter(tuple => tuple.length === 2)
+        const shouldGroup = tuples.length > 0
+        if (shouldGroup) {
+          noop()
+          async()
+            .setName("prefix-pairs-batch")
+            .promise(async () => {
+              for (const tuple of tuples) {
+                const [first, second] = tuple
+                await dispatchAsync({
+                  type: "prefix-pairs",
+                  pairIds: [first, second],
+                  transition: ["prefix-pairs", `${first}-${second}`],
+                  beforeDispatch: preventNextOne,
+                })
+              }
+            })
+        }
+      }
+    }
+
     return state
   },
 })
@@ -140,27 +241,51 @@ function revalidateList(
     any,
     any
   >,
-  todoIndex: number
+  set: ReducerSet<RevalidationListState>,
+  todoIndex: number,
+  store: SomeStoreGeneric,
+  transition: Transition,
+  userKey?: string,
+  state?: RevalidationListState
 ): AsyncPromiseOnFinishProps {
   const batchKeyMaybe = settingsStore.getState().revalidateInDifferentBatches
     ? [Math.floor(todoIndex / 2)]
     : []
+  const transitionKey = transition.join(":")
+  const transitionRevalidate = [
+    "revalidate-todo-list",
+    ...batchKeyMaybe,
+    ...(userKey ? [userKey] : []),
+  ]
+  const transitionRevalidateKey = transitionRevalidate.join(":")
   return {
-    id: ["revalidating", ...batchKeyMaybe],
+    id: transitionRevalidateKey,
     fn: (resolve, reject, { error, isLast }) => {
       const cleanUp = dispatch({
         type: "revalidate-todos",
-        transition: ["revalidate-todo-list", ...batchKeyMaybe],
+        transition: transitionRevalidate,
         beforeDispatch: ({ action, store, transition }) => {
           if (!isLast()) return
-          store.abort(transition)
+          store.abort(transition) // mesma coisa, cancelou transistion [revalidate-todo-list]
           return action
         },
-        onTransitionEnd: ({ aborted, error }) => {
+        onTransitionEnd: ({ aborted, error, setterOrPartialStateList }) => {
           if (aborted) return
           if (error) {
             return reject(error)
           }
+          setterOrPartialStateList.forEach(setter => {
+            const set = (
+              setter: SetterOrPartialState<RevalidationListState>
+            ) => {
+              const newTransitionState = store.internal.updateTransitionState(
+                transition,
+                setter
+              )
+              assignObjValues(state, newTransitionState)
+            }
+            set(setter)
+          })
           return resolve(true)
         },
       })
@@ -173,3 +298,7 @@ function revalidateList(
 
 export const RevalidationList =
   createStoreUtils<typeof newRevalidationListStore>()
+
+function nonNullable<T>(value: T): value is NonNullable<T> {
+  return value != null || value !== undefined
+}
