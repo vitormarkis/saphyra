@@ -14,6 +14,8 @@ import {
   AsyncTimerConfig,
   DefaultActions,
   SomeStore,
+  SomeStoreGeneric,
+  Transition,
   TransitionNullable,
 } from "./types"
 import { isNewActionError, labelWhen } from "./utils"
@@ -79,7 +81,6 @@ export function createAsync<
       const onFinishId = Array.isArray(onFinish?.id)
         ? onFinish.id.join(":")
         : onFinish?.id
-      const onFinishFn = onFinish?.fn
       if (!transition) throw errorNoTransition()
       store.transitions.addKey(
         transition,
@@ -132,7 +133,14 @@ export function createAsync<
           }
         }
         cleanUpList.add(cleanUp)
+
         if (!transition) throw errorNoTransition()
+        const runOnFinishCallback = createRunOnFinishCallback({
+          store,
+          newBar,
+          transition,
+          wrapPromise,
+        })
         try {
           if (!transition) throw errorNoTransition()
           if (onFinishId) {
@@ -147,47 +155,12 @@ export function createAsync<
           await Promise.race<T>([promise, racePromise.promise])
           if (label) store.transitions.doneSubtransition(label)
           if (onFinishId) store.transitions.doneFinish(onFinishId)
-          if (onFinishFn) {
-            if (!onFinishId) throw new Error("onFinishId is required")
-            const getFinishesCount = () =>
-              store.transitions.state.finishes[onFinishId]
-            const isLast = () => getFinishesCount() === 0
-            const resolver = PromiseWithResolvers<void>()
-            const finishOnFinishBar = onFinishId
-              ? newBar(transitionString, labelWhen(new Date()), onFinishId)
-              : () => {}
-            const finishCleanUp = onFinishFn?.(
-              isLast,
-              () => resolver.resolve(),
-              () => resolver.reject()
-            )
-            store.transitions.finishCallbacks.cleanUps[onFinishId] ??= new Set()
-            store.transitions.finishCallbacks.cleanUps[onFinishId].add(
-              function listener() {
-                finishCleanUp?.()
-                cleanUpList.delete(listener)
-              }
-            )
-            wrapPromise(
-              async ctx => {
-                if (ctx.signal.aborted) return
-                ctx.signal.addEventListener("abort", () => {
-                  resolver.reject()
-                })
-                await resolver.promise
-                  .then(() => {
-                    finishOnFinishBar("success")
-                  })
-                  .catch(() => {
-                    finishOnFinishBar("fail")
-                  })
-              },
-              {
-                label: onFinishId,
-              },
-              undefined,
-              false
-            )
+          if (onFinish) {
+            runOnFinishCallback({
+              onFinish,
+              error: undefined,
+              cleanUpList,
+            })
           }
           finishBar("success")
           cleanUpList.delete(cleanUp)
@@ -200,6 +173,14 @@ export function createAsync<
         } catch (error) {
           if (label) store.transitions.doneSubtransition(label)
           if (onFinishId) store.transitions.doneFinish(onFinishId)
+          if (onFinish) {
+            runOnFinishCallback({
+              onFinish,
+              error,
+              cleanUpList,
+            })
+          }
+
           const aborted = isNewActionError(error)
           if (aborted) {
             onAbort?.()
@@ -349,4 +330,84 @@ export function createAsync<
       setName,
     }
   }
+}
+
+const createRunOnFinishCallback = ({
+  store,
+  newBar,
+  transition,
+  wrapPromise,
+}: {
+  store: SomeStoreGeneric
+  newBar: (
+    transitionString: string,
+    when: string,
+    label: string | null
+  ) => (status: "cancelled" | "fail" | "success", error?: unknown) => void
+  transition: Transition
+  wrapPromise: (
+    promiseFn: (props: AsyncPromiseProps) => Promise<any>,
+    config?: AsyncPromiseConfig,
+    onFinish?: AsyncPromiseOnFinishProps,
+    emitBar?: boolean
+  ) => void
+}) => {
+  const transitionString = transition.join(":")
+  const runOnFinishCallback = ({
+    onFinish,
+    error,
+    cleanUpList,
+  }: {
+    onFinish: AsyncPromiseOnFinishProps
+    error: unknown
+    cleanUpList: Set<(error: unknown) => void>
+  }) => {
+    const onFinishId = Array.isArray(onFinish.id)
+      ? onFinish.id.join(":")
+      : onFinish.id
+    const onFinishFn = onFinish.fn
+    const getFinishesCount = () => store.transitions.state.finishes[onFinishId]
+    const resolver = PromiseWithResolvers<void>()
+    const finishOnFinishBar = onFinishId
+      ? newBar(transitionString, labelWhen(new Date()), onFinishId)
+      : () => {}
+    const finishCleanUp = onFinishFn(
+      () => resolver.resolve(),
+      (error: unknown) => resolver.reject(error),
+      {
+        error,
+        getResultList: () => [],
+        isLast: () => getFinishesCount() === 0,
+      }
+    )
+    store.transitions.finishCallbacks.cleanUps[onFinishId] ??= new Set()
+    store.transitions.finishCallbacks.cleanUps[onFinishId].add(
+      function listener() {
+        finishCleanUp?.()
+        cleanUpList.delete(listener)
+      }
+    )
+    wrapPromise(
+      async ctx => {
+        if (ctx.signal.aborted) return
+        ctx.signal.addEventListener("abort", () => {
+          resolver.reject()
+        })
+        await resolver.promise
+          .then(() => {
+            finishOnFinishBar("success")
+          })
+          .catch(() => {
+            finishOnFinishBar("fail")
+          })
+      },
+      {
+        label: onFinishId,
+      },
+      undefined,
+      false
+    )
+  }
+
+  return runOnFinishCallback
 }

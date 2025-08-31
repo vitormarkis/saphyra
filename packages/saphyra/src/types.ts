@@ -434,10 +434,16 @@ export type AsyncTimerConfig = {
 // }
 
 export type OnFinishId = string | StringSerializable[]
+export type OnFinishCallbackProps = {
+  isLast: () => boolean
+  getResultList: () => Array<unknown>
+  error: unknown
+}
+
 export type OnFinishCallback = (
-  isLast: () => boolean,
   resolve: (value: any) => void,
-  reject: (error: any) => void
+  reject: (error: any) => void,
+  props: OnFinishCallbackProps
 ) => () => void
 
 export type AsyncPromiseOnFinishProps = {

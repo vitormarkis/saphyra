@@ -135,7 +135,7 @@ function revalidateList(
 ): AsyncPromiseOnFinishProps {
   return {
     id: ["revalidating"],
-    fn: (isLast, resolve, reject) => {
+    fn: (resolve, reject, { error, isLast }) => {
       const cleanUp = dispatch({
         type: "revalidate-todos",
         transition: ["revalidate-todo-list"],
