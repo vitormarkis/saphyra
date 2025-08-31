@@ -113,8 +113,6 @@ export async function getTodosFromDb(signal: AbortSignal): Promise<TodoType[]> {
   return snapshot
 }
 
-const { getLuck } = createLuck([1, 0, 1])
-
 export async function toggleTodoInDb(todoId: number, signal: AbortSignal) {
   await new Promise(resolve => setTimeout(resolve, range(200, 600)))
   const settings = settingsStore.getState()
@@ -124,7 +122,7 @@ export async function toggleTodoInDb(todoId: number, signal: AbortSignal) {
   }
 
   if (settings.errorSometimes || settings.errorAlways) {
-    const should = settings.errorAlways || getLuck()
+    const should = settings.errorAlways || Math.random() > 0.7
     if (should) {
       throw new Error("Error while toggling todo")
     }

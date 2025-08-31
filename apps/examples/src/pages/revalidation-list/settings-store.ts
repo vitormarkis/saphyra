@@ -5,6 +5,7 @@ type SettingsState = {
   optimistic: boolean
   errorSometimes: boolean
   errorAlways: boolean
+  revalidateInDifferentBatches: boolean
 }
 
 const newSettingsStore = newStoreDef<SettingsState>({
@@ -24,6 +25,7 @@ const INITIAL_STATE = {
   optimistic: false,
   errorSometimes: false,
   errorAlways: false,
+  revalidateInDifferentBatches: false,
 }
 
 export const settingsStore = newSettingsStore(

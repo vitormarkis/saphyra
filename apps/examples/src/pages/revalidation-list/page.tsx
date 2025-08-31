@@ -91,6 +91,26 @@ export function RevalidationListPage() {
               }}
             />
           </label>
+          <label
+            htmlFor="revalidateInDifferentBatches"
+            className="flex flex-col items-center gap-1"
+          >
+            <span className="text-center h-12 inline-grid place-items-center">
+              Revalidate in
+              <br />
+              batches of 2 rows
+            </span>
+            <Checkbox
+              checked={SettingsStore.useSelector(
+                s => s.revalidateInDifferentBatches
+              )}
+              onCheckedChange={value => {
+                settingsStore.setState({
+                  revalidateInDifferentBatches: !!value,
+                })
+              }}
+            />
+          </label>
         </div>
         <div className="flex justify-center">
           <Button
@@ -169,8 +189,7 @@ export function Todo({ todoId }: TodoProps) {
       className={cn(
         "flex items-center gap-3 p-1 relative border rounded-md",
         "border-gray-200 bg-gray-50",
-        "dark:border-gray-800 dark:bg-gray-950",
-        todo.disabled && "opacity-40"
+        "dark:border-gray-800 dark:bg-gray-950"
       )}
     >
       <div className="flex-shrink-0 flex gap-2">
@@ -200,56 +219,60 @@ export function Todo({ todoId }: TodoProps) {
           {todo.disabled ? "Enable" : "Disable"}
         </div>
       </div>
-      <div className="flex-shrink-0">
-        <div
-          role="button"
-          onClick={function tryAgain() {
-            if (todo.disabled) return
+      <div
+        className={cn("flex gap-2 items-center", todo.disabled && "opacity-40")}
+      >
+        <div className="flex-shrink-0">
+          <div
+            role="button"
+            onClick={function tryAgain() {
+              if (todo.disabled) return
 
-            revalidationStore.dispatch({
-              type: "toggle-todo",
-              todoId: todo.id,
-              completed: !todo.completed,
-              transition: ["todo", todo.id, "toggle"],
-              beforeDispatch: preventNextOne,
-              onTransitionEnd: toastWithRetry(tryAgain),
-            })
-          }}
-          className={cn(
-            "w-8 h-8 rounded border-2 flex items-center justify-center",
-            "border-gray-300 dark:border-gray-700",
-            todo.completed && "bg-blue-500 border-blue-500",
-            todo.disabled && "cursor-not-allowed opacity-50"
-          )}
-        >
-          {todo.completed && (
-            <svg
-              className="w-3 h-3 text-white"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M5 13l4 4L19 7"
-              />
-            </svg>
-          )}
+              revalidationStore.dispatch({
+                type: "toggle-todo",
+                todoId: todo.id,
+                completed: !todo.completed,
+                transition: ["todo", todo.id, "toggle"],
+                beforeDispatch: preventNextOne,
+                onTransitionEnd: toastWithRetry(tryAgain),
+              })
+            }}
+            className={cn(
+              "w-8 h-8 rounded border-2 flex items-center justify-center",
+              "border-gray-300 dark:border-gray-700",
+              todo.completed && "bg-blue-500 border-blue-500",
+              todo.disabled && "cursor-not-allowed opacity-50"
+            )}
+          >
+            {todo.completed && (
+              <svg
+                className="w-3 h-3 text-white"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M5 13l4 4L19 7"
+                />
+              </svg>
+            )}
+          </div>
         </div>
-      </div>
 
-      <div className="flex-1 min-w-0">
-        <p
-          className={cn(
-            "text-sm font-medium truncate",
-            "text-gray-900 dark:text-gray-100",
-            todo.completed && "line-through"
-          )}
-        >
-          {todo.title}
-        </p>
+        <div className="flex-1 min-w-0">
+          <p
+            className={cn(
+              "text-sm font-medium truncate",
+              "text-gray-900 dark:text-gray-100",
+              todo.completed && "line-through"
+            )}
+          >
+            {todo.title}
+          </p>
+        </div>
       </div>
     </li>
   )

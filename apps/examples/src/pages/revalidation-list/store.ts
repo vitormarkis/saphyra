@@ -65,6 +65,7 @@ export const newRevalidationListStore = newStoreDef<
     }
 
     if (action.type === "toggle-todo") {
+      const todoIndex = state.todos.findIndex(todo => todo.id === action.todoId)
       if (settings.optimistic) {
         const optimisticCompleted = !state.$completedTodos.includes(
           action.todoId
@@ -80,17 +81,16 @@ export const newRevalidationListStore = newStoreDef<
 
       async()
         .setName("toggle-todo")
-        .onFinish(revalidateList(dispatch))
+        .onFinish(revalidateList(dispatch, todoIndex))
         .promise(async ctx => {
           await toggleTodoInDb(action.todoId, ctx.signal)
         })
     }
 
     if (action.type === "toggle-disabled") {
+      const todoIndex = state.todos.findIndex(todo => todo.id === action.todoId)
       if (settings.optimistic) {
-        const optimisticDisabled = !state.todos.find(
-          todo => todo.id === action.todoId
-        )?.disabled
+        const optimisticDisabled = !state.todos[todoIndex].disabled
 
         optimistic(s => ({
           todos: s.todos.map(todo =>
@@ -102,7 +102,7 @@ export const newRevalidationListStore = newStoreDef<
       }
       async()
         .setName("toggle-disabled-todo")
-        .onFinish(revalidateList(dispatch))
+        .onFinish(revalidateList(dispatch, todoIndex))
         .promise(async ctx => {
           await toggleTodoDisabledInDb(action.todoId, ctx.signal)
         })
@@ -131,16 +131,21 @@ function revalidateList(
     EventsTuple,
     any,
     any
-  >
+  >,
+  todoIndex: number
 ): AsyncPromiseOnFinishProps {
+  const batchKeyMaybe = settingsStore.getState().revalidateInDifferentBatches
+    ? [Math.floor(todoIndex / 2)]
+    : []
   return {
-    id: ["revalidating"],
+    id: ["revalidating", ...batchKeyMaybe],
     fn: (resolve, reject, { error, isLast }) => {
       const cleanUp = dispatch({
         type: "revalidate-todos",
-        transition: ["revalidate-todo-list"],
-        beforeDispatch: ({ action }) => {
+        transition: ["revalidate-todo-list", ...batchKeyMaybe],
+        beforeDispatch: ({ action, store, transition }) => {
           if (!isLast()) return
+          store.abort(transition)
           return action
         },
         onTransitionEnd: ({ aborted, error }) => {
