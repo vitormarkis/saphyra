@@ -520,10 +520,7 @@ export function newStoreDef<
 
       store.optimisticRegistry.clear(transitionKey)
       store.transitions.controllers.clear(transitionKey)
-      if (
-        store.transitions.cleanUpList[transitionKey] ||
-        store.transitions.cleanUpList[transitionKey]?.size === 0
-      ) {
+      if (store.transitions.cleanUpList[transitionKey]) {
         store.transitions.cleanUpList = deleteImmutably(
           store.transitions.cleanUpList,
           transitionKey
@@ -619,10 +616,7 @@ export function newStoreDef<
 
       store.optimisticRegistry.clear(transitionKey)
       store.transitions.controllers.clear(transitionKey)
-      if (
-        store.transitions.cleanUpList[transitionKey] ||
-        store.transitions.cleanUpList[transitionKey]?.size === 0
-      ) {
+      if (store.transitions.cleanUpList[transitionKey]) {
         store.transitions.cleanUpList = deleteImmutably(
           store.transitions.cleanUpList,
           transitionKey
@@ -834,7 +828,7 @@ export function newStoreDef<
       action,
       when = labelWhen(new Date()),
       setterOrPartialState,
-    }: DispatchInternalProps) => {
+    }: DispatchInternalProps): (() => void) => {
       try {
         const rollback = new Rollback()
         return dispatchImpl(action, rollback, setterOrPartialState, when)
@@ -845,6 +839,7 @@ export function newStoreDef<
         }
 
         handleError(error, action.transition)
+        return () => {}
       }
     }
 
@@ -853,7 +848,7 @@ export function newStoreDef<
         $$onDebugMode(() =>
           console.warn("Attempted to dispatch on disposed store")
         )
-        return
+        return () => {}
       }
       const when = labelWhen(new Date())
       return dispatchInternal({
@@ -956,7 +951,7 @@ export function newStoreDef<
             transition ?? initialAction.transition,
             signal ?? initialController.signal,
             asyncOp => {
-              if (signal.aborted) debugger
+              if (signal?.aborted) debugger
               asyncOperations.push(asyncOp)
             },
             "before-dispatch-async",
@@ -1314,6 +1309,7 @@ export function newStoreDef<
               })
               newState = producedState
               prevState = futurePrevState
+              return () => abort(action.transition)
             } else {
               return store.dispatch(safeAction)
             }
@@ -1388,6 +1384,10 @@ export function newStoreDef<
                 props: OnTransitionEndProps<TState, TEvents>
               ) => {
                 props.setterOrPartialStateList.forEach(setterOrPartialState => {
+                  if (!rootAction.transition) {
+                    debugger
+                    return
+                  }
                   updateTransitionState(
                     rootAction.transition,
                     setterOrPartialState
@@ -1504,7 +1504,7 @@ export function newStoreDef<
       const newState = cloneObj(
         store.transitionsState.get(transition) ??
           (parentTransition
-            ? store.transitionsState.get(parentTransition)
+            ? (store.transitionsState.get(parentTransition) ?? store.state)
             : store.state)
       )
       if (setterOrPartialState) {

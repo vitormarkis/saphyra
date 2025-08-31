@@ -20,5 +20,6 @@ test("should have meta", () => {
     },
   })
   expect(runNow).toBe(true)
+  // @ts-expect-error The error is the test assertion itself
   expect(meta).toStrictEqual({})
 })

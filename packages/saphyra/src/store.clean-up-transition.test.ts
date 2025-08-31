@@ -190,9 +190,9 @@ function ensureAllCleanUp(
   expect(Object.keys(store.onTransitionEndCallbacks)).to.not.toContain(
     transitionKey
   )
-  expect(store.internal.derivationsRegistry.getGetterGroups()).to.not.toContain(
-    `transition:${transitionKey}`
-  )
+  expect(
+    store.internal.derivationsRegistry?.getGetterGroups()
+  ).to.not.toContain(`transition:${transitionKey}`)
   expect(store.parentTransitionRegistry).toStrictEqual({})
   expect(Object.keys(store.parentTransitionRegistry)).to.not.toContain(
     transitionKey

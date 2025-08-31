@@ -147,71 +147,69 @@ export function DebouncedSearchView({}: DebouncedSearchViewProps) {
 
   return (
     <div className="flex flex-col overflow-y-hidden p-1">
-      {import.meta.env.DEV === true && (
-        <Button
-          style={{ width: "fit-content" }}
-          onClick={() => {
-            function dispatchingThenCancelling() {
-              action("e")
-              setTimeout(() => {
-                action("em")
-              }, 520)
-              setTimeout(() => {
-                action("emily")
-              }, 1040)
-            }
+      <Button
+        style={{ width: "fit-content" }}
+        onClick={() => {
+          function dispatchingThenCancelling() {
+            action("e")
+            setTimeout(() => {
+              action("em")
+            }, 520)
+            setTimeout(() => {
+              action("emily")
+            }, 1040)
+          }
 
-            function cancellingBeforeRedispatch() {
-              action("e")
-              setTimeout(() => {
-                action("em")
-              }, 300)
-              setTimeout(() => {
-                action("emily")
-              }, 600)
-            }
+          function cancellingBeforeRedispatch() {
+            action("e")
+            setTimeout(() => {
+              action("em")
+            }, 300)
+            setTimeout(() => {
+              action("emily")
+            }, 600)
+          }
 
-            function abortTimerThenAbortRequest() {
-              action("e")
-              setTimeout(() => {
-                action("em")
-              }, 300)
-              setTimeout(() => {
-                action("emily")
-              }, 820)
-            }
-            function abortRequestThenAbortTimer() {
-              action("e")
-              setTimeout(() => {
-                action("em")
-              }, 520)
-              setTimeout(() => {
-                action("emily")
-              }, 820)
-            }
-            function typingSlowly() {
-              // action("e")
-              // setTimeout(() => void action("em"), 200)
-              // setTimeout(() => void action("em_"), 390)
-              // setTimeout(() => void action("emi"), 550)
-              // setTimeout(() => void action("emil"), 1200)
-              // setTimeout(() => void action("emily"), 1500)
-              action("e")
-              setTimeout(() => void action("em"), 300)
-              setTimeout(() => void action("emi"), 700)
-              setTimeout(() => void action("emil"), 1200)
-              setTimeout(() => void action("emily"), 1500)
-            }
-            // dispatchingThenCancelling()
-            // cancellingBeforeRedispatch()
-            // abortTimerThenAbortRequest()
-            // abortRequestThenAbortTimer()
-            typingSlowly()
-          }}
-        >
-          Showcase
-        </Button>
-      )}
+          function abortTimerThenAbortRequest() {
+            action("e")
+            setTimeout(() => {
+              action("em")
+            }, 300)
+            setTimeout(() => {
+              action("emily")
+            }, 820)
+          }
+          function abortRequestThenAbortTimer() {
+            action("e")
+            setTimeout(() => {
+              action("em")
+            }, 520)
+            setTimeout(() => {
+              action("emily")
+            }, 820)
+          }
+          function typingSlowly() {
+            // action("e")
+            // setTimeout(() => void action("em"), 200)
+            // setTimeout(() => void action("em_"), 390)
+            // setTimeout(() => void action("emi"), 550)
+            // setTimeout(() => void action("emil"), 1200)
+            // setTimeout(() => void action("emily"), 1500)
+            action("e")
+            setTimeout(() => void action("em"), 300)
+            setTimeout(() => void action("emi"), 700)
+            setTimeout(() => void action("emil"), 1200)
+            setTimeout(() => void action("emily"), 1500)
+          }
+          // dispatchingThenCancelling()
+          // cancellingBeforeRedispatch()
+          // abortTimerThenAbortRequest()
+          // abortRequestThenAbortTimer()
+          typingSlowly()
+        }}
+      >
+        Showcase
+      </Button>
       <label
         htmlFor="name"
         className="leading-6"

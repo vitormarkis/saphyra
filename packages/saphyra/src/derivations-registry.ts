@@ -54,20 +54,22 @@ export class DerivationsRegistry<TState> {
     let stateTypeGetters = this.getters.get(stateType)
     const isTransition = !stateTypeGetters || isEmptyMap(stateTypeGetters)
     if (isTransition) {
-      stateTypeGetters = new Map()
-      this.getters.set(stateType, stateTypeGetters)
+      const newStateTypeGetters = new Map()
+      this.getters.set(stateType, newStateTypeGetters)
 
       Object.entries(this.derivations).forEach(([key, config]) => {
         const getter = new CachedGetter(
           config as DerivationConfig<TState, any[], any>
         )
-        stateTypeGetters.set(key, getter)
+        newStateTypeGetters.set(key, getter)
       })
+
+      stateTypeGetters = newStateTypeGetters
     }
 
-    const getter = stateTypeGetters.get(key)
+    const getter = stateTypeGetters!.get(key)
     if (!getter) debugger
-    return getter
+    return getter!
   }
 
   injectCachedGetters(

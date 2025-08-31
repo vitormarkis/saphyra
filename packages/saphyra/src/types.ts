@@ -114,7 +114,7 @@ export type StoreInternalEvents = {
 
 type StoreInternals<TState> = {
   events: EventEmitter<StoreInternalEvents>
-  derivationsRegistry: DerivationsRegistry<TState>
+  derivationsRegistry: DerivationsRegistry<TState> | null
 }
 
 export type GenericStoreValues<
