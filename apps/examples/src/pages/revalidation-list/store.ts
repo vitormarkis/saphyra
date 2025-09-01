@@ -3,11 +3,13 @@ import {
   AsyncPromiseOnFinishProps,
   BeforeDispatchOptions,
   Dispatch,
+  DispatchAsync,
   EventsTuple,
   InnerReducerSet,
   newStoreDef,
   ReducerSet,
   SetterOrPartialState,
+  SomeStore,
   SomeStoreGeneric,
   Transition,
 } from "saphyra"
@@ -50,6 +52,8 @@ type RevalidationListActions =
       type: "prefix-pairs"
       pairIds: [number, number]
     }
+
+let pairRevalidations = 0
 
 export const newRevalidationListStore = newStoreDef<
   RevalidationListInitialProps,
@@ -113,6 +117,7 @@ export const newRevalidationListStore = newStoreDef<
                 todoIndex,
                 store,
                 action.transition!,
+                dispatchAsync,
                 undefined,
                 state
               )
@@ -151,6 +156,7 @@ export const newRevalidationListStore = newStoreDef<
                 todoIndex,
                 store,
                 action.transition!,
+                dispatchAsync,
                 undefined,
                 state
               )
@@ -164,17 +170,20 @@ export const newRevalidationListStore = newStoreDef<
       async()
         .setName("prefix-pairs")
         .onFinish(
-          settings.manualRevalidation
-            ? undefined
-            : revalidateList(
-                dispatch,
-                set,
-                action.pairIds[0],
-                store,
-                action.transition!,
-                Math.random().toString().slice(2, 10),
-                state
-              )
+          pairRevalidations++ === 1
+            ? settings.manualRevalidation
+              ? undefined
+              : revalidateList(
+                  dispatch,
+                  set,
+                  action.pairIds[0],
+                  store,
+                  action.transition!,
+                  dispatchAsync,
+                  "ppaaiirr",
+                  state
+                )
+            : undefined
         )
         .promise(async ctx => {
           await prefixPairsInDb(action.pairIds, ctx.signal).catch()
@@ -196,17 +205,10 @@ export const newRevalidationListStore = newStoreDef<
     // Async Effects
     if (settings.prefixPairs) {
       if (diff(["$completedTodos"])) {
-        const pairs = state.$completedTodos
-          .map(todoId => state.$todosById[todoId])
-          .filter(nonNullable)
-          .filter(todo => !todo.prefixed)
-          .map(todo => todo.id)
-          .reduce((acc, todoId, idx) => {
-            const groupingIdx = Math.floor(idx / 2)
-            acc[groupingIdx] ??= []
-            acc[groupingIdx].push(todoId)
-            return acc
-          }, [] as number[][])
+        const pairs = getPairs({
+          completedTodos: state.$completedTodos,
+          todosById: state.$todosById,
+        })
 
         const tuples = Object.values(pairs).filter(tuple => tuple.length === 2)
         const shouldGroup = tuples.length > 0
@@ -243,15 +245,27 @@ function revalidateList(
   >,
   set: ReducerSet<RevalidationListState>,
   todoIndex: number,
-  store: SomeStoreGeneric,
+  store: SomeStore<
+    RevalidationListState,
+    RevalidationListActions,
+    EventsTuple,
+    any,
+    any
+  >,
   transition: Transition,
+  dispatchAsync: DispatchAsync<
+    RevalidationListState,
+    RevalidationListActions,
+    EventsTuple,
+    any,
+    any
+  >,
   userKey?: string,
   state?: RevalidationListState
 ): AsyncPromiseOnFinishProps {
   const batchKeyMaybe = settingsStore.getState().revalidateInDifferentBatches
     ? [Math.floor(todoIndex / 2)]
     : []
-  const transitionKey = transition.join(":")
   const transitionRevalidate = [
     "revalidate-todo-list",
     ...batchKeyMaybe,
@@ -260,37 +274,24 @@ function revalidateList(
   const transitionRevalidateKey = transitionRevalidate.join(":")
   return {
     id: transitionRevalidateKey,
-    fn: (resolve, reject, { error, isLast }) => {
-      const cleanUp = dispatch({
-        type: "revalidate-todos",
-        transition: transitionRevalidate,
-        beforeDispatch: ({ action, store, transition }) => {
-          if (!isLast()) return
-          store.abort(transition) // mesma coisa, cancelou transistion [revalidate-todo-list]
-          return action
+    fn: (resolve, reject, { isLast }) => {
+      dispatchAsync(
+        {
+          type: "revalidate-todos",
+          transition: transitionRevalidate,
+          beforeDispatch: ({ action, store, transition }) => {
+            if (!isLast()) return
+            store.abort(transition) // mesma coisa, cancelou transistion [revalidate-todo-list]
+            return action
+          },
         },
-        onTransitionEnd: ({ aborted, error, setterOrPartialStateList }) => {
-          if (aborted) return
-          if (error) {
-            return reject(error)
-          }
-          setterOrPartialStateList.forEach(setter => {
-            const set = (
-              setter: SetterOrPartialState<RevalidationListState>
-            ) => {
-              const newTransitionState = store.internal.updateTransitionState(
-                transition,
-                setter
-              )
-              assignObjValues(state, newTransitionState)
-            }
-            set(setter)
-          })
-          return resolve(true)
-        },
-      })
+        { onAbort: "noop" }
+      )
+        .then(resolve)
+        .catch(reject)
+
       return () => {
-        cleanUp()
+        store.abort(transitionRevalidate)
       }
     },
   }
@@ -301,4 +302,23 @@ export const RevalidationList =
 
 function nonNullable<T>(value: T): value is NonNullable<T> {
   return value != null || value !== undefined
+}
+
+type GetPairsProps = {
+  completedTodos: number[]
+  todosById: Record<number, TodoType>
+}
+
+const getPairs = ({ completedTodos, todosById }: GetPairsProps) => {
+  return completedTodos
+    .map(todoId => todosById[todoId])
+    .filter(nonNullable)
+    .filter(todo => !todo.prefixed)
+    .map(todo => todo.id)
+    .reduce((acc, todoId, idx) => {
+      const groupingIdx = Math.floor(idx / 2)
+      acc[groupingIdx] ??= []
+      acc[groupingIdx].push(todoId)
+      return acc
+    }, [] as number[][])
 }

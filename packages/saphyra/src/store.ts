@@ -853,17 +853,24 @@ export function newStoreDef<
       controller?.abort()
     }
 
-    const dispatchAsync: Met["dispatchAsync"] = (initialAction, signal) => {
+    const dispatchAsync: Met["dispatchAsync"] = (initialAction, options) => {
       const resolver = PromiseWithResolvers<TState>()
-      if (signal?.aborted) {
+      if (options?.signal?.aborted) {
         throw { code: 20, reason: "Signal is already aborted" }
       }
       const unsub = dispatch({
         ...initialAction,
         onTransitionEnd(props) {
-          if (signal?.aborted) {
+          if (options?.signal?.aborted) {
             return resolver.reject({ code: 20 })
           }
+
+          if (props.aborted) {
+            if (options?.onAbort === "resolve") resolver.resolve(props.state)
+            if (options?.onAbort === "reject") resolver.reject(props.error)
+            if (options?.onAbort === "noop") return
+          }
+
           // @ts-expect-error RESOLVENDO A PROMISE QUANDO ELE ABORTA, TA FUNCIONANDO, MAS NAO DEVERIA
           if (props.error && props.error.code !== 20) {
             resolver.reject(props.error)
@@ -873,7 +880,7 @@ export function newStoreDef<
           return initialAction.onTransitionEnd?.(props)
         },
       })
-      signal?.addEventListener("abort", () => unsub())
+      options?.signal?.addEventListener("abort", () => unsub())
       return resolver.promise
     }
 
@@ -1404,11 +1411,11 @@ export function newStoreDef<
             set: setReducerHandler,
             diff: createDiff(prevState, newState),
             dispatch: dispatchReducerHandler,
-            dispatchAsync: async (propsAction, propsSignal) => {
+            dispatchAsync: async (propsAction, options) => {
               const transition = (() => {
                 if (propsAction.transition) {
                   return [
-                    ...(action.transition ?? []),
+                    // ...(action.transition ?? []),
                     ...propsAction.transition,
                   ]
                 }
@@ -1478,7 +1485,7 @@ export function newStoreDef<
                 _guard: "is-sub-transition",
               })
 
-              return dispatchAsync(transitionAction, propsSignal ?? signal)
+              return dispatchAsync(transitionAction, options)
             },
             deps,
             isOptimistic: false,

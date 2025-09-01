@@ -28,8 +28,7 @@ export type DispatchAsync<
   TDeps,
 > = (
   action: ClassicAction<TState, TActions, TEvents, TUncontrolledState, TDeps>,
-  signal?: AbortSignal,
-  parentTransition?: TransitionNullable
+  options?: { onAbort: "resolve" | "reject" | "noop"; signal?: AbortSignal }
 ) => Promise<TState>
 
 export type ClassicAction<
