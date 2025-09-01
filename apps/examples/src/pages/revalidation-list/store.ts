@@ -1,17 +1,9 @@
 import {
-  assignObjValues,
   AsyncPromiseOnFinishProps,
-  BeforeDispatchOptions,
-  Dispatch,
   DispatchAsync,
   EventsTuple,
-  InnerReducerSet,
   newStoreDef,
-  ReducerSet,
-  SetterOrPartialState,
   SomeStore,
-  SomeStoreGeneric,
-  Transition,
 } from "saphyra"
 import { createStoreUtils } from "saphyra/react"
 import { TodoType } from "./types"
@@ -53,8 +45,6 @@ type RevalidationListActions =
       pairIds: [number, number]
     }
 
-let pairRevalidations = 0
-
 export const newRevalidationListStore = newStoreDef<
   RevalidationListInitialProps,
   RevalidationListState,
@@ -75,11 +65,9 @@ export const newRevalidationListStore = newStoreDef<
     set,
     diff,
     async,
-    dispatch,
     dispatchAsync,
     optimistic,
     store,
-    isOptimistic,
   }) {
     const settings = settingsStore.getState()
     if (action.type === "revalidate-todos") {
@@ -111,24 +99,10 @@ export const newRevalidationListStore = newStoreDef<
         .onFinish(
           settings.manualRevalidation
             ? undefined
-            : revalidateList(
-                dispatch,
-                set,
-                todoIndex,
-                store,
-                action.transition!,
-                dispatchAsync,
-                undefined,
-                state
-              )
+            : revalidateList(dispatchAsync, todoIndex, store)
         )
         .promise(async ctx => {
           await toggleTodoInDb(action.todoId, ctx.signal)
-          // set(s => ({
-          //   completingTodos: s.completingTodos.includes(action.todoId)
-          //     ? s.completingTodos.filter(todoId => todoId !== action.todoId)
-          //     : [...s.completingTodos, action.todoId],
-          // }))
         })
     }
 
@@ -150,16 +124,7 @@ export const newRevalidationListStore = newStoreDef<
         .onFinish(
           settings.manualRevalidation
             ? undefined
-            : revalidateList(
-                dispatch,
-                set,
-                todoIndex,
-                store,
-                action.transition!,
-                dispatchAsync,
-                undefined,
-                state
-              )
+            : revalidateList(dispatchAsync, todoIndex, store)
         )
         .promise(async ctx => {
           await toggleTodoDisabledInDb(action.todoId, ctx.signal)
@@ -173,14 +138,10 @@ export const newRevalidationListStore = newStoreDef<
           settings.manualRevalidation
             ? undefined
             : revalidateList(
-                dispatch,
-                set,
+                dispatchAsync,
                 action.pairIds[0],
                 store,
-                action.transition!,
-                dispatchAsync,
-                "ppaaiirr",
-                state
+                "ppaaiirr"
               )
         )
         .promise(async ctx => {
@@ -211,7 +172,6 @@ export const newRevalidationListStore = newStoreDef<
         const tuples = Object.values(pairs).filter(tuple => tuple.length === 2)
         const shouldGroup = tuples.length > 0
         if (shouldGroup) {
-          noop()
           async()
             .setName("prefix-pairs-batch")
             .promise(async () => {
@@ -235,14 +195,13 @@ export const newRevalidationListStore = newStoreDef<
 })
 
 function revalidateList(
-  dispatch: Dispatch<
+  dispatchAsync: DispatchAsync<
     RevalidationListState,
     RevalidationListActions,
     EventsTuple,
     any,
     any
   >,
-  set: ReducerSet<RevalidationListState>,
   todoIndex: number,
   store: SomeStore<
     RevalidationListState,
@@ -251,28 +210,19 @@ function revalidateList(
     any,
     any
   >,
-  transition: Transition,
-  dispatchAsync: DispatchAsync<
-    RevalidationListState,
-    RevalidationListActions,
-    EventsTuple,
-    any,
-    any
-  >,
-  userKey?: string,
-  state?: RevalidationListState
+  userKey?: string
 ): AsyncPromiseOnFinishProps {
   const batchKeyMaybe = settingsStore.getState().revalidateInDifferentBatches
     ? [Math.floor(todoIndex / 2)]
     : []
+  const userKeyMaybe = userKey ? [userKey] : []
   const transitionRevalidate = [
     "revalidate-todo-list",
     ...batchKeyMaybe,
-    ...(userKey ? [userKey] : []),
+    ...userKeyMaybe,
   ]
-  const transitionRevalidateKey = transitionRevalidate.join(":")
   return {
-    id: transitionRevalidateKey,
+    id: transitionRevalidate.join(":"),
     fn: (resolve, reject, { isLast }) => {
       dispatchAsync(
         {
@@ -280,7 +230,7 @@ function revalidateList(
           transition: transitionRevalidate,
           beforeDispatch: ({ action, store, transition }) => {
             if (!isLast()) return
-            store.abort(transition) // mesma coisa, cancelou transistion [revalidate-todo-list]
+            store.abort(transition)
             return action
           },
         },

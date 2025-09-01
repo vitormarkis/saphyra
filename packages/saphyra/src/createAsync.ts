@@ -369,8 +369,9 @@ const createRunOnFinishCallback = ({
     const onFinishFn = onFinish.fn
     const getFinishesCount = () => store.transitions.state.finishes[onFinishId]
     const resolver = PromiseWithResolvers<void>()
+    const barLabel = `$onFinish-${onFinishId}`
     const finishOnFinishBar = onFinishId
-      ? newBar(transitionString, labelWhen(new Date()), onFinishId)
+      ? newBar(transitionString, labelWhen(new Date()), barLabel)
       : () => {}
     const finishCleanUp = onFinishFn(
       () => resolver.resolve(),
@@ -406,7 +407,7 @@ const createRunOnFinishCallback = ({
           })
       },
       {
-        label: onFinishId,
+        label: barLabel,
       },
       undefined,
       false
