@@ -155,12 +155,12 @@ export function RevalidationListPage() {
                 }}
               />
               <Button
-                disabled={SettingsStore.useSelector(s => !s.manualRevalidation)}
                 className="size-6 p-0"
                 onClick={() => {
                   revalidationListStore.dispatch({
                     type: "revalidate-todos",
                     transition: ["revalidate-todo-list"],
+                    beforeDispatch: cancelPrevious,
                   })
                 }}
               >

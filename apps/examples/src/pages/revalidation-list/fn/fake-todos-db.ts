@@ -130,7 +130,7 @@ export async function getTodosFromDb(signal: AbortSignal): Promise<TodoType[]> {
 }
 
 export async function toggleTodoInDb(todoId: number, signal: AbortSignal) {
-  await new Promise(resolve => setTimeout(resolve, range(1400, 1600)))
+  await new Promise(resolve => setTimeout(resolve, range(600, 700)))
   const settings = settingsStore.getState()
 
   if (signal.aborted) {
