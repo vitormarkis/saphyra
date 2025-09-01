@@ -170,20 +170,18 @@ export const newRevalidationListStore = newStoreDef<
       async()
         .setName("prefix-pairs")
         .onFinish(
-          pairRevalidations++ === 1
-            ? settings.manualRevalidation
-              ? undefined
-              : revalidateList(
-                  dispatch,
-                  set,
-                  action.pairIds[0],
-                  store,
-                  action.transition!,
-                  dispatchAsync,
-                  "ppaaiirr",
-                  state
-                )
-            : undefined
+          settings.manualRevalidation
+            ? undefined
+            : revalidateList(
+                dispatch,
+                set,
+                action.pairIds[0],
+                store,
+                action.transition!,
+                dispatchAsync,
+                "ppaaiirr",
+                state
+              )
         )
         .promise(async ctx => {
           await prefixPairsInDb(action.pairIds, ctx.signal).catch()
@@ -217,7 +215,7 @@ export const newRevalidationListStore = newStoreDef<
           async()
             .setName("prefix-pairs-batch")
             .promise(async () => {
-              for (const tuple of tuples) {
+              const promises = tuples.map(async tuple => {
                 const [first, second] = tuple
                 await dispatchAsync({
                   type: "prefix-pairs",
@@ -225,7 +223,8 @@ export const newRevalidationListStore = newStoreDef<
                   transition: ["prefix-pairs", `${first}-${second}`],
                   beforeDispatch: preventNextOne,
                 })
-              }
+              })
+              await Promise.all(promises)
             })
         }
       }
