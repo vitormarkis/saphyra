@@ -130,6 +130,10 @@ export function RevalidationListPage() {
                     <p className="text-xs bg-background text-foreground max-w-[200px]">
                       Toggle enabled and complete for each row and see what
                       happens
+                      <br />
+                      <br />
+                      Useful for different parallel revalidation strategies,
+                      like per boardId, columnId, pageSlug, cardId, etc.
                     </p>
                   </TooltipContent>
                 </Tooltip>
