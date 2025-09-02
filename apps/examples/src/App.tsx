@@ -85,7 +85,7 @@ export default function App() {
         <div className="min-h-[160px]">
           {/* <Devtools store={homeStore} /> */}
         </div>
-        <div className="">
+        <div className="flex">
           <Waterfall store={homeStore} />
         </div>
       </div>
