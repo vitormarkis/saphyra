@@ -46,6 +46,22 @@ export function RevalidationListPage() {
       <div className="absolute top-6 left-0 right-0 z-40">
         <div className="flex items-center gap-4 px-8">
           <label
+            htmlFor="spinners"
+            className="flex flex-col items-center gap-1"
+          >
+            <span className="text-center h-16 center self-center inline-grid place-items-center">
+              Spinners
+            </span>
+            <Checkbox
+              checked={SettingsStore.useSelector(s => s.spinners)}
+              onCheckedChange={value => {
+                settingsStore.setState({
+                  spinners: !!value,
+                })
+              }}
+            />
+          </label>
+          <label
             htmlFor="optimistic"
             className="flex flex-col items-center gap-1"
           >
@@ -254,12 +270,27 @@ type PostListProps = {}
 
 export function PostList({}: PostListProps) {
   const todos = RevalidationList.useSelector(s => s.todos)
+  const isPending = RevalidationList.useTransition(["todo"])
+  const shouldDisplaySpinners = SettingsStore.useSelector(s => s.spinners)
 
   return (
     <div className="flex flex-col">
       <div className="flex justify-between mb-4">
         <div className="h-full flex [&>*]:border-r [&>*]:border-r-gray-800 [&>*:last-child]:border-r-0 "></div>
       </div>
+      {shouldDisplaySpinners && (
+        <div
+          className={cn(
+            "flex items-center gap-2 p-3 invisible",
+            isPending && "visible"
+          )}
+        >
+          <p>Board is pending: </p>
+          <div className="aspect-square h-6 grid place-items-center">
+            {isPending && <span className="animate-spin">🌀</span>}
+          </div>
+        </div>
+      )}
       <ul className="grid grid-cols-1 gap-2">
         {todos.map(todo => (
           <Todo
@@ -280,6 +311,7 @@ export function Todo({ todoId }: TodoProps) {
   const [revalidationStore] = RevalidationList.useStore()
   const todo = RevalidationList.useSelector(s => s.$todosById[todoId])
   const isPending = RevalidationList.useTransition(["todo", todoId])
+  const shouldDisplaySpinners = SettingsStore.useSelector(s => s.spinners)
 
   return (
     <li
@@ -290,7 +322,6 @@ export function Todo({ todoId }: TodoProps) {
       )}
     >
       <div className="flex-shrink-0 flex gap-2">
-        {/* {isPending && <Spinner size={16} />} */}
         <div
           role="button"
           onClick={function tryAgain() {
@@ -304,7 +335,7 @@ export function Todo({ todoId }: TodoProps) {
             })
           }}
           className={cn(
-            "px-2 py-1 text-xs rounded border",
+            "px-2 py-1 text-xs rounded border w-[70px] text-center",
             "border-gray-300 dark:border-gray-600",
             "hover:bg-gray-100 dark:hover:bg-gray-800",
             "transition-colors duration-200",
@@ -317,8 +348,18 @@ export function Todo({ todoId }: TodoProps) {
         </div>
       </div>
       <div
-        className={cn("flex gap-2 items-center", todo.disabled && "opacity-40")}
+        className={cn(
+          "flex gap-2 items-center w-full",
+          todo.disabled && "opacity-40"
+        )}
       >
+        {shouldDisplaySpinners && (
+          <div className="min-w-0">
+            <div className="pr-2 aspect-square h-6 grid place-items-center">
+              {isPending && <span className="animate-spin">🌀</span>}
+            </div>
+          </div>
+        )}
         <div className="flex-shrink-0">
           <div
             role="button"
@@ -358,7 +399,6 @@ export function Todo({ todoId }: TodoProps) {
             )}
           </div>
         </div>
-
         <div className="flex-1 min-w-0">
           <p
             className={cn(

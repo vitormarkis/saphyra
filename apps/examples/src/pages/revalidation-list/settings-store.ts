@@ -8,6 +8,7 @@ type SettingsState = {
   revalidateInDifferentBatches: boolean
   manualRevalidation: boolean
   prefixPairs: boolean
+  spinners: boolean
 }
 
 const newSettingsStore = newStoreDef<SettingsState>({
@@ -30,6 +31,7 @@ const INITIAL_STATE = {
   revalidateInDifferentBatches: false,
   manualRevalidation: false,
   prefixPairs: false,
+  spinners: false,
 }
 
 export const settingsStore = newSettingsStore(
