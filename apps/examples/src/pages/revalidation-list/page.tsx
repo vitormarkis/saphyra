@@ -335,7 +335,7 @@ export function Todo({ todoId }: TodoProps) {
             })
           }}
           className={cn(
-            "px-2 py-1 text-xs rounded border w-[70px] text-center",
+            "px-2 py-1 text-xs rounded border w-[70px] text-center select-none",
             "border-gray-300 dark:border-gray-600",
             "hover:bg-gray-100 dark:hover:bg-gray-800",
             "transition-colors duration-200",
