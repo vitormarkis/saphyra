@@ -4,7 +4,6 @@ import {
   EventsTuple,
   newStoreDef,
   SomeStore,
-  Transition,
 } from "saphyra"
 import { createStoreUtils } from "saphyra/react"
 import { TodoType } from "./types"
@@ -15,7 +14,7 @@ import {
   toggleTodoDisabledInDb,
   prefixPairsInDb,
 } from "./fn/fake-todos-db"
-import { noop, randomString } from "~/lib/utils"
+import { noop } from "~/lib/utils"
 import { settingsStore } from "./settings-store"
 import { preventNextOne } from "./before-dispatches"
 
@@ -70,6 +69,8 @@ export const newRevalidationListStore = newStoreDef<
     optimistic,
     store,
   }) {
+    const revalidateList = createRevalidateList(dispatchAsync, store)
+
     const settings = settingsStore.getState()
     if (action.type === "revalidate-todos") {
       async()
@@ -98,14 +99,7 @@ export const newRevalidationListStore = newStoreDef<
       async()
         .setName("toggle-todo")
         .onFinish(
-          settings.manualRevalidation
-            ? undefined
-            : revalidateList(
-                dispatchAsync,
-                todoIndex,
-                store,
-                action.transition!
-              )
+          settings.manualRevalidation ? undefined : revalidateList(todoIndex)
         )
         .promise(async ctx => {
           await toggleTodoInDb(action.todoId, ctx.signal)
@@ -128,14 +122,7 @@ export const newRevalidationListStore = newStoreDef<
       async()
         .setName("toggle-disabled-todo")
         .onFinish(
-          settings.manualRevalidation
-            ? undefined
-            : revalidateList(
-                dispatchAsync,
-                todoIndex,
-                store,
-                action.transition!
-              )
+          settings.manualRevalidation ? undefined : revalidateList(todoIndex)
         )
         .promise(async ctx => {
           await toggleTodoDisabledInDb(action.todoId, ctx.signal)
@@ -148,12 +135,7 @@ export const newRevalidationListStore = newStoreDef<
         .onFinish(
           settings.manualRevalidation
             ? undefined
-            : revalidateList(
-                dispatchAsync,
-                action.pairIds[0],
-                store,
-                action.transition!
-              )
+            : revalidateList(action.pairIds[0])
         )
         .promise(async ctx => {
           await prefixPairsInDb(action.pairIds, ctx.signal).catch()
@@ -205,7 +187,7 @@ export const newRevalidationListStore = newStoreDef<
   },
 })
 
-function revalidateList(
+function createRevalidateList(
   dispatchAsync: DispatchAsync<
     RevalidationListState,
     RevalidationListActions,
@@ -213,42 +195,42 @@ function revalidateList(
     any,
     any
   >,
-  todoIndex: number,
   store: SomeStore<
     RevalidationListState,
     RevalidationListActions,
     EventsTuple,
     any,
     any
-  >,
-  transition: Transition
-): AsyncPromiseOnFinishProps {
-  const batchKeyMaybe = settingsStore.getState().revalidateInDifferentBatches
-    ? [Math.floor(todoIndex / 2)]
-    : []
+  >
+) {
+  return function revalidateList(todoIndex: number): AsyncPromiseOnFinishProps {
+    const batchKeyMaybe = settingsStore.getState().revalidateInDifferentBatches
+      ? [Math.floor(todoIndex / 2)]
+      : []
 
-  return {
-    id: ["revalidate-todo-list", ...batchKeyMaybe],
-    fn: (resolve, reject, { isLast }) => {
-      dispatchAsync(
-        {
-          type: "revalidate-todos",
-          transition: ["revalidate-todo-list", ...batchKeyMaybe],
-          beforeDispatch: ({ action, store, transition }) => {
-            if (!isLast()) return
-            store.abort(transition)
-            return action
+    return {
+      id: ["revalidate-todo-list", ...batchKeyMaybe],
+      fn: (resolve, reject, { isLast }) => {
+        dispatchAsync(
+          {
+            type: "revalidate-todos",
+            transition: ["revalidate-todo-list", ...batchKeyMaybe],
+            beforeDispatch: ({ action, store, transition }) => {
+              if (!isLast()) return
+              store.abort(transition)
+              return action
+            },
           },
-        },
-        { onAbort: "noop" }
-      )
-        .then(resolve)
-        .catch(reject)
+          { onAbort: "noop" }
+        )
+          .then(resolve)
+          .catch(reject)
 
-      return () => {
-        store.abort(["revalidate-todo-list", ...batchKeyMaybe])
-      }
-    },
+        return () => {
+          store.abort(["revalidate-todo-list", ...batchKeyMaybe])
+        }
+      },
+    }
   }
 }
 
