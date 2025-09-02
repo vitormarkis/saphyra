@@ -5,6 +5,7 @@ import {
   RemoveDollarSignProps,
   DerivationsConfig,
   RemoveFunctionProps,
+  StoreInternalContextEnum,
 } from "./types"
 import { createAsync, errorNoTransition } from "./createAsync"
 import { runSuccessCallback, TransitionsStore } from "./transitions-store"
@@ -430,6 +431,7 @@ export function newStoreDef<
         events: new EventEmitter<StoreInternalEvents>(),
         derivationsRegistry,
         updateTransitionState,
+        context: null,
       },
       history: [],
       historyRedo: [],
@@ -836,6 +838,19 @@ export function newStoreDef<
       TUncontrolledState,
       TDeps
     >["abort"] = transition => {
+      const transitionKey = transition?.join(":") ?? null
+      // Should this check run always or just when on-Finish-Clean-Up?
+      if (
+        store.internal.context?.type ===
+          StoreInternalContextEnum.ON_FINISH_CLEAN_UP &&
+        transitionKey
+      ) {
+        const parents = Object.values(store.parentTransitionRegistry).flat()
+        const isCancellingAParent = parents.includes(transitionKey)
+        if (isCancellingAParent) {
+          return
+        }
+      }
       const isHappening = store.transitions.isHappeningUnique(transition)
       if (!isHappening || !transition) return
       const controller = store.transitions.controllers.get(transition)
@@ -858,27 +873,28 @@ export function newStoreDef<
       if (options?.signal?.aborted) {
         throw { code: 20, reason: "Signal is already aborted" }
       }
+      const onTransitionEnd = (props: any) => {
+        if (options?.signal?.aborted) {
+          return resolver.reject({ code: 20 })
+        }
+
+        if (props.aborted) {
+          if (options?.onAbort === "resolve") resolver.resolve(props.state)
+          if (options?.onAbort === "reject") resolver.reject(props.error)
+          if (options?.onAbort === "noop") return
+        }
+
+        if (props.error && props.error.code !== 20) {
+          resolver.reject(props.error)
+        } else {
+          resolver.resolve(props.state)
+        }
+        initialAction.onTransitionEnd?.(props)
+      }
+
       const unsub = dispatch({
         ...initialAction,
-        onTransitionEnd(props) {
-          if (options?.signal?.aborted) {
-            return resolver.reject({ code: 20 })
-          }
-
-          if (props.aborted) {
-            if (options?.onAbort === "resolve") resolver.resolve(props.state)
-            if (options?.onAbort === "reject") resolver.reject(props.error)
-            if (options?.onAbort === "noop") return
-          }
-
-          // @ts-expect-error RESOLVENDO A PROMISE QUANDO ELE ABORTA, TA FUNCIONANDO, MAS NAO DEVERIA
-          if (props.error && props.error.code !== 20) {
-            resolver.reject(props.error)
-          } else {
-            resolver.resolve(props.state)
-          }
-          return initialAction.onTransitionEnd?.(props)
-        },
+        onTransitionEnd,
       })
       options?.signal?.addEventListener("abort", () => unsub())
       return resolver.promise
@@ -1412,12 +1428,18 @@ export function newStoreDef<
             diff: createDiff(prevState, newState),
             dispatch: dispatchReducerHandler,
             dispatchAsync: async (propsAction, options) => {
+              const actionTransitionKey = action.transition!.join(":")
+              const parentTransitionKey =
+                store.parentTransitionRegistry[actionTransitionKey]?.join(":")
+              const propsActionTransitionKey = propsAction.transition?.join(":")
+
               const transition = (() => {
                 if (propsAction.transition) {
-                  return [
-                    // ...(action.transition ?? []),
-                    ...propsAction.transition,
-                  ]
+                  const maybePrefix =
+                    parentTransitionKey === propsActionTransitionKey
+                      ? [parentTransitionKey]
+                      : []
+                  return [...maybePrefix, ...propsAction.transition]
                 }
                 if (action.transition) {
                   /**

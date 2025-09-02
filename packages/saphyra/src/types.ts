@@ -111,6 +111,14 @@ export type StoreInternalEvents = {
   ]
 }
 
+export enum StoreInternalContextEnum {
+  ON_FINISH_CLEAN_UP = "on-finish-clean-up",
+}
+
+type StoreInternalContext = {
+  type: StoreInternalContextEnum
+}
+
 type StoreInternals<TState> = {
   events: EventEmitter<StoreInternalEvents>
   derivationsRegistry: DerivationsRegistry<TState> | null
@@ -118,6 +126,7 @@ type StoreInternals<TState> = {
     transition: Transition,
     setterOrPartialState: SetterOrPartialState<TState>
   ) => TState | null
+  context: StoreInternalContext | null
 }
 
 export type GenericStoreValues<
@@ -625,6 +634,7 @@ export type StateWithDerivations<
 export type AsyncOperation = {
   when: number
   fn?: () => void
+  fnUser?: (...args: any[]) => any | Promise<any>
   type: "promise" | "timeout" | "manual"
   label?: string | null
   whenReadable: string

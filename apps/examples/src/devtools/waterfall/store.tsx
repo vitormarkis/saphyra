@@ -17,6 +17,7 @@ type LineType = {
 }
 
 export type WaterfallState = {
+  stop: boolean
   bars: BarType[]
   now: number
   distance: number
@@ -105,6 +106,7 @@ export const newWaterfallStore = newStoreDef<
   onConstruct({ initialProps }) {
     return {
       ...initialProps,
+      stop: false,
       now: Date.now(),
       state: "fresh",
       barSorters,

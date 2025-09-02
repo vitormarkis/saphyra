@@ -15,6 +15,7 @@ import {
   DefaultActions,
   SomeStore,
   SomeStoreGeneric,
+  StoreInternalContextEnum,
   Transition,
   TransitionNullable,
 } from "./types"
@@ -195,6 +196,7 @@ export function createAsync<
     }
     const asyncOperation = newAsyncOperation({
       fn,
+      fnUser: promiseFn,
       when,
       type: "promise",
       label: config?.label ?? null,
@@ -264,6 +266,7 @@ export function createAsync<
 
     const asyncOperation = newAsyncOperation({
       fn,
+      fnUser: callback,
       when,
       type: "timeout",
       label: config?.label ?? null,
@@ -280,6 +283,7 @@ export function createAsync<
         throw new Error(
           "Name is required when using async().promise.onFinish, call .setName before .promise"
         )
+
       onFinishObj = _onFinishObj
 
       return {
@@ -386,8 +390,13 @@ const createRunOnFinishCallback = ({
     store.transitions.finishCallbacks.cleanUps[onFinishId].add(
       // @ts-expect-error - TODO: fix this
       function listener(incomingTransition: Transition) {
+        const prevContext = store.internal.context
+        store.internal.context = {
+          type: StoreInternalContextEnum.ON_FINISH_CLEAN_UP,
+        }
         // @ts-expect-error - TODO: fix this
         finishCleanUp?.(incomingTransition)
+        store.internal.context = prevContext
         // @ts-expect-error - TODO: fix this
         cleanUpList.delete(listener)
       }

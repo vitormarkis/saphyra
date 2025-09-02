@@ -4,6 +4,7 @@ import {
   EventsTuple,
   newStoreDef,
   SomeStore,
+  Transition,
 } from "saphyra"
 import { createStoreUtils } from "saphyra/react"
 import { TodoType } from "./types"
@@ -14,7 +15,7 @@ import {
   toggleTodoDisabledInDb,
   prefixPairsInDb,
 } from "./fn/fake-todos-db"
-import { noop } from "~/lib/utils"
+import { noop, randomString } from "~/lib/utils"
 import { settingsStore } from "./settings-store"
 import { preventNextOne } from "./before-dispatches"
 
@@ -99,7 +100,12 @@ export const newRevalidationListStore = newStoreDef<
         .onFinish(
           settings.manualRevalidation
             ? undefined
-            : revalidateList(dispatchAsync, todoIndex, store)
+            : revalidateList(
+                dispatchAsync,
+                todoIndex,
+                store,
+                action.transition!
+              )
         )
         .promise(async ctx => {
           await toggleTodoInDb(action.todoId, ctx.signal)
@@ -124,7 +130,12 @@ export const newRevalidationListStore = newStoreDef<
         .onFinish(
           settings.manualRevalidation
             ? undefined
-            : revalidateList(dispatchAsync, todoIndex, store)
+            : revalidateList(
+                dispatchAsync,
+                todoIndex,
+                store,
+                action.transition!
+              )
         )
         .promise(async ctx => {
           await toggleTodoDisabledInDb(action.todoId, ctx.signal)
@@ -141,7 +152,7 @@ export const newRevalidationListStore = newStoreDef<
                 dispatchAsync,
                 action.pairIds[0],
                 store,
-                "ppaaiirr"
+                action.transition!
               )
         )
         .promise(async ctx => {
@@ -210,24 +221,19 @@ function revalidateList(
     any,
     any
   >,
-  userKey?: string
+  transition: Transition
 ): AsyncPromiseOnFinishProps {
   const batchKeyMaybe = settingsStore.getState().revalidateInDifferentBatches
     ? [Math.floor(todoIndex / 2)]
     : []
-  const userKeyMaybe = userKey ? [userKey] : []
-  const transitionRevalidate = [
-    "revalidate-todo-list",
-    ...batchKeyMaybe,
-    ...userKeyMaybe,
-  ]
+
   return {
-    id: transitionRevalidate.join(":"),
+    id: ["revalidate-todo-list", ...batchKeyMaybe],
     fn: (resolve, reject, { isLast }) => {
       dispatchAsync(
         {
           type: "revalidate-todos",
-          transition: transitionRevalidate,
+          transition: ["revalidate-todo-list", ...batchKeyMaybe],
           beforeDispatch: ({ action, store, transition }) => {
             if (!isLast()) return
             store.abort(transition)
@@ -240,7 +246,7 @@ function revalidateList(
         .catch(reject)
 
       return () => {
-        store.abort(transitionRevalidate)
+        store.abort(["revalidate-todo-list", ...batchKeyMaybe])
       }
     },
   }
@@ -270,4 +276,8 @@ const getPairs = ({ completedTodos, todosById }: GetPairsProps) => {
       acc[groupingIdx].push(todoId)
       return acc
     }, [] as number[][])
+}
+
+function randomStr(parentTransitionKey: string) {
+  return parentTransitionKey
 }

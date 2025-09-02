@@ -188,6 +188,7 @@ function WaterfallContent() {
   }, [])
 
   const updateConfig = useCallback(() => {
+    if (waterfallStore.state.stop) return
     waterfallStore.dispatch({
       type: "refresh",
     })
@@ -418,6 +419,7 @@ export const Bar = forwardRef(function Bar({
     () => {
       if (!barRef?.current) return
       const state = waterfallStore.getState()
+      if (state.stop) return
       const config = state.getConfig()
       const bar = state.getBarsByBarId()[barId]
       // const isHighlighting = state.highlightingTransition !== null
@@ -563,6 +565,7 @@ const handle = ({
   idx,
 }: Handle) => {
   const state = waterfallStore.getState()
+  if (state.stop) return
   const duration = state.getConfig().max - state.getConfig().min
 
   if (lineViewContentRef.current) {

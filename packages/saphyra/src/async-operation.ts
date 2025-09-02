@@ -6,6 +6,7 @@ export const newAsyncOperation = ({
   label,
   type,
   when,
+  fnUser,
 }: Omit<AsyncOperation, "whenReadable">): AsyncOperation => {
   return {
     fn,
@@ -13,5 +14,6 @@ export const newAsyncOperation = ({
     type,
     when,
     whenReadable: labelWhen(when),
+    fnUser,
   }
 }
