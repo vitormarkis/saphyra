@@ -1,0 +1,49 @@
+---
+description: Saphyra store creation and usage patterns
+globs: ["**/*store*.ts", "**/store.ts", "**/*Store*.ts"]
+alwaysApply: true
+---
+
+# Saphyra Store Patterns
+
+## Store Creation
+
+- Always use `newStoreName` prefix for store factory functions
+- Follow the pattern: `new{Name}Store` (e.g., `newRevalidationListStore`)
+- Store instances should be created with `useNewStore` hook in React components
+
+## Context Pattern
+
+- Always create a Context object with `.Provider` for store sharing
+- Pattern: `{StoreName}.Context.Provider`
+- Pass `[store, setStore, isBootstraping]` as context value
+
+## Dispatch Patterns
+
+- Use inline dispatch patterns, avoid extracting payloads to named variables
+- Follow the pattern: `store.dispatch({ type: "action", payload: { ... } })`
+- Don't use `JSON.stringify` for object comparison due to performance concerns
+
+## Optimistic Updates
+
+- Don't name optimistic setters, use inline patterns
+- Follow patterns from `apps/examples` directory consistently
+
+## Transition Naming Patterns
+
+- **Core Principle**: Think containment hierarchy - left contains right, right is contained by left neighbor
+- Use hierarchical naming with arrays: `["container", id, "contained", id, "action"]`
+- **End with specific action name** to differentiate loading states for different actions
+- Examples:
+  - `["board", board.id, "column", column.id, "todo", todo.id, "toggle"]`
+  - `["user", userId, "profile", "update"]`
+  - `["project", projectId, "task", taskId, "assign"]`
+- **Loading State Derivation**: Use different levels for granular loading states:
+  - `useTransition(["board"])` - all board operations
+  - `useTransition(["board", boardId])` - specific board operations
+  - `useTransition(["board", boardId, "column", columnId, "todo"])` - all todos in column
+  - `useTransition(["board", boardId, "column", columnId, "todo", "toggle"])` - specific todo toggle action
+- Use kebab-case for multi-word identifiers: `["revalidate-todo-list"]`, `["prefix-pairs"]`
+- Include dynamic IDs when operations are specific to entities
+- Keep transition names descriptive but concise
+- Use consistent naming across related operations
