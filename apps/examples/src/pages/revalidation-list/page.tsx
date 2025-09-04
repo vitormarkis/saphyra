@@ -188,7 +188,7 @@ export function RevalidationListPage() {
               </Button>
             </div>
           </label>
-          <label
+          {/* <label
             htmlFor="prefixPairs"
             className="flex flex-col items-center gap-1 "
           >
@@ -223,7 +223,7 @@ export function RevalidationListPage() {
                 </Tooltip>
               </TooltipProvider>
             </div>
-          </label>
+          </label> */}
         </div>
         <div className="flex justify-center pt-4">
           <Button

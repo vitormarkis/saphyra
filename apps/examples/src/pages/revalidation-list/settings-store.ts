@@ -36,7 +36,7 @@ const INITIAL_STATE = {
 
 export const settingsStore = newSettingsStore(
   localStorage.getItem("settings")
-    ? JSON.parse(localStorage.getItem("settings")!)
+    ? { ...JSON.parse(localStorage.getItem("settings")!), prefixPairs: false }
     : INITIAL_STATE
 )
 
