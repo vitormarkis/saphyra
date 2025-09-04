@@ -130,6 +130,38 @@ export const newRevalidationListStore = newStoreDef<
     }
 
     if (action.type === "prefix-pairs") {
+      // Default behavior
+      async()
+        .queue({
+          id: ["todo"],
+          fn: fn => fn(),
+        })
+        .onFinish(revalidateList(0))
+        .promise(async ctx => {
+          await prefixPairsInDb(action.pairIds, ctx.signal)
+        })
+    }
+
+    if (action.type === "prefix-pairs") {
+      // Only run if all previous operations have succeeded
+      async()
+        .queue({
+          id: ["todo"],
+          fn: (fn, { getResults }) => {
+            const allSucceed = getResults().every(
+              result => result.status === "success"
+            )
+
+            if (allSucceed) fn()
+          },
+        })
+        .onFinish(revalidateList(0))
+        .promise(async ctx => {
+          await prefixPairsInDb(action.pairIds, ctx.signal)
+        })
+    }
+
+    if (action.type === "prefix-pairs") {
       async()
         .setName("prefix-pairs")
         .onFinish(
