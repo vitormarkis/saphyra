@@ -20,3 +20,142 @@ Here's what happens when you fire a transition:
 
 > This design preserves the consistency of your application's state by ensuring that no intermediate states are committed and no inconsistent states are created.
 
+## Transition Naming Patterns
+
+### Core Principle: Containment Hierarchy
+
+When creating transition names, think about **containment hierarchy** - the further left, the one that contains; the further right, the one that is contained by the left neighbor.
+
+```javascript
+;["board", board.id, "column", column.id, "todo", todo.id, "toggle"]
+```
+
+In this example:
+
+- `board` contains `column`
+- `column` contains `todo`
+- `todo` has a specific `toggle` action
+
+### Hierarchical Naming Structure
+
+Use arrays with this pattern: `["container", id, "contained", id, "action"]`
+
+**Examples:**
+
+- `["board", board.id, "column", column.id, "todo", todo.id, "toggle"]`
+- `["user", userId, "profile", "update"]`
+- `["project", projectId, "task", taskId, "assign"]`
+- `["auth", "role"]` - simple operations
+- `["pokemon"]` - single resource operations
+
+### Loading State Derivation
+
+The hierarchical structure enables granular loading state derivation:
+
+```javascript
+// All board operations
+const isBoardLoading = useTransition(["board"])
+
+// Specific board operations
+const isSpecificBoardLoading = useTransition(["board", boardId])
+
+// All todos in a specific column
+const isColumnTodosLoading = useTransition([
+  "board",
+  boardId,
+  "column",
+  columnId,
+  "todo",
+])
+
+// Specific todo toggle action
+const isTodoToggleLoading = useTransition([
+  "board",
+  boardId,
+  "column",
+  columnId,
+  "todo",
+  "toggle",
+])
+```
+
+### Best Practices
+
+- **End with specific action name** to differentiate loading states for different actions
+- Use kebab-case for multi-word identifiers: `["revalidate-todo-list"]`, `["prefix-pairs"]`
+- Include dynamic IDs when operations are specific to entities
+- Keep transition names descriptive but concise
+- Use consistent naming across related operations
+
+## Common Questions
+
+### When do I need to use transitions?
+
+- When you need to batch changes.
+
+- When you need optimistic updates:
+  - Optimistic updates let you show some UI changes before the async operation finishes. The challenge here is to handle the rollback if the operation fails.
+  - In a transition, you can register a list of optimistic setters that live while the transition is pending. If the transition fails, all optimistic setters are discarded, causing the UI to revert to the previous state effortlessly.
+- When you need a transactional state change
+
+  - Examples:
+    - You need to ensure the user permissions match the user's current role. If you fail to get the user permissions, you can't transition to the new role because the permissions would reflect the old role.
+    - You have a dynamic form builder, and you need to ensure the form fields reflect the current form step/type. In order to construct all the fields, you need to resolve 3 promises. If some of them fail, you can't transition to the next step because that would construct a broken form.
+
+  ### How transitions work under the hood?
+
+  - If you dispatch an action with a transition property, I create a copy of the current main state, and all the setters (set calls), including the ones inside nested dispatches, and the ones fired asynchronously, are applied to this copy, and at the same time, are saved in a list.
+  - If the transition fails, I discard this list, and nothing changes in the main state.
+  - If the transition succeeds, I apply the list of setters to the main state.
+
+    ### How the optimistic updates work in a transition:
+
+    - Similar to the topic above, all optimistic setters are grouped in a global list that includes all optimistic setters of all transitions.
+    - Whenever this list is changed, by receiving a new setter, or deleting some setter, I create a new state called optimisticState that is the combination of main state + all the optimistic setters.
+    - When the transition ends, I remove all the optimistic setters registered by this transition.
+    - If it succeeds, the setter calls should be sufficient to react to the latest valid version on the screen. They will be run on the main state and the main state should now reflect the latest valid version.
+    - If it fails, no optimistic setters and no transition setters are applied, causing the state to fallback to the main state (no changes).
+
+### What happens if I dispatch two actions with different transitions?
+
+- They will run in parallel and commit independently.
+
+### What happens if I dispatch two actions with the same transition?
+
+By default, they will run simultaneously, all their set calls will be grouped together, and once the transition succeeds (all subtransitions finished), all the set calls are applied to the main state in batch.
+Dispatching two actions with the same transition will cause conflict and this is intentional, the way Saphyra handles conflicts is one of the selling points. Read more about transition conflict in [Handling conflicts](/docs/transition-conflict)
+
+### How do I choose transition identifiers?
+
+Transition identifiers are arrays that should uniquely identify the operation. Use hierarchical naming like `["post", post.id, "like"]` or `["user", userId, "update-profile"]`. This allows you to track pending states for specific operations and prevents conflicts between different types of operations.
+
+### What happens if I don't use a transition with async operations?
+
+If you forget to add the `transition` property to an action that triggers async work, Saphyra will throw an error.
+
+### Can I have multiple async operations in the same transition?
+
+Yes! All async operations triggered by the same action (or related actions with the same transition identifier) will be grouped together. The transition only completes when ALL async operations finish successfully.
+
+### How do transitions handle errors?
+
+When any async operation in a transition fails or throws an error, the entire transition is rolled back. This means:
+
+- All state changes made during the transition are discarded
+- The original state is preserved
+- No partial updates are committed
+
+### What's the difference between `useTransition` and manually tracking loading states?
+
+- Many state management libraries require you to manually track loading states, this is a big pain and prone to errors.
+- They don't understand the concept of async, the concept that something is happening, we're in the middle of a transition and the loading state should be derived from this fact.
+- Saphyra understands the concept of async, and we can label them in a way we can keep track of them, and derive the loading state from this.
+- Which means you don't need to manually track loading states, you can derive them from the transitions you're subscribed to.
+
+### How do I handle optimistic updates with transitions?
+
+Optimistic updates work seamlessly with transitions. You can use the `optimistic()` function to show immediate UI changes, and if the transition fails, both the optimistic updates and any state changes are automatically rolled back.
+
+### What are the performance implications?
+
+State forking is designed to be efficient. Saphyra uses structural sharing and only creates copies of the parts of state that actually change. For most applications, the performance impact is negligible compared to the benefits of data consistency.
