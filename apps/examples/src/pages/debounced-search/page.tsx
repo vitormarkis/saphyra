@@ -122,7 +122,7 @@ export function DebouncedSearchView({}: DebouncedSearchViewProps) {
         type: "change-name",
         name: newQuery,
         transition: ["debounced-search", "name"],
-        beforeDispatch({ transition, createAsync, action, abort, store }) {
+        beforeDispatch({ transition, async, action, abort, store }) {
           // abort(transition)
           // return action
           abort(transition)
@@ -135,7 +135,6 @@ export function DebouncedSearchView({}: DebouncedSearchViewProps) {
             return action
           }
 
-          const async = createAsync()
           async()
             .setName(`debounce [${action.name}]`)
             .setTimeout(() => store.dispatch(action), 500)

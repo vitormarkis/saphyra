@@ -778,6 +778,27 @@ export function newStoreDef<
       action: Action
     }
 
+    const createAsyncInternal: Met["createAsync"] = (
+      transition,
+      signal,
+      onAsyncOperation
+    ) => {
+      const when = labelWhen(new Date())
+      const initialAbort = getAbortController(transition)
+
+      const defaultOnAsyncOperation = (asyncOp: AsyncOperation) =>
+        asyncOp.fn?.()
+      return createAsync(
+        store,
+        when,
+        transition,
+        signal ?? initialAbort.controller!.signal,
+        onAsyncOperation ?? defaultOnAsyncOperation,
+        "store-create-async",
+        () => {}
+      )
+    }
+
     const emitError: Met["emitError"] = error => {
       store.errorHandlers.forEach(handleError => {
         handleError(error, null)
@@ -1006,6 +1027,33 @@ export function newStoreDef<
         controller: initialAction.controller,
       })
 
+      const async = createAsync(
+        store,
+        when,
+        initialAction.transition,
+        initialController.signal,
+        asyncOp => {
+          if (initialController.signal?.aborted) debugger
+          asyncOperations.push(asyncOp)
+        },
+        "before-dispatch-async",
+        () => {
+          const t = initialAction.transition
+          if (!t) return
+          opts.action.onTransitionEnd?.({
+            events: store.events,
+            meta: store.transitions.meta.get(t),
+            state: store.state,
+            transition: t,
+            transitionStore: store.transitions,
+            error: { code: 20 },
+            aborted: true,
+            setterOrPartialStateList: [],
+            store,
+          })
+        }
+      )
+
       const asyncOperations: AsyncOperation[] = []
       const opts: BeforeDispatchOptions<
         TState,
@@ -1025,33 +1073,7 @@ export function newStoreDef<
         transitionStore: store.transitions,
         transition: initialAction.transition,
         events: store.events,
-        createAsync: (transition, signal) =>
-          createAsync(
-            store,
-            when,
-            transition ?? initialAction.transition,
-            signal ?? initialController.signal,
-            asyncOp => {
-              if (signal?.aborted) debugger
-              asyncOperations.push(asyncOp)
-            },
-            "before-dispatch-async",
-            () => {
-              const t = transition ?? initialAction.transition
-              if (!t) return
-              opts.action.onTransitionEnd?.({
-                events: store.events,
-                meta: store.transitions.meta.get(t),
-                state: store.state,
-                transition: t,
-                transitionStore: store.transitions,
-                error: { code: 20 },
-                aborted: true,
-                setterOrPartialStateList: [],
-                store,
-              })
-            }
-          ),
+        async,
         abort,
         store,
       }
@@ -1744,6 +1766,7 @@ export function newStoreDef<
       waitForBootstrap,
       dispose,
       emitError,
+      createAsync: createAsyncInternal,
     }
 
     store = mergeObj(subject, store, methods)

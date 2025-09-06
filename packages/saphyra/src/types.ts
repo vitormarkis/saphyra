@@ -262,6 +262,11 @@ export type GenericStoreMethods<
   waitForBootstrap(timeout?: number): Promise<WaitForResult>
   dispose(): void
   emitError(error: unknown): void
+  createAsync: (
+    transition: TransitionNullable,
+    signal?: AbortSignal,
+    onAsyncOperation?: (asyncOperation: AsyncOperation) => void
+  ) => AsyncBuilder
 }
 
 type UncontrolledState<
@@ -378,10 +383,7 @@ export type BeforeDispatchOptions<
    * For example: you can debounce a search query and group the wait
    * time and request time under the same transition
    */
-  createAsync: (
-    transition?: TransitionNullable,
-    signal?: AbortSignal
-  ) => AsyncBuilder
+  async: AsyncBuilder
   /**
    * Used to abort an ongoing transition
    *

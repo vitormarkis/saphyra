@@ -226,7 +226,7 @@ export function Post({ post }: PostProps) {
                 abort,
                 transition,
                 transitionStore,
-                createAsync,
+                async,
                 store,
               }) {
                 if (transitionStore.isHappeningUnique(transition)) {
@@ -234,7 +234,6 @@ export function Post({ post }: PostProps) {
                   return
                 }
 
-                const async = createAsync()
                 return async().setTimeout(() => store.dispatch(action), 200, {
                   label: "debounce",
                 })

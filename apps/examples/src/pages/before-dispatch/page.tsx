@@ -12,12 +12,10 @@ import "prismjs/themes/prism-okaidia.css"
 
 import { Spinner } from "@blueprintjs/core"
 import { useSuspenseQuery } from "@tanstack/react-query"
-import { noop } from "lodash"
 import { ReactNode, Suspense } from "react"
 import invariant from "tiny-invariant"
 import { createStoreUtils, useNewStore } from "saphyra/react"
-import { ClassicAction, newStoreDef } from "saphyra"
-import { runSuccessCallback } from "saphyra"
+import { newStoreDef } from "saphyra"
 import { BaseAction, BeforeDispatch, SomeStoreGeneric } from "saphyra"
 import { cn } from "~/lib/cn"
 import { formatScript } from "~/lib/prettify-code"
@@ -134,18 +132,18 @@ const EXAMPLES_FACTORY: ExampleFactory[] = [
     action: {
       type: "fetch-albums",
       transition: ["albums"],
-      beforeDispatch({ action, abort, transition, transitionStore }) {
-        if (transitionStore.isHappeningUnique(transition)) {
-          abort(transition)
+      beforeDispatch({ action, store, transition }) {
+        if (store.transitions.isHappeningUnique(transition)) {
+          store.abort(transition)
         }
 
         return action
       },
     },
     script: `
-      beforeDispatch({ action, abort, transition, transitionStore }) {
-        if (transitionStore.isHappeningUnique(transition)) {
-          abort(transition)
+      beforeDispatch({ action, store, transition }) {
+        if (store.transitions.isHappeningUnique(transition)) {
+          store.abort(transition)
         }
 
         return action
@@ -159,9 +157,9 @@ const EXAMPLES_FACTORY: ExampleFactory[] = [
     action: {
       type: "fetch-albums",
       transition: ["albums"],
-      beforeDispatch({ action, abort, transition, transitionStore }) {
-        if (transitionStore.isHappeningUnique(transition)) {
-          abort(transition)
+      beforeDispatch({ action, store, transition }) {
+        if (store.transitions.isHappeningUnique(transition)) {
+          store.abort(transition)
           return // early return
         }
 
@@ -169,9 +167,9 @@ const EXAMPLES_FACTORY: ExampleFactory[] = [
       },
     },
     script: `
-      beforeDispatch({ action, abort, transition, transitionStore }) {
-        if (transitionStore.isHappeningUnique(transition)) {
-          abort(transition)
+      beforeDispatch({ action, store, transition }) {
+        if (store.transitions.isHappeningUnique(transition)) {
+          store.abort(transition)
           return // early return
         }
 
@@ -187,16 +185,16 @@ const EXAMPLES_FACTORY: ExampleFactory[] = [
     action: {
       type: "fetch-albums",
       transition: ["albums"],
-      beforeDispatch({ action, transitionStore, transition }) {
-        if (transitionStore.isHappeningUnique(transition)) {
+      beforeDispatch({ action, store, transition }) {
+        if (store.transitions.isHappeningUnique(transition)) {
           return
         }
         return action
       },
     },
     script: `
-      beforeDispatch({ action, transitionStore, transition }) {
-        if (transitionStore.isHappeningUnique(transition)) {
+      beforeDispatch({ action, store, transition }) {
+        if (store.transitions.isHappeningUnique(transition)) {
           return
         }
         return action
@@ -210,16 +208,14 @@ const EXAMPLES_FACTORY: ExampleFactory[] = [
     action: {
       type: "fetch-albums",
       transition: ["albums"],
-      beforeDispatch({ action, transition, abort, createAsync, store }) {
-        const async = createAsync()
-        abort(transition)
+      beforeDispatch({ action, transition, async, store }) {
+        store.abort(transition)
         async().setTimeout(() => store.dispatch(action), 500)
       },
     },
     script: `
-      beforeDispatch({ transition, abort, createAsync, store, action }) {
-        const async = createAsync()
-        abort(transition)
+      beforeDispatch({ transition, async, store, action }) {
+        store.abort(transition)
         async().setTimeout(() => store.dispatch(action), 500)
       }
     `,
@@ -294,9 +290,9 @@ const EXAMPLES_FACTORY: ExampleFactory[] = [
     action: {
       type: "fetch-albums",
       transition: ["albums"],
-      beforeDispatch({ action, transitionStore, transition }) {
+      beforeDispatch({ action, store, transition }) {
         const timeoutId = setTimeout(() => {
-          const controller = transitionStore.controllers.get(transition)
+          const controller = store.transitions.controllers.get(transition)
           controller?.abort()
         }, 1000) // 1 second
         return {
@@ -309,9 +305,9 @@ const EXAMPLES_FACTORY: ExampleFactory[] = [
       },
     },
     script: `
-      beforeDispatch({ action, abort, transition }) {
+      beforeDispatch({ action, store, transition }) {
         const timeoutId = setTimeout(() => {
-          abort(transition)
+          store.abort(transition)
         }, 1000) // 1 second
 
         return {
@@ -332,10 +328,10 @@ const EXAMPLES_FACTORY: ExampleFactory[] = [
   //   action: {
   //     type: "fetch-albums",
   //     transition: ["albums"],
-  //     beforeDispatch({ action, transitionStore }) {
-  //       const fetchingTodos = transitionStore.isHappeningUnique(["todos"])
+  //     beforeDispatch({ action, store }) {
+  //       const fetchingTodos = store.transitions.isHappeningUnique(["todos"])
   //       if (!fetchingTodos) return action
-  //       transitionStore.events.done.once(["todos"].join(":")).run(() => {
+  //       store.transitions.events.done.once(["todos"].join(":")).run(() => {
   //         setTimeout(() => {
   //           store.dispatch(action)
   //         })
@@ -345,18 +341,18 @@ const EXAMPLES_FACTORY: ExampleFactory[] = [
   //   actionSupport: {
   //     type: "fetch-todos",
   //     transition: ["todos"],
-  //     beforeDispatch({ action, transitionStore, transition }) {
-  //       if (transitionStore.isHappeningUnique(transition)) {
+  //     beforeDispatch({ action, store, transition }) {
+  //       if (store.transitions.isHappeningUnique(transition)) {
   //         return
   //       }
   //       return action
   //     },
   //   },
   //   script: `
-  //     beforeDispatch({ action, transitionStore }) {
-  //       const fetchingTodos = transitionStore.isHappeningUnique(["todos"])
+  //     beforeDispatch({ action, store }) {
+  //       const fetchingTodos = store.transitions.isHappeningUnique(["todos"])
   //       if (!fetchingTodos) return action
-  //       transitionStore.events.done.once(["todos"].join(":")).run(() => {
+  //       store.transitions.events.done.once(["todos"].join(":")).run(() => {
   //         setTimeout(() => {
   //           store.dispatch(action)
   //         })
@@ -372,14 +368,14 @@ const EXAMPLES_FACTORY: ExampleFactory[] = [
   //   action: {
   //     type: "fetch-albums",
   //     transition: ["albums"],
-  //     beforeDispatch({ action, transitionStore, transition }) {
-  //       const fetchingTodos = transitionStore.isHappeningUnique(["todos"])
+  //     beforeDispatch({ action, store, transition }) {
+  //       const fetchingTodos = store.transitions.isHappeningUnique(["todos"])
   //       if (!fetchingTodos) return action
-  //       transitionStore.addKey(transition)
-  //       transitionStore.events.done.once(["todos"].join(":")).run(() => {
+  //       store.transitions.addKey(transition)
+  //       store.transitions.events.done.once(["todos"].join(":")).run(() => {
   //         setTimeout(() => {
   //           store.dispatch(action)
-  //           transitionStore.doneKey(transition, {
+  //           store.transitions.doneKey(transition, {
   //             onFinishTransition: runSuccessCallback,
   //           })
   //         })
@@ -389,22 +385,22 @@ const EXAMPLES_FACTORY: ExampleFactory[] = [
   //   actionSupport: {
   //     type: "fetch-todos",
   //     transition: ["todos"],
-  //     beforeDispatch({ action, transitionStore, transition }) {
-  //       if (transitionStore.isHappeningUnique(transition)) {
+  //     beforeDispatch({ action, store, transition }) {
+  //       if (store.transitions.isHappeningUnique(transition)) {
   //         return
   //       }
   //       return action
   //     },
   //   },
   //   script: `
-  //     beforeDispatch({ action, transitionStore, transition }) {
-  //       const fetchingTodos = transitionStore.isHappeningUnique(["todos"])
+  //     beforeDispatch({ action, store, transition }) {
+  //       const fetchingTodos = store.transitions.isHappeningUnique(["todos"])
   //       if (!fetchingTodos) return action
-  //       transitionStore.addKey(transition)
-  //       transitionStore.events.done.once(["todos"].join(":")).run(() => {
+  //       store.transitions.addKey(transition)
+  //       store.transitions.events.done.once(["todos"].join(":")).run(() => {
   //         setTimeout(() => {
   //           store.dispatch(action)
-  //           transitionStore.doneKey(transition, {
+  //           store.transitions.doneKey(transition, {
   //             onFinishTransition: runSuccessCallback,
   //           })
   //         })

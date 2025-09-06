@@ -158,8 +158,7 @@ const Handle = React.forwardRef<React.ElementRef<"i">, HandleProps>(
                 width,
               },
               transition: ["resize"],
-              beforeDispatch({ createAsync, transition, store, action }) {
-                const async = createAsync()
+              beforeDispatch({ async, transition, store, action }) {
                 store.abort(transition)
                 // return action
                 async().setTimeout(() => store.dispatch(action), 400)
