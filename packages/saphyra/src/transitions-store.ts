@@ -65,6 +65,7 @@ export class TransitionsStore extends Subject {
   meta: {
     get: (transition: TransitionNullable) => Record<string, any>
     set: (transition: TransitionNullable, meta: Record<string, any>) => void
+    clear: () => void
     values: Record<string, any>
     delete: (transition: string) => void
   }
@@ -98,6 +99,9 @@ export class TransitionsStore extends Subject {
     this.meta = {
       get: this.getMeta.bind(this),
       set: this.setMeta.bind(this),
+      clear: () => {
+        this.meta.values = {}
+      },
       values: {},
       delete: (transition: string) => {
         this.meta.values = deleteImmutably(this.meta.values, transition)
@@ -127,7 +131,7 @@ export class TransitionsStore extends Subject {
   private getMeta(transition: TransitionNullable) {
     if (!transition) return {} // TODO
     const key = transition.join(":")
-    // this.meta.values[key] ??= {}
+    this.meta.values[key] ??= {}
     return this.meta.values[key]
   }
 
@@ -269,7 +273,7 @@ export class TransitionsStore extends Subject {
             this.state.transitions,
             transitionName
           )
-          this.meta.delete(transitionName)
+          // this.meta.delete(transitionName)
         })
       }
     }

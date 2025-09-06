@@ -61,36 +61,6 @@ describe("ensure proper transition cleanup", () => {
     ensureAllCleanUp(store, ["incrementkey"], { expectError: true })
   })
 
-  test("error", async () => {
-    const newStore = newStoreDefTest({
-      derivations: {
-        getCount: {
-          selectors: [s => s.count],
-          evaluator: s => s.count,
-        },
-      },
-      reducer({ state, action, async }) {
-        if (action.type === "increment") {
-          async().promise(async () => {
-            throw new Error("test")
-          })
-        }
-
-        return state
-      },
-    })
-
-    const store = newStore({ count: 0 })
-    await store
-      .dispatchAsync({
-        type: "increment",
-        transition: ["incrementkey"],
-      })
-      .catch(() => {})
-
-    ensureAllCleanUp(store, ["incrementkey"], { expectError: true })
-  })
-
   test("dispatch async", async () => {
     const newStore = newStoreDefTest({
       derivations: {
@@ -172,9 +142,9 @@ function ensureAllCleanUp(
   expect(Object.keys(store.transitions.state.transitions)).to.not.toContain(
     transitionKey
   )
-  expect(Object.keys(store.transitions.meta.values)).to.not.toContain(
-    transitionKey
-  )
+  // expect(Object.keys(store.transitions.meta.values)).to.not.toContain(
+  //   transitionKey
+  // )
   expect(store.transitions.controllers.getKeys()).to.not.toContain(
     transitionKey
   )

@@ -1007,7 +1007,6 @@ export function newStoreDef<
       })
 
       const asyncOperations: AsyncOperation[] = []
-      store.transitions.meta.set(initialAction.transition, {})
       const opts: BeforeDispatchOptions<
         TState,
         TActions,
@@ -1705,7 +1704,7 @@ export function newStoreDef<
       store.transitions.callbacks.done.clear()
       store.transitions.callbacks.error.clear()
 
-      store.transitions.meta.values = {}
+      store.transitions.meta.clear()
 
       store.transitions.state = {
         finishes: {},

@@ -10,10 +10,10 @@ import "prismjs/themes/prism.css"
 // prettier-ignore
 import "prismjs/themes/prism-okaidia.css"
 
-import { Spinner, Text } from "@blueprintjs/core"
+import { Spinner } from "@blueprintjs/core"
 import { useSuspenseQuery } from "@tanstack/react-query"
 import { noop } from "lodash"
-import { CSSProperties, ReactNode, Suspense, useState } from "react"
+import { ReactNode, Suspense } from "react"
 import invariant from "tiny-invariant"
 import { createStoreUtils, useNewStore } from "saphyra/react"
 import { ClassicAction, newStoreDef } from "saphyra"
