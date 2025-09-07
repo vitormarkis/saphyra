@@ -128,8 +128,8 @@ export function TransitionsShowcaseView({}: TransitionsShowcaseViewProps) {
           transitionsStore.dispatch({
             type: "fetch-albums",
             transition: ["fetch", "albums"],
-            beforeDispatch({ action, transitionStore, transition }) {
-              if (transitionStore.isHappeningUnique(transition)) return
+            beforeDispatch({ action, store, transition }) {
+              if (store.transitions.isHappeningUnique(transition)) return
               return action
             },
           })

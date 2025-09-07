@@ -221,22 +221,15 @@ export function Post({ post }: PostProps) {
               type: "like-post",
               postId: post.id,
               transition,
-              beforeDispatch({
-                action,
-                abort,
-                transition,
-                transitionStore,
-                async,
-                store,
-              }) {
-                if (transitionStore.isHappeningUnique(transition)) {
+              beforeDispatch({ action, abort, transition, store, async }) {
+                if (store.transitions.isHappeningUnique(transition)) {
                   abort(transition)
                   return
                 }
 
-                return async().setTimeout(() => store.dispatch(action), 200, {
-                  label: "debounce",
-                })
+                async()
+                  .setName("debounce")
+                  .setTimeout(() => store.dispatch(action), 200)
               },
             })
           }}
