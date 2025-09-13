@@ -82,25 +82,21 @@ export const newRevalidationListStore = newStoreDef<
     }
 
     if (action.type === "toggle-todo") {
-      const todoIndex = state.todos.findIndex(todo => todo.id === action.todoId)
-      if (settings.optimistic) {
-        const optimisticCompleted = !state.$completedTodos.includes(
-          action.todoId
-        )
-        optimistic(s => ({
-          todos: s.todos.map(todo =>
-            todo.id === action.todoId
-              ? { ...todo, completed: optimisticCompleted }
-              : todo
-          ),
-        }))
-      }
-
       async()
         .setName("toggle-todo")
-        .onFinish(
-          settings.manualRevalidation ? undefined : revalidateList(todoIndex)
-        )
+        .onFinish({
+          id: ["vitor"],
+          fn(resolve, reject) {
+            store
+              .waitFor(["todo", action.todoId, "toggle-disabled"])
+              .then(resolve)
+              .catch(reject)
+
+            return () => {
+              resolve(false)
+            }
+          },
+        })
         .promise(async ctx => {
           await toggleTodoInDb(action.todoId, ctx.signal)
         })
@@ -121,9 +117,9 @@ export const newRevalidationListStore = newStoreDef<
       }
       async()
         .setName("toggle-disabled-todo")
-        .onFinish(
-          settings.manualRevalidation ? undefined : revalidateList(todoIndex)
-        )
+        // .onFinish(
+        //   settings.manualRevalidation ? undefined : revalidateList(todoIndex)
+        // )
         .promise(async ctx => {
           await toggleTodoDisabledInDb(action.todoId, ctx.signal)
         })
