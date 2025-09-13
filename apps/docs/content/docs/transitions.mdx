@@ -3,7 +3,7 @@ title: Transitions
 description: Learn how to use transitions in Saphyra
 ---
 
-### What is a transition?
+## What is a transition?
 
 A transition is a safe mechanism for changing your application's state from one valid state to another valid state when those changes involve asynchronous operations. It ensures data consistency throughout the entire process.
 
@@ -20,7 +20,14 @@ Here's what happens when you fire a transition:
 
 > This design preserves the consistency of your application's state by ensuring that no intermediate states are committed and no inconsistent states are created.
 
-## Transition Naming Patterns
+## What is a subtransition?
+
+A subtransition is any async operation that is done by the async module.
+- Examples:
+  - `async().promise()`
+  - `async().setTimeout()`
+
+Dispatching an action can trigger many async operations via the async module (many subtransitions) and the transition itself is only settled after all the subtransitions finish.## Transition Naming Patterns
 
 ### Core Principle: Containment Hierarchy
 

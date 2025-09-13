@@ -169,9 +169,7 @@ function CountProvider({ initialCount, children }) {
   )
 
   return (
-    <CountStore.Context.Provider value={[countStore, setCountStore]}>
-      {" "}
-      // [!code ++]
+    <CountStore.Context.Provider value={[countStore, setCountStore]}> // [!code ++]
       {children}
     </CountStore.Context.Provider> // [!code ++]
   )
@@ -198,11 +196,3 @@ These are the basic concepts. Now, let's explore what makes Saphyra unique and p
 
 </Step>  
 </Steps>
-
-<iframe
-  style={{
-    width: "100%",
-    height: "500px",
-  }}
-  src="https://stackblitz.com/edit/vitejs-vite-k5otaxhv?embed=1&file=src%2FApp.tsx&hideExplorer=1&theme=dark"
-/>
