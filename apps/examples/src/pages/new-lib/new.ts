@@ -2,28 +2,30 @@ import { Subject } from "./impl"
 
 type MOCK_STATE = { vitor: Subject<true>; age: Subject<20> }
 
-type ExtractSubjectValue<T> = T extends Subject<infer U> ? U : T
+type ExtractValue<T> = T extends Subject<infer U> ? U : T
 
-type GenericReactions<
-  TState extends Record<string, Subject<any>>,
-  TSelectors extends ((state: TState) => any)[],
-> = {
-  on: TSelectors
-  run: (
-    ...args: {
-      [K in keyof TSelectors]: ExtractSubjectValue<ReturnType<TSelectors[K]>>
-    }
-  ) => void
+type SelectorValues<T extends readonly ((state: MOCK_STATE) => any)[]> = {
+  [K in keyof T]: ExtractValue<ReturnType<T[K]>>
 }
 
-const Selector = function <
-  TState extends MOCK_STATE,
-  TSelectors extends ((state: TState) => any)[],
->({ on, run }: GenericReactions<TState, TSelectors>) {
-  return [on, run]
+type Reaction<TSelectors extends readonly ((state: MOCK_STATE) => any)[]> = {
+  on: TSelectors
+  run: (...args: SelectorValues<TSelectors>) => void
+}
+
+function Selector<
+  const TSelectors extends readonly ((state: MOCK_STATE) => any)[],
+>(
+  reaction: Reaction<TSelectors>
+): [TSelectors, (...args: SelectorValues<TSelectors>) => void] {
+  return [reaction.on, reaction.run]
 }
 
 Selector({
   on: [s => s.vitor, s => s.age],
-  run: (vitor, age) => `${vitor} ${age}`,
+  run: (vitor, age) => {
+    const vitor_value: true = vitor
+    const age_value: 20 = age
+    return `${vitor_value} ${age_value}`
+  },
 })
