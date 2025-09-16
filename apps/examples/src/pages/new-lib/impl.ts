@@ -60,7 +60,8 @@ function newStore() {
             ) => Derivation<TState, TSelectors>
           ) => TDerivations
         ) {
-          derivations = derivationBuilder(derive)
+          const __derivations = derivationBuilder(derive)
+          derivations = __derivations
           return {
             reactions(
               reactionBuilder: (
@@ -78,20 +79,23 @@ function newStore() {
                 >
               >
             ) {
-              reactions = reactionBuilder(react)
+              const __reactions = reactionBuilder(react)
+              reactions = __reactions
               return {
-                build: () => ({
-                  state,
-                  derivations,
-                  reactions,
-                }),
+                build: () =>
+                  ({ derivations, reactions, state }) as Store<
+                    TState,
+                    TDerivations,
+                    typeof __reactions
+                  >,
               }
             },
-            build: () => ({
-              state,
-              derivations,
-              reactions: [],
-            }),
+            build: () =>
+              ({ derivations, reactions, state }) as Store<
+                TState,
+                TDerivations,
+                []
+              >,
           }
         },
         reactions(
@@ -101,20 +105,19 @@ function newStore() {
             ) => Reaction<TState, TSelectors>
           ) => Array<Reaction<TState, readonly ((state: TState) => any)[]>>
         ) {
-          reactions = reactionBuilder(react)
+          const __reactions = reactionBuilder(react)
+          reactions = __reactions
           return {
-            build: () => ({
-              state,
-              derivations: {},
-              reactions,
-            }),
+            build: () =>
+              ({ derivations, reactions, state }) as Store<
+                TState,
+                {},
+                typeof __reactions
+              >,
           }
         },
-        build: () => ({
-          state,
-          derivations: {},
-          reactions: [],
-        }),
+        build: () =>
+          ({ derivations, reactions, state }) as Store<TState, {}, []>,
       }
     },
   }
@@ -206,8 +209,6 @@ const store = newStore()
   .build()
 
 type Permission = string
-
-store.state.count
 
 type State<T> = {
   value: T
