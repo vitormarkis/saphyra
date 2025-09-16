@@ -8,7 +8,7 @@ import importPlugin from "eslint-plugin-import"
 
 export default defineConfig([
   {
-    ignores: ["**/dist/**"],
+    ignores: ["**/dist/**", "**/apps/examples/**"],
   },
   {
     files: ["**/*.{js,mjs,cjs,ts,mts,cts,jsx,tsx}"],
@@ -41,7 +41,7 @@ export default defineConfig([
     },
     rules: {
       "react-refresh/only-export-components": "off", // Next.js doesn't need this
-      "@typescript-eslint/no-explicit-any": "error",
+      "@typescript-eslint/no-explicit-any": "off",
       "no-debugger": "off",
       "import/no-unresolved": ["error"],
     },

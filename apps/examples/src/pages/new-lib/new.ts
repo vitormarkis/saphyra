@@ -1,65 +1,86 @@
 import { Subject, createSubject } from "./impl"
 
-type MOCK_STATE = { vitor: Subject<true>; age: Subject<20> }
-
 type ExtractValue<T> = T extends Subject<infer U> ? U : T
 
-type SelectorValues<T extends readonly ((state: MOCK_STATE) => any)[]> = {
+type SelectorValues<TState, T extends readonly ((state: TState) => any)[]> = {
   [K in keyof T]: ExtractValue<ReturnType<T[K]>>
 }
 
-type Reaction<TSelectors extends readonly ((state: MOCK_STATE) => any)[]> = {
+type Reaction<
+  TState,
+  TSelectors extends readonly ((state: TState) => any)[],
+> = {
   on: TSelectors
-  run: (...args: SelectorValues<TSelectors>) => void
+  run: (...args: SelectorValues<TState, TSelectors>) => void
 }
 
-function Selector<const TSelectors extends ((state: MOCK_STATE) => any)[]>(
-  reaction: Reaction<TSelectors>
-): [TSelectors, (...args: SelectorValues<TSelectors>) => void] {
-  return [reaction.on, reaction.run]
+type SelectorType<TState> = <
+  const TSelectors extends ((state: TState) => any)[],
+>(
+  reaction: Reaction<TState, TSelectors>
+) => Reaction<TState, TSelectors>
+
+function createSelector<TState>(): SelectorType<TState> {
+  return <const TSelectors extends ((state: TState) => any)[]>(
+    reaction: Reaction<TState, TSelectors>
+  ): Reaction<TState, TSelectors> => {
+    return reaction
+  }
 }
 
 function builder() {
-  let state: MOCK_STATE | undefined
-  let selectors: Array<Reaction<readonly ((state: MOCK_STATE) => any)[]>> = []
+  let state: any = undefined
+  let selectors: Array<Reaction<any, readonly ((state: any) => any)[]>> = []
 
   return {
-    state<TState extends MOCK_STATE>(newState: TState) {
+    state<TState extends Record<string, Subject<any>>>(newState: TState) {
       state = newState
       return {
-        selectors<const TSelectors extends ((state: MOCK_STATE) => any)[]>(
-          selectorList: Array<Reaction<TSelectors>>
-        ) {
+        selectors<
+          const TSelectors extends Array<
+            Reaction<TState, readonly ((state: TState) => any)[]>
+          >,
+        >(selectorList: TSelectors) {
           selectors = selectorList
           return {
             build: () => ({
               state,
               selectors,
             }),
+            createSelector: createSelector<TState>(),
           }
         },
         build: () => ({
           state,
           selectors: [],
         }),
+        createSelector: createSelector<TState>(),
       }
     },
   }
 }
 
-const result = builder()
-  .state({
-    vitor: createSubject(true),
-    age: createSubject(20),
-  })
+const builderInstance = builder().state({
+  vitor: createSubject(true as const),
+  age: createSubject(20 as const),
+})
+
+const result = builderInstance
   .selectors([
-    {
+    builderInstance.createSelector({
       on: [s => s.vitor, s => s.age],
       run: (vitor, age) => {
         const vitor_value: true = vitor
         const age_value: 20 = age
         return `${vitor_value} ${age_value}`
       },
-    },
+    }),
+    builderInstance.createSelector({
+      on: [s => s.age],
+      run: age => {
+        const age_value: 20 = age
+        return `Age: ${age_value}`
+      },
+    }),
   ])
   .build()

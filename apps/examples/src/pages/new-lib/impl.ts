@@ -1,28 +1,30 @@
 import { EventsTuple } from "saphyra"
 
+type Selector<TState> = (state: TState) => unknown
+
 type GenericState = Record<string, any>
 type Store<
   TState extends GenericState = GenericState,
-  TReactions extends Array<GenericReactions<TState, any[]>> = Array<
-    GenericReactions<TState, any[]>
-  >,
+  TSelectors extends Array<
+    Reaction<TState, readonly ((state: TState) => unknown)[]>
+  > = Array<Reaction<TState, readonly ((state: TState) => unknown)[]>>,
 > = {
   state: TState
-  reactions: TReactions
+  selectors: TSelectors
 }
 
 function newStore() {
   const store = {} as Store
 
-  function reactionsBuilder<
-    TState extends Record<string, Subject<any>>,
-    TReactions extends Array<GenericReactions<TState, any[]>> = Array<
-      GenericReactions<TState, any[]>
-    >,
-  >(reactions: TReactions) {
-    Object.assign(store, { reactions })
+  function selectorsBuilder<
+    TState extends Record<string, Subject<unknown>>,
+    const TSelectors extends Array<
+      Reaction<TState, readonly ((state: TState) => unknown)[]>
+    > = Array<Reaction<TState, readonly ((state: TState) => unknown)[]>>,
+  >(selectors: TSelectors) {
+    Object.assign(store, { selectors })
     return {
-      build: () => store as Store<TState, TReactions>,
+      build: () => store as Store<TState, TSelectors>,
     }
   }
 
@@ -30,9 +32,13 @@ function newStore() {
     store.state = state
     return {
       build: () => store as Store<TState>,
-      reactions: <TReactions extends Array<GenericReactions<TState, any[]>>>(
-        reactions: TReactions
-      ) => reactionsBuilder<TState, TReactions>(reactions),
+      selectors: <
+        const TSelectors extends Array<
+          Reaction<TState, readonly ((state: TState) => unknown)[]>
+        >,
+      >(
+        selectors: TSelectors
+      ) => selectorsBuilder<TState, TSelectors>(selectors),
     }
   }
 
@@ -71,20 +77,29 @@ type OnInitType = {
   permissions: Permission[]
 }
 
-type GenericReactions<
-  TState extends Record<string, Subject<any>>,
-  TArgument extends (state: TState) => any,
+type ExtractValue<T> = T extends Subject<infer U> ? U : T
+
+type SelectorValues<
+  TState,
+  T extends readonly ((state: TState) => unknown)[],
 > = {
-  on: TArgument[]
-  run: (args: ReturnType<TArgument>) => void
+  [K in keyof T]: ExtractValue<ReturnType<T[K]>>
+}
+
+type Reaction<
+  TState,
+  TSelectors extends readonly ((state: TState) => unknown)[],
+> = {
+  on: TSelectors
+  run: (...args: SelectorValues<TState, TSelectors>) => void
 }
 
 type MOCK_STATE = { vitor: Subject<true>; markis: Subject<false> }
 
 const Selector = function <
   TState extends MOCK_STATE,
-  TArguments extends ((state: TState) => any)[],
->({ on, run }: GenericReactions<MOCK_STATE, TArguments>) {
+  TArguments extends ((state: TState) => unknown)[],
+>({ on, run }: Reaction<TState, TArguments>) {
   return [on, run]
 }
 
@@ -114,10 +129,14 @@ const store = newStore()
       onNewPermissions(newPermissions => () => newPermissions)
     ),
   })
-  .reactions([
+  .selectors([
     {
-      on: [s => s.count],
-      run: () => emitRoleChanged(count),
+      on: [s => s.count, s => s.role],
+      run: (count, role) => {
+        const __count: number = count
+        const __role: "user" | "admin" = role
+        return `${__count} ${__role}`
+      },
     },
   ])
   .build()
@@ -159,14 +178,13 @@ export function createSubject<T>(
 }
 
 export type Subject<T> = ReturnType<typeof createSubject<T>>
-
 function createState<T>(initialValue: T, ...events: Handler<T>[]): State<T> {
   return {
     value: initialValue,
   }
 }
 
-function testModule<TEvents extends any[], T>(
+function testModule<TEvents extends unknown[], T>(
   build: (
     builder: (e: TEvents) => { build: <T>(setter: (e: TEvents) => T) => T }
   ) => T
