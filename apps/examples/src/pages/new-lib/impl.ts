@@ -5,22 +5,39 @@ type Selector<TState> = (state: TState) => unknown
 type GenericState = Record<string, any>
 type Store<
   TState extends GenericState = GenericState,
+  TDerivations extends Record<string, any> = {},
   TReactions extends Array<
-    Reaction<TState, readonly ((state: TState) => any)[]>
-  > = Array<Reaction<TState, readonly ((state: TState) => any)[]>>,
+    Reaction<
+      TState & TDerivations,
+      readonly ((state: TState & TDerivations) => any)[]
+    >
+  > = Array<
+    Reaction<
+      TState & TDerivations,
+      readonly ((state: TState & TDerivations) => any)[]
+    >
+  >,
 > = {
   state: TState
+  derivations: TDerivations
   reactions: TReactions
 }
 
 function newStore() {
   let state: any = undefined
+  let derivations: any = {}
   let reactions: Array<Reaction<any, readonly ((state: any) => any)[]>> = []
 
   function react<TState, const TSelectors extends ((state: TState) => any)[]>(
     reaction: Reaction<TState, TSelectors>
   ): Reaction<TState, TSelectors> {
     return reaction
+  }
+
+  function derive<TState, const TSelectors extends ((state: TState) => any)[]>(
+    derivation: Derivation<TState, TSelectors>
+  ): Derivation<TState, TSelectors> {
+    return derivation
   }
 
   return {
@@ -34,6 +51,49 @@ function newStore() {
     ) {
       state = stateBuilder(createSubject)
       return {
+        derivations<TDerivations extends Record<string, any>>(
+          derivationBuilder: (
+            newDerivation: <
+              const TSelectors extends ((state: TState) => any)[],
+            >(
+              derivation: Derivation<TState, TSelectors>
+            ) => Derivation<TState, TSelectors>
+          ) => TDerivations
+        ) {
+          derivations = derivationBuilder(derive)
+          return {
+            reactions(
+              reactionBuilder: (
+                react: <
+                  const TSelectors extends ((
+                    state: TState & TDerivations
+                  ) => any)[],
+                >(
+                  reaction: Reaction<TState & TDerivations, TSelectors>
+                ) => Reaction<TState & TDerivations, TSelectors>
+              ) => Array<
+                Reaction<
+                  TState & TDerivations,
+                  readonly ((state: TState & TDerivations) => any)[]
+                >
+              >
+            ) {
+              reactions = reactionBuilder(react)
+              return {
+                build: () => ({
+                  state,
+                  derivations,
+                  reactions,
+                }),
+              }
+            },
+            build: () => ({
+              state,
+              derivations,
+              reactions: [],
+            }),
+          }
+        },
         reactions(
           reactionBuilder: (
             react: <const TSelectors extends ((state: TState) => any)[]>(
@@ -45,12 +105,14 @@ function newStore() {
           return {
             build: () => ({
               state,
+              derivations: {},
               reactions,
             }),
           }
         },
         build: () => ({
           state,
+          derivations: {},
           reactions: [],
         }),
       }
@@ -96,6 +158,14 @@ type Reaction<
   run: (...args: SelectorValues<TState, TSelectors>) => void
 }
 
+type Derivation<
+  TState,
+  TSelectors extends readonly ((state: TState) => any)[],
+> = {
+  on: TSelectors
+  run: (...args: SelectorValues<TState, TSelectors>) => any
+}
+
 const store = newStore()
   .state(newSubject => ({
     count: newSubject(
@@ -116,6 +186,16 @@ const store = newStore()
       [] as Permission[],
       onNewPermissions(newPermissions => () => newPermissions)
     ),
+  }))
+  .derivations(newDerivation => ({
+    firstPermission: newDerivation({
+      on: [s => s.permissions],
+      run: permissions => permissions[0],
+    }),
+    welcomeMessage: newDerivation({
+      on: [s => s.username, s => s.role],
+      run: (username, role) => `Welcome ${username}! Your role is [${role}].`,
+    }),
   }))
   .reactions(newReact => [
     newReact({
