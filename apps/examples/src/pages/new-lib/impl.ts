@@ -5,51 +5,62 @@ type Selector<TState> = (state: TState) => unknown
 type GenericState = Record<string, any>
 type Store<
   TState extends GenericState = GenericState,
-  TSelectors extends Array<
-    Reaction<TState, readonly ((state: TState) => unknown)[]>
-  > = Array<Reaction<TState, readonly ((state: TState) => unknown)[]>>,
+  TReactions extends Array<
+    Reaction<TState, readonly ((state: TState) => any)[]>
+  > = Array<Reaction<TState, readonly ((state: TState) => any)[]>>,
 > = {
   state: TState
-  selectors: TSelectors
+  reactions: TReactions
 }
 
 function newStore() {
-  const store = {} as Store
+  let state: any = undefined
+  let reactions: Array<Reaction<any, readonly ((state: any) => any)[]>> = []
 
-  function selectorsBuilder<
-    TState extends Record<string, Subject<unknown>>,
-    const TSelectors extends Array<
-      Reaction<TState, readonly ((state: TState) => unknown)[]>
-    > = Array<Reaction<TState, readonly ((state: TState) => unknown)[]>>,
-  >(selectors: TSelectors) {
-    Object.assign(store, { selectors })
-    return {
-      build: () => store as Store<TState, TSelectors>,
-    }
-  }
-
-  function stateBuilder<TState extends GenericState>(state: TState) {
-    store.state = state
-    return {
-      build: () => store as Store<TState>,
-      selectors: <
-        const TSelectors extends Array<
-          Reaction<TState, readonly ((state: TState) => unknown)[]>
-        >,
-      >(
-        selectors: TSelectors
-      ) => selectorsBuilder<TState, TSelectors>(selectors),
-    }
+  function react<TState, const TSelectors extends ((state: TState) => any)[]>(
+    reaction: Reaction<TState, TSelectors>
+  ): Reaction<TState, TSelectors> {
+    return reaction
   }
 
   return {
-    state: stateBuilder,
+    state<TState extends Record<string, Subject<any>> | Subject<any>>(
+      stateBuilder: (
+        newSubject: <T>(
+          init: T,
+          ...events: Array<Handler<T | ((prev: T) => T)>>
+        ) => Subject<T>
+      ) => TState
+    ) {
+      state = stateBuilder(createSubject)
+      return {
+        reactions(
+          reactionBuilder: (
+            react: <const TSelectors extends ((state: TState) => any)[]>(
+              reaction: Reaction<TState, TSelectors>
+            ) => Reaction<TState, TSelectors>
+          ) => Array<Reaction<TState, readonly ((state: TState) => any)[]>>
+        ) {
+          reactions = reactionBuilder(react)
+          return {
+            build: () => ({
+              state,
+              reactions,
+            }),
+          }
+        },
+        build: () => ({
+          state,
+          reactions: [],
+        }),
+      }
+    },
   }
 }
 
 type Handler<E> = <O>(transform: (e: E) => O) => Handler<O>
 
-function createEvent<T>(): [(value: T) => void, Handler<T>] {
+export function createEvent<T>(): [(value: T) => void, Handler<T>] {
   const handlers: Array<(value: T) => void> = []
 
   const handler: Handler<T> = transform => {
@@ -71,86 +82,52 @@ const [emitIncrementCount, onIncrementCount] = createEvent<number>()
 const [emitDecrementCount, onDecrementCount] = createEvent<number>()
 const [emitResetCount, onResetCount] = createEvent<number>()
 
-type OnInitType = {
-  role: "user" | "admin"
-  username: string
-  permissions: Permission[]
-}
-
 type ExtractValue<T> = T extends Subject<infer U> ? U : T
 
-type SelectorValues<
-  TState,
-  T extends readonly ((state: TState) => unknown)[],
-> = {
+type SelectorValues<TState, T extends readonly ((state: TState) => any)[]> = {
   [K in keyof T]: ExtractValue<ReturnType<T[K]>>
 }
 
 type Reaction<
   TState,
-  TSelectors extends readonly ((state: TState) => unknown)[],
+  TSelectors extends readonly ((state: TState) => any)[],
 > = {
   on: TSelectors
   run: (...args: SelectorValues<TState, TSelectors>) => void
 }
 
-type MOCK_STATE = { vitor: Subject<true>; markis: Subject<false> }
-
-const Selector = function <
-  TState extends MOCK_STATE,
-  TArguments extends ((state: TState) => unknown)[],
->({ on, run }: Reaction<TState, TArguments>) {
-  return [on, run]
-}
-
-Selector({
-  on: [s => s.vitor, s => s.markis],
-  run: (vitor, markis) => `${vitor} ${markis}`,
-})
-
 const store = newStore()
-  .state({
-    count: createSubject(
+  .state(newSubject => ({
+    count: newSubject(
       0,
       onIncrementCount(delta => prevCount => prevCount + delta),
       onDecrementCount(delta => prevCount => prevCount - delta),
       onResetCount(() => () => 0)
     ),
-    role: createSubject(
+    role: newSubject(
       "user" as "user" | "admin",
       onChangeRole(newRole => () => newRole)
     ),
-    username: createSubject(
-      "vitor",
+    username: newSubject(
+      "",
       onNewUsername(newUsername => () => newUsername)
     ),
-    permissions: createSubject(
+    permissions: newSubject(
       [] as Permission[],
       onNewPermissions(newPermissions => () => newPermissions)
     ),
-  })
-  .selectors([
-    {
-      on: [s => s.count, s => s.role],
-      run: (count, role) => {
-        const __count: number = count
-        const __role: "user" | "admin" = role
-        return `${__count} ${__role}`
-      },
-    },
+  }))
+  .reactions(newReact => [
+    newReact({
+      on: [s => s.role],
+      run: role => emitRoleChanged(role),
+    }),
   ])
   .build()
-// ({
-//   onInit(payload: {
-//     role: "user" | "admin"
-//     username: string
-//     permissions: Permission[]
-//   }) {
-//     console.log("Initialized")
-//   },
-// })
 
 type Permission = string
+
+store.state.count
 
 type State<T> = {
   value: T
