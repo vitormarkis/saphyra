@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto"
 import { EventsTuple } from "saphyra"
 
 type Selector<TState> = (state: TState) => unknown
@@ -169,6 +170,25 @@ type Derivation<
   run: (...args: SelectorValues<TState, TSelectors>) => any
 }
 
+type TodoSliceInitialState = {
+  description: string
+}
+
+const todoSlice = ({ description }: TodoSliceInitialState) =>
+  newStore()
+    .state(newSubject => ({
+      id: newSubject(randomUUID()),
+      description: newSubject(description),
+      completed: newSubject(false),
+    }))
+    .derivations(newDerivation => ({
+      isCompleted: newDerivation({
+        on: [s => s.description],
+        run: description => description,
+      }),
+    }))
+    .build()
+
 const store = newStore()
   .state(newSubject => ({
     count: newSubject(
@@ -254,4 +274,105 @@ function testModule<TEvents extends unknown[], T>(
 
 const result = testModule(b => {
   return b([true]).build(e => ({ vitor: true }))
+})
+
+const [emitIncrement, onIncrement] = createEvent()
+const [emitDecrement, onDecrement] = createEvent()
+const [emitReset, onReset] = createEvent()
+const [emitIncremented, onIncremented] = createEvent()
+const [emitDecremented, onDecremented] = createEvent()
+const [emitResetted, onResetted] = createEvent()
+const counter = st()
+  .state(newSubject => ({
+    count: newSubject(
+      0,
+      onIncremented(count => () => count),
+      onDecremented(count => () => count),
+      onResetted(() => () => 0)
+    )
+      .actions({
+        increment: emitIncrement,
+        decrement: emitDecrement,
+        reset: emitReset,
+      })
+      .optimistic(
+        onIncrement(delta => current => current + delta),
+        onDecrement(delta => current => current - delta),
+        onReset(() => () => 0)
+      ),
+  }))
+  .effects(newEffect => [
+    newEffect([
+      onIncrement(),
+      (delta, { async, deps }) => {
+        async().promise(async () => {
+          const newCount = await deps.increment(delta)
+          emitIncremented(newCount)
+        })
+      },
+    ]),
+    newEffect([
+      onDecrement(),
+      (delta, { async, deps }) => {
+        async().promise(async () => {
+          const newCount = await deps.decrement(delta)
+          emitDecremented(newCount)
+        })
+      },
+    ]),
+    newEffect([
+      onReset(),
+      (_, { async, deps }) => {
+        async().promise(async () => {
+          await deps.reset()
+          emitResetted(0)
+        })
+      },
+    ]),
+  ])
+
+/**
+ * SAPHYRA VERSION
+ */
+type CounterState = {
+  count: number
+}
+
+type CounterActions =
+  | { type: "increment"; delta: number }
+  | { type: "decrement"; delta: number }
+  | { type: "reset" }
+
+const newCounter = newStoreDef<{}, CounterState, CounterActions>({
+  onConstruct: () => ({ count: 0 }),
+  reducer: ({ state, action, async, set, optimistic }) => {
+    if (action.type === "increment") {
+      optimistic(s => ({ count: s.count + action.delta }))
+
+      async().promise(async () => {
+        const newCount = await deps.increment(action.delta)
+        set({ count: newCount })
+      })
+    }
+
+    if (action.type === "decrement") {
+      optimistic(s => ({ count: s.count - action.delta }))
+
+      async().promise(async () => {
+        const newCount = await deps.decrement(action.delta)
+        set({ count: newCount })
+      })
+    }
+
+    if (action.type === "reset") {
+      optimistic(() => ({ count: 0 }))
+
+      async().promise(async () => {
+        await deps.reset()
+        set({ count: 0 })
+      })
+    }
+
+    return state
+  },
 })
