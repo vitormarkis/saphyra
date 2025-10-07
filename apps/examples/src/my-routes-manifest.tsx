@@ -9,6 +9,7 @@ import { BeforeDispatchPage } from "./pages/before-dispatch/page"
 import { DebouncedSearchPage } from "./pages/debounced-search/page"
 import { MultipleOptimisticUpdatesPage } from "./pages/multiple-optimistic-updates/page"
 import { ResizeDebouncedPage } from "./pages/resize-debounced/page"
+import { DependentSelectPage } from "./pages/dependent-select/page"
 
 export const myRoutesManifest = [
   {
@@ -54,5 +55,9 @@ export const myRoutesManifest = [
   {
     path: "/resize-debounced",
     element: <ResizeDebouncedPage />,
+  },
+  {
+    path: "/dependent-select",
+    element: <DependentSelectPage />,
   },
 ]
