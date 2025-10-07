@@ -1,41 +1,33 @@
-import { Icon, Spinner } from "@blueprintjs/core"
+import { Spinner } from "@blueprintjs/core"
 import { useEffect, useState } from "react"
 import { cn } from "~/lib/cn"
 
-import { useHistory, useNewStore } from "saphyra/react"
-import { Waterfall } from "~/devtools/waterfall"
-import { DependentSelect, newDependentSelectStore } from "./store"
-import { INITIAL_TODOS } from "./consts"
-import { cancelPrevious, preventNextOne } from "./before-dispatches"
-import { Checkbox } from "~/components/ui/checkbox"
+import { useBootstrapError, useNewStore } from "saphyra/react"
 import { Button } from "~/components/ui/button"
-import { settingsStore, SettingsStore } from "./settings-store"
-import { toastWithRetry } from "./on-transition-ends"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "~/components/ui/tooltip"
-import { PostType } from "./types"
+import { Checkbox } from "~/components/ui/checkbox"
+import { Waterfall } from "~/devtools/waterfall"
+import { toastWithSonner } from "~/sonner-error-handler"
 import { productionDeps } from "./deps"
+import { settingsStore, SettingsStore } from "./settings-store"
+import { DependentSelect, newDependentSelectStore } from "./store"
+import { PostType } from "./types"
+import { ErrorPage } from "~/components/error-page"
 
 export function DependentSelectPage() {
   const [displayingContent, setDisplayingContent] = useState(true)
-  const [dependentSelectStore, setDependentSelectStore, isBootstraping] =
-    useNewStore(() =>
-      newDependentSelectStore({ tag: "life" }, { deps: productionDeps })
-    )
-
-  useHistory(dependentSelectStore)
+  const [dependentSelect, resetDependentSelect, isBootstraping] = useNewStore(
+    () => newDependentSelectStore({}, { deps: productionDeps })
+  )
 
   useEffect(() => {
-    Object.assign(window, { dependentSelect: dependentSelectStore })
-  }, [dependentSelectStore])
+    Object.assign(window, { dependentSelect: dependentSelect })
+  }, [dependentSelect])
+
+  DependentSelect.useErrorHandlers(toastWithSonner, dependentSelect)
 
   return (
     <DependentSelect.Context.Provider
-      value={[dependentSelectStore, setDependentSelectStore, isBootstraping]}
+      value={[dependentSelect, resetDependentSelect, isBootstraping]}
     >
       <div className="absolute top-6 left-0 right-0 z-40">
         <div className="flex items-center gap-4 px-8">
@@ -142,7 +134,7 @@ export function DependentSelectPage() {
           {/* <div className="size-full p-4">
             <pre>{JSON.stringify(subtransitions, null, 2)}</pre>
           </div> */}
-          <Waterfall store={dependentSelectStore} />
+          <Waterfall store={dependentSelect} />
         </div>
       </div>
     </DependentSelect.Context.Provider>
@@ -152,17 +144,60 @@ export function DependentSelectPage() {
 type DependentSelectContentProps = {}
 
 export function DependentSelectContent({}: DependentSelectContentProps) {
+  const [dependentSelect] = DependentSelect.useStore()
   const posts = DependentSelect.useSelector(s => s.$posts)
-  const isPending = DependentSelect.useTransition(["todo"])
+  const isChangingTag = DependentSelect.useTransition(["change-tag"])
   const shouldDisplaySpinners = SettingsStore.useSelector(s => s.spinners)
-  const tag = DependentSelect.useSelector(s => s.tag)
+  const selectedTag = DependentSelect.useSelector(s => s.selectedTag)
+  const tags = DependentSelect.useSelector(s => s.tags)
+  const [error, tryAgain] = useBootstrapError(DependentSelect.useStore(), () =>
+    newDependentSelectStore({}, { deps: productionDeps })
+  )
+
+  if (error != null) {
+    return (
+      <ErrorPage
+        error={error}
+        tryAgain={tryAgain}
+      />
+    )
+  }
 
   return (
     <div className="flex flex-col">
       <div className="flex justify-between mb-4">
         <div className="h-full flex [&>*]:border-r [&>*]:border-r-gray-800 [&>*:last-child]:border-r-0 "></div>
       </div>
-      {shouldDisplaySpinners && (
+      <div className="flex flex-col p-1">
+        <label
+          htmlFor="tag"
+          className="text-sm/7 font-medium"
+        >
+          Select tag:
+        </label>
+        <select
+          value={selectedTag}
+          onChange={e => {
+            const selectedTag = e.target.value
+            dependentSelect.dispatch({
+              type: "change-tag",
+              selectedTag,
+              transition: ["change-tag"],
+            })
+          }}
+        >
+          {tags.map(tag => (
+            <option
+              key={tag.slug}
+              value={tag.slug}
+            >
+              {tag.name}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="my-2" />
+      {/* {shouldDisplaySpinners && (
         <div
           className={cn(
             "flex items-center gap-2 p-3 invisible",
@@ -174,12 +209,12 @@ export function DependentSelectContent({}: DependentSelectContentProps) {
             {isPending && <span className="animate-spin">🌀</span>}
           </div>
         </div>
-      )}
+      )} */}
       <h3 className="text-lg font-medium mb-2">
         Tag:
         <span className="mx-1"></span>
         <span className="inline-block text-lg/none py-1 px-2 rounded-sm bg-blue-500 text-white">
-          {tag.toUpperCase()}
+          {selectedTag.toUpperCase()}
         </span>
       </h3>
       <ul className="grid grid-cols-1 gap-2">

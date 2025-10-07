@@ -9,6 +9,7 @@ type SettingsState = {
   manualRevalidation: boolean
   prefixPairs: boolean
   spinners: boolean
+  randomLatency: boolean
 }
 
 const newSettingsStore = newStoreDef<SettingsState>({
@@ -32,6 +33,7 @@ const INITIAL_STATE = {
   manualRevalidation: false,
   prefixPairs: false,
   spinners: false,
+  randomLatency: false,
 }
 
 export const settingsStore = newSettingsStore(

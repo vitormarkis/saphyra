@@ -1,23 +1,24 @@
 import { newStoreDef } from "saphyra"
 import { createStoreUtils } from "saphyra/react"
-import { PostType } from "./types"
+import { PostType, TagType } from "./types"
+import { settingsStore } from "./settings-store"
 
 type DependentSelectState = {
-  tag: string
+  tags: TagType[]
+  selectedTag: string
   $posts: PostType[]
 }
 
-type DependentSelectInitialProps = {
-  tag: string
-}
+type DependentSelectInitialProps = {}
 
 type DependentSelectActions = {
   type: "change-tag"
-  tag: string
+  selectedTag: string
 }
 
 export type DependentSelectActionsDeps = {
   getPostsByTag: (tag: string, signal: AbortSignal) => Promise<PostType[]>
+  getTags: (signal: AbortSignal) => Promise<TagType[]>
 }
 
 export const newDependentSelectStore = newStoreDef<
@@ -28,17 +29,32 @@ export const newDependentSelectStore = newStoreDef<
   {},
   DependentSelectActionsDeps
 >({
+  async onConstruct({ deps, signal }) {
+    const tags = await deps.getTags(signal)
+    const [firstTag] = tags
+    if (!firstTag) throw new Error("No tags found")
+    return {
+      tags,
+      selectedTag: firstTag.slug,
+    }
+  },
   reducer({ state, action, set, diff, async, optimistic, deps }) {
+    const settings = settingsStore.getState()
+
     if (action.type === "change-tag") {
-      optimistic({ tag: action.tag })
-      set({ tag: action.tag })
+      if (settings.optimistic) {
+        optimistic({ selectedTag: action.selectedTag })
+      }
+      set({ selectedTag: action.selectedTag })
     }
 
-    if (diff(["tag"])) {
-      async().promise(async ({ signal }) => {
-        const posts = await deps.getPostsByTag(state.tag, signal)
-        set({ $posts: posts })
-      })
+    if (diff(["selectedTag"])) {
+      async()
+        .setName(`Getting posts [${state.selectedTag}]`)
+        .promise(async ({ signal }) => {
+          const posts = await deps.getPostsByTag(state.selectedTag, signal)
+          set({ $posts: posts })
+        })
     }
 
     return state

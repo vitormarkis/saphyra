@@ -10,3 +10,8 @@ export type PostType = {
   views: number
   userId: number
 }
+
+export type TagType = {
+  name: string
+  slug: string
+}
