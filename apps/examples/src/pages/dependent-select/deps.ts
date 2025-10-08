@@ -13,7 +13,7 @@ export const productionDeps: DependentSelectActionsDeps = {
       await sleep(400)
       const should = settings.errorAlways || Math.random() > 0.7
       if (should) {
-        throw new Error("Error while getting posts by tag")
+        throw new Error(`Error while getting posts by tag [${tag}]`)
       }
     }
     const data = await response.json()

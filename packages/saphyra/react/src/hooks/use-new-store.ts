@@ -1,10 +1,4 @@
-import {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-  useSyncExternalStore,
-} from "react"
+import { useCallback, useRef, useState, useSyncExternalStore } from "react"
 import { NewStoreReturn } from "../types"
 import { SomeStoreGeneric } from "~/types"
 
@@ -38,12 +32,13 @@ export function useNewStore<Store extends SomeStoreGeneric>(
     [currentStore]
   )
 
-  useEffect(
-    function cleanUp() {
-      return () => void currentStore.dispose()
-    },
-    [currentStore]
-  )
+  // TO-DO: Find a better way to clean up the store.
+  // useEffect(
+  //   function cleanUp() {
+  //     return () => void currentStore.dispose()
+  //   },
+  //   [currentStore]
+  // )
 
   const isLoading = isBootstrapping
     ? isInitialStore

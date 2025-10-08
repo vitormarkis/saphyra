@@ -2,6 +2,7 @@ import { newStoreDef } from "saphyra"
 import { createStoreUtils } from "saphyra/react"
 import { PostType, TagType } from "./types"
 import { settingsStore } from "./settings-store"
+import invariant from "tiny-invariant"
 
 type DependentSelectState = {
   tags: TagType[]
@@ -11,10 +12,15 @@ type DependentSelectState = {
 
 type DependentSelectInitialProps = {}
 
-type DependentSelectActions = {
-  type: "change-tag"
-  selectedTag: string
-}
+type DependentSelectActions =
+  | {
+      type: "change-tag"
+      selectedTag: string
+    }
+  | {
+      type: "fetch-posts"
+      tag: string
+    }
 
 export type DependentSelectActionsDeps = {
   getPostsByTag: (tag: string, signal: AbortSignal) => Promise<PostType[]>
@@ -38,7 +44,7 @@ export const newDependentSelectStore = newStoreDef<
       selectedTag: firstTag.slug,
     }
   },
-  reducer({ state, action, set, diff, async, optimistic, deps }) {
+  reducer({ state, action, set, diff, async, optimistic, deps, dispatch }) {
     const settings = settingsStore.getState()
 
     if (action.type === "change-tag") {
@@ -48,13 +54,20 @@ export const newDependentSelectStore = newStoreDef<
       set({ selectedTag: action.selectedTag })
     }
 
-    if (diff(["selectedTag"])) {
+    if (action.type === "fetch-posts") {
       async()
         .setName(`Getting posts [${state.selectedTag}]`)
         .promise(async ({ signal }) => {
           const posts = await deps.getPostsByTag(state.selectedTag, signal)
           set({ $posts: posts })
         })
+    }
+
+    if (diff(["selectedTag"])) {
+      dispatch({
+        type: "fetch-posts",
+        tag: state.selectedTag,
+      })
     }
 
     return state

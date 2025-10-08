@@ -175,26 +175,38 @@ export function DependentSelectContent({}: DependentSelectContentProps) {
         >
           Select tag:
         </label>
-        <select
-          value={selectedTag}
-          onChange={e => {
-            const selectedTag = e.target.value
-            dependentSelect.dispatch({
-              type: "change-tag",
-              selectedTag,
-              transition: ["change-tag"],
-            })
-          }}
-        >
-          {tags.map(tag => (
-            <option
-              key={tag.slug}
-              value={tag.slug}
+        <div className="flex items-center gap-2 h-8">
+          <div className="flex-1 flex">
+            <select
+              value={selectedTag}
+              onChange={e => {
+                const selectedTag = e.target.value
+                dependentSelect.dispatch({
+                  type: "change-tag",
+                  selectedTag,
+                  transition: ["change-tag"],
+                })
+              }}
+              className="flex-1"
             >
-              {tag.name}
-            </option>
-          ))}
-        </select>
+              {tags.map(tag => (
+                <option
+                  key={tag.slug}
+                  value={tag.slug}
+                >
+                  {tag.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          {shouldDisplaySpinners && (
+            <div className="aspect-square h-full grid place-items-center">
+              {isChangingTag && (
+                <span className="animate-spin text-lg">🌀</span>
+              )}
+            </div>
+          )}
+        </div>
       </div>
       <div className="my-2" />
       {/* {shouldDisplaySpinners && (
@@ -217,7 +229,12 @@ export function DependentSelectContent({}: DependentSelectContentProps) {
           {selectedTag.toUpperCase()}
         </span>
       </h3>
-      <ul className="grid grid-cols-1 gap-2">
+      <ul
+        className={cn(
+          "grid grid-cols-1 gap-2",
+          shouldDisplaySpinners && isChangingTag && "opacity-50"
+        )}
+      >
         {posts.map(post => (
           <Post
             key={post.id}
@@ -251,13 +268,6 @@ export function Post({ post }: PostProps) {
           // todo.disabled && "opacity-40"
         )}
       >
-        {shouldDisplaySpinners && (
-          <div className="min-w-0">
-            <div className="pr-2 aspect-square grid place-items-center">
-              {isPending && <span className="animate-spin">🌀</span>}
-            </div>
-          </div>
-        )}
         <div className="font-medium">{post.title}</div>
         <p
           className={cn(
