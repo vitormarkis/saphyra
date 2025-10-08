@@ -20,14 +20,14 @@ export const myRoutesManifest = [
     path: "/change-role",
     element: <ChangeRolePage />,
   },
-  {
-    path: "/zustand-like",
-    element: <ZustandLikePage />,
-  },
-  {
-    path: "/memory-game",
-    element: <MemoryGamePage />,
-  },
+  // {
+  //   path: "/zustand-like",
+  //   element: <ZustandLikePage />,
+  // },
+  // {
+  //   path: "/memory-game",
+  //   element: <MemoryGamePage />,
+  // },
   {
     path: "/external-deps",
     element: <ExternalDepsPage />,
@@ -44,14 +44,14 @@ export const myRoutesManifest = [
     path: "/debounced-search",
     element: <DebouncedSearchPage />,
   },
-  {
-    path: "/multiple-optimistic-updates",
-    element: <MultipleOptimisticUpdatesPage />,
-  },
-  {
-    path: "/pokemon",
-    element: <PokemonPage />,
-  },
+  // {
+  //   path: "/multiple-optimistic-updates",
+  //   element: <MultipleOptimisticUpdatesPage />,
+  // },
+  // {
+  //   path: "/pokemon",
+  //   element: <PokemonPage />,
+  // },
   {
     path: "/resize-debounced",
     element: <ResizeDebouncedPage />,

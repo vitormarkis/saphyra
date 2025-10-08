@@ -1,6 +1,6 @@
 import React, { useEffect } from "react"
 import { newStoreDef } from "saphyra"
-import { createStoreUtils, useNewStore } from "saphyra/react"
+import { createStoreUtils, useHistory, useNewStore } from "saphyra/react"
 import { toast } from "sonner"
 import { cn } from "~/lib/cn"
 import { extractErrorMessage } from "~/lib/extract-error-message"
@@ -41,8 +41,18 @@ const newStore = newStoreDef<
   ResizeDebouncedState,
   ResizeDebouncedActions
 >({
-  reducer({ prevState, state, action, set, async, dispatchAsync, store }) {
+  reducer({
+    prevState,
+    state,
+    action,
+    set,
+    async,
+    dispatchAsync,
+    store,
+    optimistic,
+  }) {
     if (action.type === "resize") {
+      optimistic({ $width: action.payload.width })
       async().promise(async () => {
         await new Promise(resolve => setTimeout(resolve))
         await dispatchAsync({
@@ -81,6 +91,8 @@ const Store = createStoreUtils<typeof newStore>()
 export function ResizeDebouncedPage() {
   const [store, resetStore, isLoading] = useNewStore(() => newStore({}))
 
+  useHistory(store)
+
   useEffect(() => {
     Object.assign(window, {
       resizeDebounced: store,
@@ -99,24 +111,43 @@ export function ResizeDebouncedPage() {
 }
 
 function Content() {
-  const state = Store.useSelector()
+  const optimisticState = Store.useSelector()
+  const committedState = Store.useCommittedSelector()
   return (
     <div className="flex flex-col gap-4">
+      <h2 className="text-lg font-bold">What is happening?</h2>
+      <p>
+        The "resize" action is being debounced by 50ms. The committed state is
+        lagging behind the optimistic state to avoid enormous numbers of
+        rerenders/paints and entries on the undo/redo history.
+        <br />
+        <br />
+        Drag the red handle to resize the box. After you commit few state, press
+        CTRL Z and CTRL Y to undo and redo.
+      </p>
       <pre className="p-2 rounded border">
-        {JSON.stringify({ state }, null, 2)}
+        {JSON.stringify({ optimisticState, committedState }, null, 2)}
       </pre>
       <div className="p-2 rounded border flex-1">
-        <Box />
+        <strong>Optimistic</strong>
+        <Box strategy="optimistic" />
+        <strong>Committed</strong>
+        <Box strategy="committed" />
       </div>
     </div>
   )
 }
 
-type BoxProps = React.ComponentProps<"div">
+type BoxProps = React.ComponentProps<"div"> & {
+  strategy: "optimistic" | "committed"
+}
 
 const Box = React.forwardRef<React.ElementRef<"div">, BoxProps>(
-  ({ className, ...props }, ref) => {
-    const width = Store.useSelector(s => s.$width)
+  ({ className, strategy, ...props }, ref) => {
+    const width =
+      strategy === "optimistic"
+        ? Store.useSelector(s => s.$width)
+        : Store.useCommittedSelector(s => s.$width)
 
     return (
       <div
@@ -161,7 +192,7 @@ const Handle = React.forwardRef<React.ElementRef<"i">, HandleProps>(
               beforeDispatch({ async, transition, store, action }) {
                 store.abort(transition)
                 // return action
-                async().setTimeout(() => store.dispatch(action), 400)
+                async().setTimeout(() => store.dispatch(action), 50)
               },
             })
           }
