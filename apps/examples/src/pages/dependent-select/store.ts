@@ -3,6 +3,7 @@ import { createStoreUtils } from "saphyra/react"
 import { PostType, TagType } from "./types"
 import { settingsStore } from "./settings-store"
 import invariant from "tiny-invariant"
+import { noop } from "~/lib/utils"
 
 type DependentSelectState = {
   tags: TagType[]
@@ -35,6 +36,11 @@ export const newDependentSelectStore = newStoreDef<
   {},
   DependentSelectActionsDeps
 >({
+  config: {
+    onCommitTransition(props) {
+      console.log("onCommitTransition", props)
+    },
+  },
   async onConstruct({ deps, signal }) {
     const tags = await deps.getTags(signal)
     const [firstTag] = tags

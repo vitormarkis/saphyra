@@ -1,5 +1,5 @@
 import { Spinner } from "@blueprintjs/core"
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { cn } from "~/lib/cn"
 
 import { useBootstrapError, useNewStore } from "saphyra/react"
@@ -99,6 +99,24 @@ export function DependentSelectPage() {
               }}
             />
           </label>
+          <label
+            htmlFor="randomLatency"
+            className="flex flex-col items-center gap-1"
+          >
+            <span className="text-center h-16 center self-center inline-grid place-items-center">
+              Random
+              <br />
+              latency
+            </span>
+            <Checkbox
+              checked={SettingsStore.useSelector(s => s.randomLatency)}
+              onCheckedChange={value => {
+                settingsStore.setState({
+                  randomLatency: !!value,
+                })
+              }}
+            />
+          </label>
         </div>
         <div className="flex justify-center pt-4">
           <Button
@@ -188,11 +206,11 @@ export function DependentSelectContent({}: DependentSelectContentProps) {
                 dependentSelect.dispatch({
                   type: "change-tag",
                   selectedTag,
-                  transition: ["change-tag", selectedTag],
-                  beforeDispatch({ action, store }) {
-                    store.abort(["change-tag"], "nested")
-                    return action
-                  },
+                  transition: ["change-tag"],
+                  // beforeDispatch({ action, store }) {
+                  //   store.abort(["change-tag"], "nested")
+                  //   return action
+                  // },
                 })
               }}
               className="flex-1"
@@ -264,8 +282,12 @@ type PostProps = {
 }
 
 export function Post({ post }: PostProps) {
-  const isPending = DependentSelect.useTransition(["todo"])
-  const shouldDisplaySpinners = SettingsStore.useSelector(s => s.spinners)
+  const selectedTag = DependentSelect.useSelector(s => s.selectedTag)
+  const sortedTags = useMemo(() => {
+    return [...post.tags].sort((a, b) =>
+      a === selectedTag ? -1 : b === selectedTag ? 1 : 0
+    )
+  }, [post.tags])
 
   return (
     <li
@@ -294,6 +316,16 @@ export function Post({ post }: PostProps) {
             Read more
           </span>
         </p>
+        <ul className="flex flex-wrap gap-1">
+          {sortedTags.map(tag => (
+            <li
+              key={tag}
+              className="text-sm/none p-1 rounded-sm bg-gray-200 dark:bg-gray-800"
+            >
+              {tag}
+            </li>
+          ))}
+        </ul>
       </div>
     </li>
   )
