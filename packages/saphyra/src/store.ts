@@ -45,7 +45,7 @@ import type {
 import { EventEmitter, EventsTuple } from "./event-emitter"
 import { noop } from "./fn/noop"
 import { ErrorsStore } from "./errors-store"
-import { isNewActionError, labelWhen } from "./utils"
+import { checkTransitionIsNested, isNewActionError, labelWhen } from "./utils"
 import { getSnapshotAction } from "./helpers/get-snapshot-action"
 import { Rollback } from "./helpers/rollback"
 import invariant from "tiny-invariant"
@@ -858,10 +858,11 @@ export function newStoreDef<
       TEvents,
       TUncontrolledState,
       TDeps
-    >["abort"] = (transition, strategy = "unique") => {
-      if (!transition) return
+    >["abort"] = userTransition => {
+      if (!userTransition) return
+      const [strategy, transition] = checkTransitionIsNested(userTransition)
       if (strategy === "unique") {
-        abortImpl(transition, strategy)
+        abortImpl(transition)
       }
 
       if (strategy === "nested") {

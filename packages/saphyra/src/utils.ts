@@ -1,3 +1,6 @@
+import { exact } from "./fn/common"
+import { Transition } from "./types"
+
 export function isNewActionError(error: unknown) {
   if (typeof error !== "object") return false
   if (!error) return false
@@ -39,4 +42,13 @@ export function readState(state: Record<string, any>) {
     }
   }
   return finalState
+}
+
+export function checkTransitionIsNested(transition: Transition) {
+  const [lastSubject] = transition.toReversed()
+  const isNested = lastSubject === "..." || lastSubject === "*"
+
+  return isNested
+    ? exact(["nested", transition.slice(0, -1)])
+    : exact(["unique", transition])
 }

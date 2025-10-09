@@ -389,7 +389,7 @@ export type BeforeDispatchOptions<
    *
    * If the provided transition is not ongoing, it will do nothing
    */
-  abort(transition: TransitionNullable, strategy?: "unique" | "nested"): void
+  abort(transition: TransitionNullable): void
 }
 
 export type BeforeDispatch<

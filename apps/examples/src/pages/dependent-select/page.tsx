@@ -227,7 +227,7 @@ export function DependentSelectContent({}: DependentSelectContentProps) {
                     /**
                      * Abort on going requests
                      */
-                    store.abort(["change-tag"], "nested")
+                    store.abort(["change-tag", "*"])
 
                     /**
                      * Debounce ?
