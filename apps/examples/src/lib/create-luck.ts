@@ -14,5 +14,8 @@ export function createLuck(odds: number[]) {
       shiftLuck()
       return val
     },
+    setOdds(odds: number[]) {
+      local.odds = odds
+    },
   }
 }

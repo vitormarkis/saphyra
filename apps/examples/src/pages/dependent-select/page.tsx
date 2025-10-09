@@ -149,6 +149,10 @@ export function DependentSelectContent({}: DependentSelectContentProps) {
   const isChangingTag = DependentSelect.useTransition(["change-tag"])
   const shouldDisplaySpinners = SettingsStore.useSelector(s => s.spinners)
   const selectedTag = DependentSelect.useSelector(s => s.selectedTag)
+  const commitedSelectedTag = DependentSelect.useCommittedSelector(
+    s => s.selectedTag
+  )
+  const showingOptimisticTag = selectedTag !== commitedSelectedTag
   const tags = DependentSelect.useSelector(s => s.tags)
   const [error, tryAgain] = useBootstrapError(DependentSelect.useStore(), () =>
     newDependentSelectStore({}, { deps: productionDeps })
@@ -184,7 +188,11 @@ export function DependentSelectContent({}: DependentSelectContentProps) {
                 dependentSelect.dispatch({
                   type: "change-tag",
                   selectedTag,
-                  transition: ["change-tag"],
+                  transition: ["change-tag", selectedTag],
+                  beforeDispatch({ action, store }) {
+                    store.abort(["change-tag"], "nested")
+                    return action
+                  },
                 })
               }}
               className="flex-1"
@@ -225,7 +233,12 @@ export function DependentSelectContent({}: DependentSelectContentProps) {
       <h3 className="text-lg font-medium mb-2">
         Tag:
         <span className="mx-1"></span>
-        <span className="inline-block text-lg/none py-1 px-2 rounded-sm bg-blue-500 text-white">
+        <span
+          className={cn(
+            "inline-block text-lg/none py-1 px-2 rounded-sm bg-blue-500 text-white transition-all duration-300",
+            showingOptimisticTag && "opacity-50"
+          )}
+        >
           {selectedTag.toUpperCase()}
         </span>
       </h3>
