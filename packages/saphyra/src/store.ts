@@ -858,6 +858,34 @@ export function newStoreDef<
       TEvents,
       TUncontrolledState,
       TDeps
+    >["abort"] = (transition, strategy = "unique") => {
+      if (!transition) return
+      if (strategy === "unique") {
+        abortImpl(transition, strategy)
+      }
+
+      if (strategy === "nested") {
+        const abortingTransitionName = transition.join(":")
+        const allNestedTransitions = Object.keys(
+          store.transitions.state.transitions
+        ).filter(
+          transitionName =>
+            transitionName.startsWith(abortingTransitionName) &&
+            transitionName !== abortingTransitionName
+        )
+        for (const transitionName of allNestedTransitions) {
+          const transitionArr = transitionName.split(":")
+          abortImpl(transitionArr)
+        }
+      }
+    }
+
+    const abortImpl: BeforeDispatchOptions<
+      TState,
+      TActions,
+      TEvents,
+      TUncontrolledState,
+      TDeps
     >["abort"] = transition => {
       const transitionKey = transition?.join(":") ?? null
       // Should this check run always or just when on-Finish-Clean-Up?

@@ -256,7 +256,7 @@ export type GenericStoreMethods<
     newState: TState
     prevState: TState
   }
-  abort(transition: TransitionNullable): void
+  abort(transition: TransitionNullable, strategy?: "unique" | "nested"): void
   cleanUpTransition(transition: Transition, error: unknown | null): void
   waitFor(transition: Transition, timeout?: number): Promise<WaitForResult>
   waitForBootstrap(timeout?: number): Promise<WaitForResult>
@@ -389,7 +389,7 @@ export type BeforeDispatchOptions<
    *
    * If the provided transition is not ongoing, it will do nothing
    */
-  abort(transition: TransitionNullable): void
+  abort(transition: TransitionNullable, strategy?: "unique" | "nested"): void
 }
 
 export type BeforeDispatch<
