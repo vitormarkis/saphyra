@@ -64,6 +64,22 @@ export function DependentSelectPage() {
             />
           </label>
           <label
+            htmlFor="debounce"
+            className="flex flex-col items-center gap-1"
+          >
+            <span className="text-center h-16 center self-center inline-grid place-items-center">
+              Debounce
+            </span>
+            <Checkbox
+              checked={SettingsStore.useSelector(s => s.debounce)}
+              onCheckedChange={value => {
+                settingsStore.setState({
+                  debounce: !!value,
+                })
+              }}
+            />
+          </label>
+          <label
             htmlFor="optimistic"
             className="flex flex-col items-center gap-1"
           >
@@ -206,11 +222,25 @@ export function DependentSelectContent({}: DependentSelectContentProps) {
                 dependentSelect.dispatch({
                   type: "change-tag",
                   selectedTag,
-                  transition: ["change-tag"],
-                  // beforeDispatch({ action, store }) {
-                  //   store.abort(["change-tag"], "nested")
-                  //   return action
-                  // },
+                  transition: ["change-tag", selectedTag],
+                  beforeDispatch({ action, store, async }) {
+                    /**
+                     * Abort on going requests
+                     */
+                    store.abort(["change-tag"], "nested")
+
+                    /**
+                     * Debounce ?
+                     */
+                    const settings = settingsStore.getState()
+                    if (settings.debounce) {
+                      async()
+                        .setName(`d [${selectedTag}]`)
+                        .setTimeout(() => store.dispatch(action), 700)
+                    } else {
+                      return action
+                    }
+                  },
                 })
               }}
               className="flex-1"
