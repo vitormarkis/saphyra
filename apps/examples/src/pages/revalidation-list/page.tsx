@@ -1,37 +1,27 @@
-import { Icon, Spinner } from "@blueprintjs/core"
-import { useEffect, useState, useSyncExternalStore } from "react"
-import { Devtools } from "~/devtools/devtools"
+import { Icon } from "@blueprintjs/core"
+import { Suspense, use, useEffect, useReducer, useState } from "react"
 import { cn } from "~/lib/cn"
-import { toastWithSonner } from "~/sonner-error-handler"
 
-import { useHistory, useNewStore } from "saphyra/react"
-import { Waterfall } from "~/devtools/waterfall"
-import { newRevalidationListStore, RevalidationList } from "./store"
-import { INITIAL_TODOS } from "./consts"
-import { toast } from "sonner"
-import { cancelPrevious, preventNextOne } from "./before-dispatches"
-import { Checkbox } from "~/components/ui/checkbox"
+import { useHistory } from "saphyra/react"
 import { Button } from "~/components/ui/button"
-import { settingsStore, SettingsStore } from "./settings-store"
-import { toastWithRetry } from "./on-transition-ends"
+import { Checkbox } from "~/components/ui/checkbox"
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "~/components/ui/tooltip"
+import { Waterfall } from "~/devtools/waterfall"
+import { cancelPrevious, preventNextOne } from "./before-dispatches"
+import { toastWithRetry } from "./on-transition-ends"
+import { settingsStore, SettingsStore } from "./settings-store"
+import { newRevalidationListStore, RevalidationList } from "./store"
 
 export function RevalidationListPage() {
   const [displayingContent, setDisplayingContent] = useState(true)
-  const [revalidationListStore, setRevalidationListStore, isBootstraping] =
-    useNewStore(() =>
-      newRevalidationListStore(
-        {
-          todos: INITIAL_TODOS,
-        },
-        {}
-      )
-    )
+  const [revalidationListStore] = useState(() =>
+    newRevalidationListStore({}, {})
+  )
 
   useHistory(revalidationListStore)
 
@@ -39,156 +29,162 @@ export function RevalidationListPage() {
     Object.assign(window, { revalidationList: revalidationListStore })
   }, [revalidationListStore])
 
+  const [loadin, toggle] = useReducer(s => !s, false)
+  useEffect(() => {
+    Object.assign(window, { toggle })
+  }, [])
+
   return (
     <RevalidationList.Context.Provider
-      value={[revalidationListStore, setRevalidationListStore, isBootstraping]}
+      value={[revalidationListStore, () => {}, false]}
     >
-      <div className="absolute top-6 left-0 right-0 z-40">
-        <div className="flex items-center gap-4 px-8">
-          <label
-            htmlFor="spinners"
-            className="flex flex-col items-center gap-1"
-          >
-            <span className="text-center h-16 center self-center inline-grid place-items-center">
-              Spinners
-            </span>
-            <Checkbox
-              checked={SettingsStore.useSelector(s => s.spinners)}
-              onCheckedChange={value => {
-                settingsStore.setState({
-                  spinners: !!value,
-                })
-              }}
-            />
-          </label>
-          <label
-            htmlFor="optimistic"
-            className="flex flex-col items-center gap-1"
-          >
-            <span className="text-center h-16 center self-center inline-grid place-items-center">
-              Optimistic
-            </span>
-            <Checkbox
-              checked={SettingsStore.useSelector(s => s.optimistic)}
-              onCheckedChange={value => {
-                settingsStore.setState({
-                  optimistic: !!value,
-                })
-              }}
-            />
-          </label>
-          <label
-            htmlFor="optimistic"
-            className="flex flex-col items-center gap-1"
-          >
-            <span className="text-center h-16 center self-center inline-grid place-items-center">
-              Error
-              <br />
-              sometimes
-            </span>
-            <Checkbox
-              checked={SettingsStore.useSelector(s => s.errorSometimes)}
-              onCheckedChange={value => {
-                settingsStore.setState({
-                  errorSometimes: !!value,
-                })
-              }}
-            />
-          </label>
-          <label
-            htmlFor="errorAlways"
-            className="flex flex-col items-center gap-1"
-          >
-            <span className="text-center h-16 center self-center inline-grid place-items-center">
-              Error
-              <br />
-              always
-            </span>
-            <Checkbox
-              checked={SettingsStore.useSelector(s => s.errorAlways)}
-              onCheckedChange={value => {
-                settingsStore.setState({
-                  errorAlways: !!value,
-                })
-              }}
-            />
-          </label>
-          <label
-            htmlFor="revalidateInDifferentBatches"
-            className="flex flex-col items-center gap-1"
-          >
-            <span className="text-center h-16 center self-center inline-grid place-items-center">
-              Revalidate in
-              <br />
-              batches of 2 rows
-            </span>
+      <Suspense fallback={<LoadingSkeleton />}>
+        <div className="absolute top-6 left-0 right-0 z-40">
+          <div className="flex items-center gap-4 px-8">
+            <label
+              htmlFor="spinners"
+              className="flex flex-col items-center gap-1"
+            >
+              <span className="text-center h-16 center self-center inline-grid place-items-center">
+                Spinners
+              </span>
+              <Checkbox
+                checked={SettingsStore.useSelector(s => s.spinners)}
+                onCheckedChange={value => {
+                  settingsStore.setState({
+                    spinners: !!value,
+                  })
+                }}
+              />
+            </label>
+            <label
+              htmlFor="optimistic"
+              className="flex flex-col items-center gap-1"
+            >
+              <span className="text-center h-16 center self-center inline-grid place-items-center">
+                Optimistic
+              </span>
+              <Checkbox
+                checked={SettingsStore.useSelector(s => s.optimistic)}
+                onCheckedChange={value => {
+                  settingsStore.setState({
+                    optimistic: !!value,
+                  })
+                }}
+              />
+            </label>
+            <label
+              htmlFor="optimistic"
+              className="flex flex-col items-center gap-1"
+            >
+              <span className="text-center h-16 center self-center inline-grid place-items-center">
+                Error
+                <br />
+                sometimes
+              </span>
+              <Checkbox
+                checked={SettingsStore.useSelector(s => s.errorSometimes)}
+                onCheckedChange={value => {
+                  settingsStore.setState({
+                    errorSometimes: !!value,
+                  })
+                }}
+              />
+            </label>
+            <label
+              htmlFor="errorAlways"
+              className="flex flex-col items-center gap-1"
+            >
+              <span className="text-center h-16 center self-center inline-grid place-items-center">
+                Error
+                <br />
+                always
+              </span>
+              <Checkbox
+                checked={SettingsStore.useSelector(s => s.errorAlways)}
+                onCheckedChange={value => {
+                  settingsStore.setState({
+                    errorAlways: !!value,
+                  })
+                }}
+              />
+            </label>
+            <label
+              htmlFor="revalidateInDifferentBatches"
+              className="flex flex-col items-center gap-1"
+            >
+              <span className="text-center h-16 center self-center inline-grid place-items-center">
+                Revalidate in
+                <br />
+                batches of 2 rows
+              </span>
 
-            <div className="flex items-center gap-2">
-              <Checkbox
-                checked={SettingsStore.useSelector(
-                  s => s.revalidateInDifferentBatches
-                )}
-                onCheckedChange={value => {
-                  settingsStore.setState({
-                    revalidateInDifferentBatches: !!value,
-                  })
-                }}
-              />
-              <TooltipProvider delayDuration={0}>
-                <Tooltip>
-                  <TooltipTrigger>
-                    <Icon icon="info-sign" />
-                  </TooltipTrigger>
-                  <TooltipContent
-                    side="right"
-                    className="bg-background border rounded-lg"
-                  >
-                    <p className="text-xs bg-background text-foreground max-w-[200px]">
-                      Toggle enabled and complete for each row and see what
-                      happens
-                      <br />
-                      <br />
-                      Useful for different parallel revalidation strategies,
-                      like per boardId, columnId, pageSlug, cardId, etc.
-                    </p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
-          </label>
-          <label
-            htmlFor="manualRevalidation"
-            className="flex flex-col items-center gap-1"
-          >
-            <span className="text-center h-16 center self-center inline-grid place-items-center">
-              Manual
-              <br />
-              revalidation
-            </span>
-            <div className="flex gap-2 items-center">
-              <Checkbox
-                checked={SettingsStore.useSelector(s => s.manualRevalidation)}
-                onCheckedChange={value => {
-                  settingsStore.setState({
-                    manualRevalidation: !!value,
-                  })
-                }}
-              />
-              <Button
-                className="size-6 p-0"
-                onClick={() => {
-                  revalidationListStore.dispatch({
-                    type: "revalidate-todos",
-                    transition: ["revalidate-todo-list"],
-                    beforeDispatch: cancelPrevious,
-                  })
-                }}
-              >
-                R
-              </Button>
-            </div>
-          </label>
-          {/* <label
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  checked={SettingsStore.useSelector(
+                    s => s.revalidateInDifferentBatches
+                  )}
+                  onCheckedChange={value => {
+                    settingsStore.setState({
+                      revalidateInDifferentBatches: !!value,
+                    })
+                  }}
+                />
+                <TooltipProvider delayDuration={0}>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <Icon icon="info-sign" />
+                    </TooltipTrigger>
+                    <TooltipContent
+                      side="right"
+                      className="bg-background border rounded-lg"
+                    >
+                      <p className="text-xs bg-background text-foreground max-w-[200px]">
+                        Toggle enabled and complete for each row and see what
+                        happens
+                        <br />
+                        <br />
+                        Useful for different parallel revalidation strategies,
+                        like per boardId, columnId, pageSlug, cardId, etc.
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+            </label>
+            <label
+              htmlFor="manualRevalidation"
+              className="flex flex-col items-center gap-1"
+            >
+              <span className="text-center h-16 center self-center inline-grid place-items-center">
+                Manual
+                <br />
+                revalidation
+              </span>
+              <div className="flex gap-2 items-center">
+                <Checkbox
+                  checked={SettingsStore.useSelector(s => s.manualRevalidation)}
+                  onCheckedChange={value => {
+                    settingsStore.setState({
+                      manualRevalidation: !!value,
+                    })
+                  }}
+                />
+                <Button
+                  className="size-6 p-0"
+                  onClick={() => {
+                    revalidationListStore.dispatch({
+                      type: "revalidate-todos",
+                      transition: ["revalidate-todo-list"],
+                      beforeDispatch: cancelPrevious,
+                    })
+                  }}
+                >
+                  R
+                </Button>
+              </div>
+            </label>
+            {/* <label
             htmlFor="prefixPairs"
             className="flex flex-col items-center gap-1 "
           >
@@ -224,16 +220,17 @@ export function RevalidationListPage() {
               </TooltipProvider>
             </div>
           </label> */}
+          </div>
+          <div className="flex justify-center pt-4">
+            <Button
+              className="w-fit"
+              onClick={() => setDisplayingContent(prev => !prev)}
+            >
+              Expand waterfall
+            </Button>
+          </div>
         </div>
-        <div className="flex justify-center pt-4">
-          <Button
-            className="w-fit"
-            onClick={() => setDisplayingContent(prev => !prev)}
-          >
-            Expand waterfall
-          </Button>
-        </div>
-      </div>
+      </Suspense>
       <div
         className={cn(
           "h-full gap-4 flex flex-col @xl:flex-row overflow-hidden pt-40"
@@ -245,15 +242,11 @@ export function RevalidationListPage() {
             !displayingContent && "hidden"
           )}
         >
-          {isBootstraping ? (
-            <div className="w-full h-full grid place-items-center">
-              <Spinner size={96} />
-            </div>
-          ) : (
+          <Suspense fallback={<LoadingSkeleton />}>
             <div className="mr-4 relative w-full">
               <PostList />
             </div>
-          )}
+          </Suspense>
         </div>
         <div className="flex-1 grid min-h-0 min-w-0 h-full gap-4 w-full">
           {/* <div className="size-full p-4">
@@ -269,7 +262,7 @@ export function RevalidationListPage() {
 type PostListProps = {}
 
 export function PostList({}: PostListProps) {
-  const todos = RevalidationList.useSelector(s => s.todos)
+  const todos = RevalidationList.useSelector(s => use(s.todos))
   const isPending = RevalidationList.useTransition(["todo"])
   const shouldDisplaySpinners = SettingsStore.useSelector(s => s.spinners)
 
@@ -309,7 +302,8 @@ type TodoProps = {
 
 export function Todo({ todoId }: TodoProps) {
   const [revalidationStore] = RevalidationList.useStore()
-  const todo = RevalidationList.useSelector(s => s.$todosById[todoId])
+  const todosById = RevalidationList.useSelector(s => use(s.$todosById))
+  const todo = todosById[todoId]
   const isPending = RevalidationList.useTransition(["todo", todoId])
   const shouldDisplaySpinners = SettingsStore.useSelector(s => s.spinners)
 
@@ -412,5 +406,39 @@ export function Todo({ todoId }: TodoProps) {
         </div>
       </div>
     </li>
+  )
+}
+
+function LoadingSkeleton() {
+  return (
+    <div className="mr-4 relative w-full">
+      <div className="flex justify-between mb-4">
+        <div className="h-full flex [&>*]:border-r [&>*]:border-r-gray-800 [&>*:last-child]:border-r-0 "></div>
+      </div>
+      <ul className="flex flex-col gap-2">
+        {Array.from({ length: 16 }).map((_, i) => (
+          <div
+            key={i}
+            className={cn(
+              "flex items-center gap-3 p-1 relative border rounded-md animate-pulse",
+              "border-gray-200 bg-gray-50",
+              "dark:border-gray-800 dark:bg-gray-950"
+            )}
+          >
+            <div className="flex-shrink-0 flex gap-2">
+              <div className="px-2 py-1 w-[70px] h-6 bg-gray-200 dark:bg-gray-700 rounded"></div>
+            </div>
+            <div className="flex gap-2 items-center w-full">
+              <div className="flex-shrink-0">
+                <div className="w-8 h-8 rounded border-2 border-gray-300 dark:border-gray-700"></div>
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </ul>
+    </div>
   )
 }

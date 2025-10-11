@@ -19,9 +19,9 @@ import { settingsStore } from "./settings-store"
 import { preventNextOne } from "./before-dispatches"
 
 type RevalidationListState = {
-  todos: TodoType[]
-  $todosById: Record<number, TodoType>
-  $completedTodos: number[]
+  todos: Promise<TodoType[]>
+  $todosById: Promise<Record<number, TodoType>>
+  $completedTodos: Promise<number[]>
 }
 
 type RevalidationListInitialProps = {}
@@ -55,9 +55,8 @@ export const newRevalidationListStore = newStoreDef<
       noop()
     },
   },
-  async onConstruct({ signal }) {
-    const todos = await getTodosFromDb(signal)
-    return { todos }
+  onConstruct({ signal }) {
+    return { todos: getTodosFromDb(signal) }
   },
   reducer({
     state,
@@ -74,52 +73,39 @@ export const newRevalidationListStore = newStoreDef<
     const settings = settingsStore.getState()
     if (action.type === "revalidate-todos") {
       async()
-        .setName("fetch() hitting API")
-        .promise(async ctx => {
-          const todos = await getTodosFromDb(ctx.signal)
-          set({ todos })
+        .setName("revalidate-todos")
+        .promise(async ({ signal }) => {
+          const todosPromise = getTodosFromDb(signal)
+          // optimistic({ todos: todosPromise })
+          set({ todos: todosPromise })
+          await todosPromise
         })
     }
 
     if (action.type === "toggle-todo") {
       async()
         .setName("toggle-todo")
-        .onFinish({
-          id: ["vitor"],
-          fn(resolve, reject) {
-            store
-              .waitFor(["todo", action.todoId, "toggle-disabled"])
-              .then(resolve)
-              .catch(reject)
-
-            return () => {
-              resolve(false)
-            }
-          },
-        })
+        .onFinish(settings.manualRevalidation ? undefined : revalidateList(0))
         .promise(async ctx => {
           await toggleTodoInDb(action.todoId, ctx.signal)
         })
     }
 
     if (action.type === "toggle-disabled") {
-      const todoIndex = state.todos.findIndex(todo => todo.id === action.todoId)
       if (settings.optimistic) {
-        const optimisticDisabled = !state.todos[todoIndex].disabled
-
         optimistic(s => ({
-          todos: s.todos.map(todo =>
-            todo.id === action.todoId
-              ? { ...todo, disabled: optimisticDisabled }
-              : todo
+          todos: s.todos.then(todos =>
+            todos.map(todo =>
+              todo.id === action.todoId
+                ? { ...todo, disabled: action.disabled }
+                : todo
+            )
           ),
         }))
       }
       async()
         .setName("toggle-disabled-todo")
-        // .onFinish(
-        //   settings.manualRevalidation ? undefined : revalidateList(todoIndex)
-        // )
+        .onFinish(settings.manualRevalidation ? undefined : revalidateList(0))
         .promise(async ctx => {
           await toggleTodoDisabledInDb(action.todoId, ctx.signal)
         })
@@ -128,42 +114,45 @@ export const newRevalidationListStore = newStoreDef<
     if (action.type === "prefix-pairs") {
       async()
         .setName("prefix-pairs")
-        .onFinish(
-          settings.manualRevalidation
-            ? undefined
-            : revalidateList(action.pairIds[0])
-        )
+        .onFinish(settings.manualRevalidation ? undefined : revalidateList(0))
         .promise(async ctx => {
           await prefixPairsInDb(action.pairIds, ctx.signal).catch()
         })
     }
 
     if (diff(["todos"])) {
-      set({ $todosById: groupByKey(state.todos, "id") })
+      set({ $todosById: state.todos.then(todos => groupByKey(todos, "id")) })
     }
 
     if (diff(["todos"])) {
       set({
-        $completedTodos: state.todos
-          .filter(todo => todo.completed)
-          .map(todo => todo.id),
+        $completedTodos: state.todos.then(todos =>
+          todos.filter(todo => todo.completed).map(todo => todo.id)
+        ),
       })
     }
 
     // Async Effects
     if (settings.prefixPairs) {
       if (diff(["$completedTodos"])) {
-        const pairs = getPairs({
-          completedTodos: state.$completedTodos,
-          todosById: state.$todosById,
-        })
+        async()
+          .setName("prefix-pairs-batch")
+          .promise(async () => {
+            const [completedTodos, todosById] = await Promise.all([
+              state.$completedTodos,
+              state.$todosById,
+            ])
 
-        const tuples = Object.values(pairs).filter(tuple => tuple.length === 2)
-        const shouldGroup = tuples.length > 0
-        if (shouldGroup) {
-          async()
-            .setName("prefix-pairs-batch")
-            .promise(async () => {
+            const pairs = getPairs({
+              completedTodos,
+              todosById,
+            })
+
+            const tuples = Object.values(pairs).filter(
+              tuple => tuple.length === 2
+            )
+            const shouldGroup = tuples.length > 0
+            if (shouldGroup) {
               const promises = tuples.map(async tuple => {
                 const [first, second] = tuple
                 await dispatchAsync({
@@ -174,8 +163,8 @@ export const newRevalidationListStore = newStoreDef<
                 })
               })
               await Promise.all(promises)
-            })
-        }
+            }
+          })
       }
     }
 
@@ -254,8 +243,4 @@ const getPairs = ({ completedTodos, todosById }: GetPairsProps) => {
       acc[groupingIdx].push(todoId)
       return acc
     }, [] as number[][])
-}
-
-function randomStr(parentTransitionKey: string) {
-  return parentTransitionKey
 }
