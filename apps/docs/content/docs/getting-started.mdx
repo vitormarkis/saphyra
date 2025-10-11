@@ -45,8 +45,12 @@ const newCountStore = newStoreDef()
 Define your store's lifecycle, local or global.
 
 ```js tab="Local"
+import { useNewStore } from "saphyra/react"
+
 function App() {
-  const [countStore, setCountStore] = useState(newCountStore({}))
+  const [countStore, resetStore, isLoading] = useNewStore(
+    () => newCountStore({})
+  )
 }
 ```
 
@@ -64,16 +68,16 @@ Saphyra provides a helper called `createStoreUtils`, which generates many useful
 
 ```js tab="Local"
 import { newStoreDef } from "saphyra"
-import { createStoreUtils } from "saphyra/react"
+import { useNewStore, createStoreUtils } from "saphyra/react"
 
 const newCountStore = newStoreDef()
 const CountStore = createStoreUtils()
 
 function App() {
-  const [countStore, setCountStore] = useState(() =>
-    newCountStore({ count: 0 })
+  const [countStore, resetStore, isLoading] = useNewStore(
+    () => newCountStore({ count: 0 })
   )
-  const count = CountStore.useCommittedSelector(s => s.count, countStore) // [!code ++]
+  const count = CountStore.useSelector(s => s.count, countStore) // [!code ++]
 
   return <span>{count}</span> // [!code ++]
 }
@@ -110,16 +114,16 @@ Use this for non-critical updates, such as UI state changes from color pickers, 
 
 ```js tab="Local"
 import { newStoreDef } from "saphyra"
-import { createStoreUtils } from "saphyra/react"
+import { useNewStore, createStoreUtils } from "saphyra/react"
 
 const newCountStore = newStoreDef()
 const CountStore = createStoreUtils()
 
 function App() {
-  const [countStore, setCountStore] = useState(() =>
-    newCountStore({ count: 0 })
+  const [countStore, resetStore, isLoading] = useNewStore(
+    () => newCountStore({ count: 0 })
   )
-  const count = CountStore.useCommittedSelector(s => s.count, countStore)
+  const count = CountStore.useSelector(s => s.count, countStore)
   const setToTen = () => countStore.setState({ count: 10 }) // [!code ++]
 
   return (
@@ -133,13 +137,14 @@ function App() {
 
 ```js tab="Global"
 import { newStoreDef } from "saphyra"
+import { createStoreUtils } from "saphyra/react"
 
 const newCountStore = newStoreDef()
 const countStore = newCountStore({ count: 0 })
 const CountStore = createStoreUtils(countStore)
 
 function App() {
-  const count = CountStore.useCommittedSelector(s => s.count, countStore)
+  const count = CountStore.useSelector(s => s.count, countStore)
   const setToTen = () => countStore.setState({ count: 10 }) // [!code ++]
 
   return (
@@ -159,17 +164,18 @@ In case you stick with local (recommended), the `CountStore` module exposes a `P
 
 ```js
 import { newStoreDef } from "saphyra"
+import { useNewStore, createStoreUtils } from "saphyra/react"
 
 const newCountStore = newStoreDef()
 const CountStore = createStoreUtils()
 
 function CountProvider({ initialCount, children }) {
-  const [countStore, setCountStore] = useState(() =>
-    newCountStore({ count: initialCount })
+  const [countStore, resetStore, isLoading] = useNewStore(
+    () => newCountStore({ count: initialCount })
   )
 
   return (
-    <CountStore.Context.Provider value={[countStore, setCountStore]}> // [!code ++]
+    <CountStore.Context.Provider value={[countStore, resetStore, isLoading]}> // [!code ++]
       {children}
     </CountStore.Context.Provider> // [!code ++]
   )
@@ -177,11 +183,27 @@ function CountProvider({ initialCount, children }) {
 
 function Children() {
   const [countStore] = CountStore.useStore()
-  const count = CountStore.useCommittedSelector(s => s.count)
+  const count = CountStore.useSelector(s => s.count)
+  const setToTen = () => countStore.setState({ count: 10 })
 
-  // ...
+  return (
+    <div>
+      <span>{count}</span>
+      <button onClick={setToTen}>Set to 10</button>
+    </div>
+  )
+}
+
+function App() {
+  return (
+    <CountProvider initialCount={0}>
+      <Children />
+    </CountProvider>
+  )
 }
 ```
+
+
 
 ### We're all set up
 
@@ -191,8 +213,9 @@ These are the basic concepts. Now, let's explore what makes Saphyra unique and p
 
 #### Next Steps:
 
-- [Actions](/docs/actions)
 - [Transitions](/docs/transitions)
+- [On Construct](/docs/on-construct)
+- [Actions](/docs/actions)
 
 </Step>  
 </Steps>
