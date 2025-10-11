@@ -1,5 +1,11 @@
 {
   "title": "Name of Folder",
-  "pages": ["introduction", "getting-started", "..."],
+  "pages": [
+    "introduction",
+    "getting-started",
+    "transitions",
+    "on-construct",
+    "..."
+  ],
   "defaultOpen": true
 }
