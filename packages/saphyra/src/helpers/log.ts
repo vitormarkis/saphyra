@@ -1,6 +1,4 @@
-const isDev =
-  typeof process !== "undefined" && process.env.NODE_ENV !== "production"
-const isDebug = typeof process !== "undefined" && process.env.DEBUG === "true"
+import { isDebug, isDev } from "./env"
 
 export function $$onDevMode(fn: () => void) {
   if (isDev) fn()

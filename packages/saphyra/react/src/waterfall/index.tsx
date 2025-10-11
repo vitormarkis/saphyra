@@ -700,8 +700,8 @@ type LineViewProps = {
 
 type Handle = {
   waterfallStore: WaterfallStore
-  lineViewContentRef: React.RefObject<HTMLSpanElement>
-  lineViewRef: React.RefObject<HTMLDivElement>
+  lineViewContentRef: React.RefObject<HTMLSpanElement | null>
+  lineViewRef: React.RefObject<HTMLDivElement | null>
   createStyle(state: WaterfallState): React.CSSProperties
   idx?: number
 }
@@ -902,7 +902,9 @@ type RefContextProviderProps = {
   children: React.ReactNode
 }
 
-const RefContext = createContext<React.RefObject<HTMLDivElement> | null>(null)
+const RefContext = createContext<React.RefObject<HTMLDivElement | null> | null>(
+  null
+)
 
 export function RefContextProvider({ children }: RefContextProviderProps) {
   const ref = useRef<HTMLDivElement>(null)

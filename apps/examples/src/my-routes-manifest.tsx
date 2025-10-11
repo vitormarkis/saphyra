@@ -9,6 +9,17 @@ import { BeforeDispatchPage } from "./pages/before-dispatch/page"
 import { DebouncedSearchPage } from "./pages/debounced-search/page"
 import { MultipleOptimisticUpdatesPage } from "./pages/multiple-optimistic-updates/page"
 import { ResizeDebouncedPage } from "./pages/resize-debounced/page"
+import { SuspenseTestPage } from "./pages/suspense-test/page"
+
+const isDev =
+  typeof process !== "undefined" && process.env.NODE_ENV !== "production"
+
+const devRoutes = [
+  {
+    path: "/suspense-test",
+    element: <SuspenseTestPage />,
+  },
+]
 import { DependentSelectPage } from "./pages/dependent-select/page"
 
 export const myRoutesManifest = [
@@ -56,6 +67,7 @@ export const myRoutesManifest = [
     path: "/resize-debounced",
     element: <ResizeDebouncedPage />,
   },
+  ...(isDev ? devRoutes : []),
   {
     path: "/dependent-select",
     element: <DependentSelectPage />,
