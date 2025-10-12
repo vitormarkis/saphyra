@@ -184,42 +184,42 @@ export function RevalidationListPage() {
                 </Button>
               </div>
             </label>
-            {/* <label
-            htmlFor="prefixPairs"
-            className="flex flex-col items-center gap-1 "
-          >
-            <span className="text-center h-16 center self-center inline-grid place-items-center max-w-[150px]">
-              [Async Effect] <br />
-              Prefix to-dos when completing pairs
-            </span>
-            <div className="flex items-center gap-2">
-              <Checkbox
-                checked={SettingsStore.useSelector(s => s.prefixPairs)}
-                onCheckedChange={value => {
-                  settingsStore.setState({
-                    prefixPairs: !!value,
-                  })
-                }}
-              />
-              <TooltipProvider delayDuration={0}>
-                <Tooltip>
-                  <TooltipTrigger>
-                    <Icon icon="info-sign" />
-                  </TooltipTrigger>
-                  <TooltipContent
-                    side="right"
-                    className="bg-background border rounded-lg"
-                  >
-                    <p className="text-xs bg-background text-foreground max-w-[200px]">
-                      When you complete two unpaired todos, an client-side async
-                      effect will run to pair them. Once paired, they're locked
-                      and titles reflect the connection.
-                    </p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
-          </label> */}
+            <label
+              htmlFor="prefixPairs"
+              className="flex flex-col items-center gap-1 "
+            >
+              <span className="text-center h-16 center self-center inline-grid place-items-center max-w-[150px]">
+                [Async Effect] <br />
+                Prefix to-dos when completing pairs
+              </span>
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  checked={SettingsStore.useSelector(s => s.prefixPairs)}
+                  onCheckedChange={value => {
+                    settingsStore.setState({
+                      prefixPairs: !!value,
+                    })
+                  }}
+                />
+                <TooltipProvider delayDuration={0}>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <Icon icon="info-sign" />
+                    </TooltipTrigger>
+                    <TooltipContent
+                      side="right"
+                      className="bg-background border rounded-lg"
+                    >
+                      <p className="text-xs bg-background text-foreground max-w-[200px]">
+                        When you complete two unpaired todos, an client-side
+                        async effect will run to pair them. Once paired, they're
+                        locked and titles reflect the connection.
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+            </label>
           </div>
           <div className="flex justify-center pt-4">
             <Button

@@ -7,6 +7,13 @@ export function createCompareValues<TSource>(
   ) {
     const newValue = selector(newSource)
     const oldValue = selector(oldSource)
+
+    if (newValue instanceof Promise && oldValue instanceof Promise) {
+      if ("value" in newValue) {
+        return (oldValue as any)["value"] === newValue["value"]
+      }
+    }
+
     return !Object.is(oldValue, newValue)
   }
 }

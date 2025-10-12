@@ -41,6 +41,9 @@ import type {
   OnTransitionEndProps,
   OnCommitTransitionConfig,
   SomeStoreGeneric,
+  UseModule,
+  Thenable,
+  ThenableMaybe,
 } from "./types"
 import { EventEmitter, EventsTuple } from "./event-emitter"
 import { noop } from "./fn/noop"
@@ -163,6 +166,7 @@ export type ReducerProps<
   >
   deps: TDeps
   isOptimistic: boolean
+  use: UseModule
 }
 
 export type Reducer<
@@ -464,6 +468,38 @@ export function newStoreDef<
       "history"
     )
 
+    function ensureThenable<T>(thenable: ThenableMaybe<T>): Thenable<T> {
+      const pendingThenable = thenable as Thenable<T>
+      pendingThenable.status = "pending"
+      pendingThenable.then(
+        fulfilledValue => {
+          if (thenable.status === "pending") {
+            pendingThenable.status = "fulfilled"
+            pendingThenable.value = fulfilledValue
+          }
+        },
+        (error: unknown) => {
+          if (thenable.status === "pending") {
+            pendingThenable.status = "rejected"
+            pendingThenable.reason = error
+          }
+        }
+      )
+
+      return pendingThenable
+    }
+
+    const createUseModule = () => {
+      return <T>(thenable: Promise<T>): T => {
+        const pendingThenable = ensureThenable(thenable)
+        if (pendingThenable.status === "fulfilled") {
+          return pendingThenable.value as T
+        }
+
+        throw pendingThenable
+      }
+    }
+
     const createDiff = (oldState: TState, newState: TState) => {
       const [, diff] = createDiffOnKeyChange(oldState, newState)
       return diff
@@ -507,6 +543,7 @@ export function newStoreDef<
           const derivedState = userReducer({
             action: { type: "noop" } as TActions,
             diff: createDiff(prevState, newState),
+            use: createUseModule(),
             state: newState,
             prevState,
             async: mockAsync(),
@@ -837,6 +874,7 @@ export function newStoreDef<
         dispatchAsync: () => Promise.resolve(newState),
         deps,
         isOptimistic: true,
+        use: createUseModule(),
       }
 
       const transitionString = action.transition?.join(":")
@@ -1476,6 +1514,7 @@ export function newStoreDef<
             },
             set: setReducerHandler,
             diff: createDiff(prevState, newState),
+            use: createUseModule(),
             dispatch: dispatchReducerHandler,
             dispatchAsync: async (propsAction, options) => {
               const actionTransitionKey = action.transition!.join(":")
@@ -1592,12 +1631,25 @@ export function newStoreDef<
             }
             return userReducer(props)
           }
-          const producedState = reducer(contextFn(prevState))
-          // looks redundant but user might return prev state
-          // if (transition)
-          //   store.transitionsState.prevState[transition.join(":")] = newState
-          newState = producedState
-          prevState = futurePrevState
+          const run = () => reducer(contextFn(prevState))
+          try {
+            const producedState = run()
+            // looks redundant but user might return prev state
+            // if (transition)
+            //   store.transitionsState.prevState[transition.join(":")] = newState
+            newState = producedState
+            prevState = futurePrevState
+          } catch (error) {
+            if (error instanceof Promise && "status" in error) {
+              const pendingThenable = error as Thenable<unknown>
+
+              pendingThenable.then(() => {
+                run()
+              })
+            } else {
+              throw error
+            }
+          }
         }
         isSync = false
         asyncOperations.forEach(asyncOperation => asyncOperation.fn?.())

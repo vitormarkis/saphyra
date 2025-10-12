@@ -510,6 +510,8 @@ export type AsyncBuilder = () => AsyncModule
 
 export type Diff<TState> = (keys: (keyof TState)[]) => boolean
 
+export type UseModule = <T>(thenable: Promise<T>) => T
+
 export type TransitionsExtension = {
   transitions: TransitionsStore
 }
@@ -703,3 +705,12 @@ export type OnCommitTransitionConfig<
     TDeps
   >
 ) => void
+
+export type Thenable<T> = Promise<T> & ThenableProperties<T>
+export type ThenableMaybe<T> = Promise<T> & Partial<ThenableProperties<T>>
+
+export type ThenableProperties<T> = {
+  status: "fulfilled" | "rejected" | "pending"
+  value: T
+  reason?: unknown
+}

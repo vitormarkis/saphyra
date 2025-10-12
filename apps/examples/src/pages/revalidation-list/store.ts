@@ -67,6 +67,7 @@ export const newRevalidationListStore = newStoreDef<
     dispatchAsync,
     optimistic,
     store,
+    use,
   }) {
     const revalidateList = createRevalidateList(dispatchAsync, store)
 
@@ -135,23 +136,16 @@ export const newRevalidationListStore = newStoreDef<
     // Async Effects
     if (settings.prefixPairs) {
       if (diff(["$completedTodos"])) {
+        const pairs = getPairs({
+          completedTodos: use(state.$completedTodos),
+          todosById: use(state.$todosById),
+        })
+
+        const tuples = Object.values(pairs).filter(tuple => tuple.length === 2)
+        const shouldGroup = tuples.length > 0
         async()
           .setName("prefix-pairs-batch")
           .promise(async () => {
-            const [completedTodos, todosById] = await Promise.all([
-              state.$completedTodos,
-              state.$todosById,
-            ])
-
-            const pairs = getPairs({
-              completedTodos,
-              todosById,
-            })
-
-            const tuples = Object.values(pairs).filter(
-              tuple => tuple.length === 2
-            )
-            const shouldGroup = tuples.length > 0
             if (shouldGroup) {
               const promises = tuples.map(async tuple => {
                 const [first, second] = tuple
