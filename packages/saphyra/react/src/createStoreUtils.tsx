@@ -102,7 +102,8 @@ export function createStoreUtils<
       cb => store.subscribe(cb),
       () => {
         const state =
-          store.transitionsState.state[transition.join(":")] ?? store.getState()
+          store.transitionsState.state[transition.join(":")] ??
+          store.getOptimisticState()
         // For transition states, we need to inject cached getters manually
         const stateWithGetters = (store as any).derivationsRegistry
           ? (store as any).derivationsRegistry.injectCachedGetters(
@@ -114,7 +115,8 @@ export function createStoreUtils<
       },
       () => {
         const state =
-          store.transitionsState.state[transition.join(":")] ?? store.getState()
+          store.transitionsState.state[transition.join(":")] ??
+          store.getOptimisticState()
         // For transition states, we need to inject cached getters manually
         const stateWithGetters = (store as any).derivationsRegistry
           ? (store as any).derivationsRegistry.injectCachedGetters(
