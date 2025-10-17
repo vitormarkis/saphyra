@@ -7,7 +7,7 @@
   "author": "vitormarkis",
   "license": "MIT",
   "files": [],
-  "packageManager": "pnpm@10.x",
+  "packageManager": "pnpm@10.18.3",
   "scripts": {
     "prepare": "husky"
   },
