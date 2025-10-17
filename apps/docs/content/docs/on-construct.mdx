@@ -1,0 +1,192 @@
+---
+title: On Construct
+description: A function that runs before the store is instantiated. Returns the first state of the store.
+---
+
+When creating a store factory with `newStoreDef`, you can define a constructor function to run before the store is instantiated via `onConstruct`.
+
+## How does it look like:
+You can define a simple and high level initial props for the user to pass, and transform it to the state of the store.
+```js
+const newAuthStore = newStoreDef({
+  onConstruct({ initialProps }) {
+    const { name } = initialProps
+    const [firstName, lastName] = name.split(" ")
+    
+    return { firstName, lastName }
+  },
+})
+
+const authStore = newAuthStore({ name: "John Doe" })
+console.log(authStore.getState())
+// > { firstName: "John", lastName: "Doe" }
+```
+
+## Fetching Data on Initialization
+
+The `onConstruct` function can be async.
+
+### Example
+1. Define how the store is initialized
+```js
+const newProductsStore = newStoreDef({
+  async onConstruct({ initialProps }) {
+    const { category } = initialProps
+    const products = await fetchProducts(category)
+    return { products }
+  },
+})
+
+async function fetchProducts(category) {
+  const response = await fetch(`https://dummyjson.com/products/category/${category}`)
+  const products = await response.json()
+  return products
+}
+```
+
+2. Display the loading state
+
+```js
+const ProductsStore = createStoreUtils()
+
+function App() {
+  const [productsStore, resetStore, isLoading] = useNewStore(
+    () => newProductsStore({ category: "smartphones" })
+  )
+
+  const products = ProductsStore.useSelector(s => s.products, productsStore)
+
+  if (isLoading) return <div>Loading...</div> // [!code ++]
+
+  return <pre>{JSON.stringify(products, null, 2)}</pre>
+}
+```
+
+> I'm working on suspense support based on read, so the selector suspends your component if the value is not ready yet.
+
+## What if initial props changes?
+If the initial props changed, you have two options:
+1. Keep the same store instance and invoke some store action to update the state.
+2. Create a new store instance with the new initial props.
+
+Reach to the 1. when these props are just trivial properties of the store.
+
+Reach to the 2. when these props are what represent the store, like if the entity id changed, the whole thing should be nuked and recreated.
+
+### Example
+#### When trivial properties change:
+```javascript
+// To-Do
+```
+
+#### When the store is the entity:
+```javascript
+const newTodoStore = newStoreDef({
+  onConstruct: ({ initialProps: { todoId } }) => fetchTodo(todoId),
+})
+
+const Todo = createStoreUtils()
+
+function TodoView({ todoId }) {
+  const [todoStore, resetStore, isLoading] = useNewStore(
+    () => newTodoStore({ todoId })
+  )
+
+  useEffect(() => {
+    resetStore(newTodoStore({ todoId }))
+  }, [todoId])
+
+  // ...
+}
+
+```
+
+
+## Cleaning up
+The `onConstruct` function receives a abort signal that let you clean up any side effect caused by the function.
+
+### Example
+```js
+const newTodosStore = newStoreDef({
+  async onConstruct({ initialProps, signal, deps }) {
+    const todos = await fetchTodos({ signal })
+
+    const websocket = deps.createWebsocket("ws://localhost:3000")
+    signal.addEventListener("abort", websocket.close)
+
+    const cleanToast = deps.fireToast()
+    signal.addEventListener("abort", cleanToast)
+
+    return { todos, websocket }
+  },
+})
+```
+### When the clean up happens
+The abort signal used on the `onConstruct` function is aborted when the store is disposed, either by calling it manually via `store.dispose()` or unmounting the component where the `useNewStore` hook was used.
+
+
+## The primitive (in depth)
+`onConstruct` runs before the store’s first state is created. It maps the user’s initial props into a plain source state that the reducer will use to build the final shape.
+
+Return only source fields from `onConstruct`. Do not include `$` derived fields here. Declare your derived fields in the reducer. The reducer will be called in the construction pass. If you pass derived values here, they will be ignored and overwritten by the reducer.
+
+Saphyra calls the reducer once with `prevState` as `{}` and the `onConstruct` result as `state`. Since the fields are being first evaluated, all diffs are gonna be triggered, including derived fields and effects.
+
+
+If any async effect is triggered during this reducer pass, Saphyra runs it under the `["bootstrap"]` transition to scope loading and side effects to the initialization phase.
+
+Both the `onConstruct` promise and all async effects started during construction complete under the reserved `["bootstrap"]` transition, keeping initialization behavior predictable and traceable.
+
+### Minimal example
+#### Derived values
+This example shows how to derive values from the source in the `onConstruct` function.
+```js
+const [store] = useNewStore(() => newNameStore(user))
+
+const newNameStore = newStoreDef({
+  onConstruct({ initialProps }) {
+    const { user } = initialProps
+    return { name: user.name } // just the source // [!code ++]
+  },
+  reducer({ state, diff, set }) {
+    diff()
+      .on(s => s.name)
+      .run(name => {
+        const [$firstName, $lastName] = name.split(" ")
+        set({ $firstName, $lastName }) // derived values // [!code ++]
+      })
+
+    return state // final state // [!code ++] 
+  },
+})
+```
+---
+
+#### Initial Async Effect
+This example shows async effects can be leveraged in the store initialization.
+```js
+const newProductsStore = newStoreDef({
+  async onConstruct({ initialProps }) {
+    const { category } = initialProps
+    // we're storing the category as the source this time
+    return { category } // [!code ++]
+  },
+  reducer({ state, diff, set, async }) {
+    diff()
+      .on(s => s.category)
+      .run(category => {
+        async().promise(async ({ signal }) => {
+          const products = await fetchProducts(category, signal) // [!code ++]
+          set({ $products: products }) // [!code ++]
+        })
+      })
+
+    return state
+  },
+})
+
+const productsStore = newProductsStore({ category: "smartphones" })
+await productsStore.waitFor(["bootstrap"])
+console.log(productsStore.getState()) 
+// > { $products: [{...}, {...}], category: "smartphones" }
+```

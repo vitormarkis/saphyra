@@ -3,7 +3,7 @@ title: Transitions
 description: Learn how to use transitions in Saphyra
 ---
 
-### What is a transition?
+## What is a transition?
 
 A transition is a safe mechanism for changing your application's state from one valid state to another valid state when those changes involve asynchronous operations. It ensures data consistency throughout the entire process.
 
@@ -20,3 +20,211 @@ Here's what happens when you fire a transition:
 
 > This design preserves the consistency of your application's state by ensuring that no intermediate states are committed and no inconsistent states are created.
 
+## What is a subtransition?
+
+A subtransition is any async operation that is done by the async module.
+- Examples:
+  - `async().promise()`
+  - `async().setTimeout()`
+
+Dispatching an action can trigger many async operations via the async module (many subtransitions) and the transition itself is only settled after all the subtransitions finish.## Transition Naming Patterns
+
+### Core Principle: Containment Hierarchy
+
+When creating transition names, think about **containment hierarchy** - the further left, the one that contains; the further right, the one that is contained by the left neighbor.
+
+```javascript
+;["board", board.id, "column", column.id, "todo", todo.id, "toggle"]
+```
+
+In this example:
+
+- `board` contains `column`
+- `column` contains `todo`
+- `todo` has a specific `toggle` action
+
+### Hierarchical Naming Structure
+
+Use arrays with this pattern: `["container", id, "contained", id, "action"]`
+
+**Examples:**
+
+- `["board", board.id, "column", column.id, "todo", todo.id, "toggle"]`
+- `["user", userId, "profile", "update"]`
+- `["project", projectId, "task", taskId, "assign"]`
+- `["auth", "role"]` - simple operations
+- `["pokemon"]` - single resource operations
+
+### Loading State Derivation
+
+The hierarchical structure enables granular loading state derivation:
+
+```javascript
+// All board operations
+const isBoardLoading = useTransition(["board"])
+
+// Specific board operations
+const isSpecificBoardLoading = useTransition(["board", boardId])
+
+// All todos in a specific column
+const isColumnTodosLoading = useTransition([
+  "board",
+  boardId,
+  "column",
+  columnId,
+  "todo",
+])
+
+// Specific todo toggle action
+const isTodoToggleLoading = useTransition([
+  "board",
+  boardId,
+  "column",
+  columnId,
+  "todo",
+  "toggle",
+])
+```
+
+### Best Practices
+
+- **End with specific action name** to differentiate loading states for different actions
+- Use kebab-case for multi-word identifiers: `["revalidate-todo-list"]`, `["prefix-pairs"]`
+- Include dynamic IDs when operations are specific to entities
+- Keep transition names descriptive but concise
+- Use consistent naming across related operations
+
+## When to Use Transitions
+
+Transitions are essential for three main scenarios:
+
+### 1. Batching Results
+
+- Group multiple state updates together, ensuring they all succeed or fail as a unit
+- Particularly useful when you need to update multiple related pieces of state simultaneously
+- Prevents partial updates that could leave your application in an inconsistent state
+
+### 2. Optimistic Updates
+
+- **Purpose**: Show UI changes immediately before the async operation finishes, providing instant user feedback
+- **Challenge**: The main difficulty with optimistic updates is handling rollbacks when operations fail
+- **Solution**: In a transition, you can register optimistic setters that live while the transition is pending
+- **Auto-rollback**: If the transition fails, all optimistic setters are automatically discarded, causing the UI to revert to the previous state effortlessly
+- **Result**: Users see immediate feedback while maintaining data consistency
+
+### 3. Transactional State Changes
+
+- **Purpose**: Ensure that complex operations either complete fully or not at all
+- **Principle**: No partial state changes that could create broken or inconsistent application states
+
+**Example 1: User Role Change**
+
+- **Requirement**: Must ensure the user permissions match the new role before completing the transition
+- **Failure Scenario**: If you fail to get the user permissions, you can't transition to the new role
+- **Reason**: The permissions would reflect the old role, creating a security inconsistency
+
+**Example 2: Dynamic Form Builder**
+
+- **Requirement**: Form fields must reflect the current step/type before transitioning to the next step
+- **Failure Scenario**: If constructing all fields requires resolving 3 promises and some fail, you can't transition to the next step
+- **Reason**: That would create a broken form with missing or incorrect field configurations
+
+## How Transitions Work Under the Hood
+
+### Main State Process
+
+**When you dispatch an action with transition property:**
+
+1. **Create Copy** - Saphyra creates a copy of the current main state, providing a safe workspace for changes
+2. **Apply Setters** - All setters are applied to this copy and simultaneously saved in a list for potential rollback
+   - Includes setters inside nested dispatches (when one action triggers another)
+   - Includes setters fired asynchronously (from async operations within the transition)
+3. **Success Path** - If all operations complete successfully, the list of setters is applied to the main state atomically
+4. **Failure Path** - If any operation fails, the list is discarded and nothing changes in the main state, preserving consistency
+
+### Optimistic Updates Process
+
+**Optimistic updates work similarly:**
+
+- **Global List** - All optimistic setters are grouped in a global list that includes optimistic setters from all transitions
+- **State Creation** - Whenever this list changes (by receiving a new setter or deleting an existing one), a new state called `optimisticState` is created
+  - This optimistic state combines the main state with all optimistic setters
+  - The UI renders from this optimistic state, showing immediate changes to users
+- **Transition End** - When the transition ends, all optimistic setters registered by that transition are removed from the global list
+- **Success** - If the transition succeeds, the setter calls react to the latest valid version on screen and run on the main state
+- **Failure** - If the transition fails, no optimistic setters or transition setters are applied, causing the state to fallback to the main state
+
+## Multiple Transitions and Conflicts
+
+### Different Transitions
+
+- **Parallel Execution**: Run in parallel and commit independently, allowing multiple async operations to happen simultaneously without interfering with each other
+- **Isolation**: Each transition manages its own state changes and doesn't affect other transitions
+- **Concurrency**: This enables true concurrent programming where multiple operations can be in progress at the same time
+
+### Same Transition Identifiers
+
+- **Intentional Conflicts**: Cause intentional conflicts that Saphyra handles elegantly, allowing you to group related operations under the same transition identifier
+- **Simultaneous Execution**: Actions with the same transition run simultaneously by default, with all their set calls grouped together
+- **Batch Processing**: All set calls are collected and processed as a single unit, ensuring atomic updates
+- **Success Path**: All set calls are applied to the main state in batch only after all subtransitions have finished successfully
+- **Key Feature**: This sophisticated conflict handling is one of Saphyra's main selling points, enabling complex state management patterns that would be difficult to achieve with other libraries
+
+> Read more about transition conflict in [Handling conflicts](/docs/transition-conflict).
+
+## Error Handling and Rollback
+
+**When any async operation fails:**
+
+- **Complete Rollback**: The entire transition is rolled back, ensuring no partial state changes are applied
+- **State Discard**: All state changes made during the transition are discarded, returning to the exact state before the transition began
+- **Original Preservation**: The original state is preserved completely, maintaining data integrity
+- **No Partial Updates**: No partial updates are committed, preventing the application from entering an inconsistent state
+- **Consistency Guarantee**: This ensures your application never enters an inconsistent state, even when complex operations fail
+
+## Multiple Async Operations
+
+**Same transition can have multiple async operations:**
+
+- **Action Grouping**: All async operations triggered by the same action are grouped together and treated as a single unit
+- **Identifier Grouping**: Related actions with the same transition identifier are grouped together, allowing complex workflows
+- **All-or-Nothing**: The transition only completes when ALL async operations finish successfully, ensuring complete consistency
+- **Data Integrity**: This ensures data consistency across complex operations that involve multiple async steps
+
+## Required Transitions for Async Operations
+
+**Transition property is mandatory for async work:**
+
+- **Error Prevention**: Saphyra throws an error if the `transition` property is missing, preventing accidental async operations
+- **State Management**: This prevents accidental async operations without proper state management, ensuring all async work is properly tracked
+- **Loading States**: Ensures you always handle loading states correctly by requiring explicit transition labeling
+- **Failure Handling**: Ensures you always handle potential failures correctly by making transitions mandatory for async work
+
+## Loading State Management
+
+**Saphyra vs Other Libraries:**
+
+- **Other Libraries**: Require manual tracking of loading states, which is error-prone and painful to maintain across complex applications
+- **Saphyra**: Understands the concept of async operations natively, eliminating the need for manual state tracking
+- **Labeling**: You can label transitions in a way that allows tracking them and deriving loading states automatically
+- **Automatic Derivation**: Loading states are derived automatically from the transitions you're subscribed to using `useTransition`
+- **No Manual Tracking**: You don't need to manually track loading states - you can derive them from the transitions you're subscribed to using `useTransition`
+
+## Optimistic Updates Integration
+
+**Seamless integration with transitions:**
+
+- **Immediate UI**: Use the `optimistic()` function to show immediate UI changes before async operations complete
+- **Automatic Rollback**: If the transition fails, both the optimistic updates and any state changes are automatically rolled back
+- **Smooth Experience**: This provides a smooth user experience with instant feedback while maintaining data consistency
+- **Data Integrity**: Maintains data consistency by ensuring optimistic updates are properly handled and rolled back when needed
+
+## Performance Considerations
+
+**State forking efficiency:**
+
+- **Efficient Design**: State forking is designed to be efficient, minimizing performance overhead
+- **Structural Sharing**: Saphyra uses structural sharing techniques to optimize memory usage
+- **Selective Copying**: Only creates copies of the parts of state that actually change, not the entire state tree
+- **Negligible Impact**: For most applications, the performance impact is negligible compared to the benefits
+- **Value Proposition**: The benefits significantly outweigh the costs: data consistency + elimination of manual loading state management

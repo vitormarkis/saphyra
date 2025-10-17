@@ -1,0 +1,18 @@
+---
+title: Suspense Integration
+description: Learn how to integrate Saphyra with Suspense
+---
+
+## Code example
+
+```tsx
+const newTodoStore = newStoreDef({
+  reducer({ state, set, diff, async, deps, action }) {
+    if (action.type === "add-todo") {
+      async().promise(async ({ signal }) => {
+        await deps.addTodo(action.todo, signal)
+      })
+    }
+  },
+})
+```

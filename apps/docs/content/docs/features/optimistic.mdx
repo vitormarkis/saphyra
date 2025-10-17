@@ -1,0 +1,93 @@
+---
+title: Optimistic State
+description: Learn about the optimistic state in Saphyra.
+---
+
+### What is Optimistic State?
+
+Optimistic state allows you to immediately show users the expected result of an action, even before the async operation completes. 
+
+Instead of waiting for a transition to finish, you predict what the state should look like and apply that change right away. 
+
+This creates a responsive, instant feeling user experience while maintaining data consistency.
+
+When the transition finishes, all the optimistic changes are discarded.
+- Transition success? All setters (`set` calls) are merged to the main state.
+- Transition fails? Nothing changes, keep previous state.
+
+
+### Real world use case:
+Optimistic state shines when paired with async actions that changes state. For example, a toggle to-do action.
+
+```ts
+reducer({ action, async, set }) {
+  async().promise(async ({ signal }) => {
+    await toggleTodoDb(action.todoId, signal)
+    const todos = await fetchTodosDb(signal)
+    set({ todos })
+  })
+}
+```
+
+The `set({ todos })` will only happen in the future, after the promise resolves. Until then, you can display a loading indicator.
+
+If you have enough information, we can try to predict the future. If everything succeeds, we know that the new `todos` will be the same `todos` that we already have, but with that to-do marked as completed.
+
+We can go ahead and apply this change immediately and show the user the result of the action right away, without needing a loading indicator.
+
+We do this calling the `optimistic()`:
+```ts
+reducer({ action, async, set, state, optimistic }) {
+  async().promise(async ({ signal }) => {
+    optimistic({ // [!code ++]
+      todos: state.todos.map(todo => // [!code ++]
+        todo.id === action.todoId // [!code ++]
+          ? { ...todo, completed: !todo.completed } // [!code ++]
+          : todo // [!code ++]
+      ), // [!code ++]
+    }) // [!code ++]
+    await toggleTodoDb(action.todoId, signal)
+    const todos = await fetchTodosDb(signal)
+    set({ todos })
+  })
+}
+```
+
+All the state changes (`set` calls) inside a transition are both collected and applied to the *transition's state*, not the commited state, which is the one that is read by the UI (if you use `useSelector`).
+
+So you get stuck in the past state until the transition is completed. You can derive a loading state to tell the user that the transition is in progress.
+
+Another alternative is to predict the future state. If you're incrementing a counter, you can predict the future - if everything goes well - that the counter will be incremented by 1.
+
+### How does `optimistic()` look like?
+You can call `optimistic()` inside a transition to predict the future state.
+```ts
+reducer({ set, state, async, optimistic }) {
+  optimistic({ count: state.count + 1 }) // [!code ++]
+  async().promise(async () => {
+    const newCounter = await incrementCounter(state.count)
+    set({ count: newCounter })
+  })
+  return state
+}
+```
+
+### How does `optimistic()` work?
+Upon calling `optimistic()`, Saphyra will register a new optimistic setter internally, caused by the transitions that initiated it.
+
+In order to apply this optimistic UI, we create a copy of the committed state and apply **all the optimistic setters** to it.
+
+This copy is called the *optimistic state*, which is where `useSelector` will read from.
+
+If you wanna read from the commited state, which is the one the reflects the store real values, you can use `useCommittedSelector`.
+
+
+### How long does the optimistic state last?
+All optimistic setters are applied to the optimistic state until the transition is completed.
+Once the transition is completed, all optimistic setters **registered by that transition** are discarded and the optimistic state is recalculated.
+
+If the transitions succeeds, the optimistic setter is discarded, and the `set` call is finally applied to the committed state.
+
+If the transitions fails, the optimistic setter is discarded, and since the `set` call was never applied, it rollbacks to the committed state.
+
+You don't worry about cleaning up this optimistic setter, Saphyra will take care of it.

@@ -1,0 +1,298 @@
+---
+title: onFinish API
+description: The onFinish API lets you run a callback once a subtransition finishes.
+
+---
+import { Tab, Tabs } from "fumadocs-ui/components/tabs"
+import { Step, Steps } from "fumadocs-ui/components/steps"
+
+<Callout title="Before you start">
+  This API is a flexible primitive designed to solve data revalidation, keep this topic in mind as you go through this documentation.
+</Callout>
+
+## Description:
+Declare a callback to run after a [subtransition](/docs/transitions#what-is-a-subtransition) finishes. This function is async by default and keep your transition hanging until you call `resolve` or `reject`. Pass an id to reference this async work and control it's lifecycle.
+
+## How it looks like
+
+```javascript
+async()
+  .setName("update-profile")
+  .onFinish({
+    id: ["user"],
+    fn: () => {
+      console.log("Some user related async operation has finished!")
+    },
+  })
+  .promise(async ctx => {
+    await deps.updateUserProfile(action.payload, ctx.signal)
+  })
+```
+
+## OnFinish blocks your transition
+
+When you pass a `onFinish` callback, your transition will hang as ongoing until you call `resolve` or `reject`. The two first arguments of the `onFinish` callback are the same as the native Promise callback, there is the inspiration.
+
+```javascript
+onFinish({
+  id: ["user"],
+  fn: (resolve, reject) => {
+    setTimeout(() => {
+      const wentGood = Math.random() > 0.5
+      wentGood ? resolve() : reject()
+    }, 1000)
+  },
+})
+```
+
+## Cleaning up
+
+
+The `fn` callback can return a function that runs when a new `fn` with the same `id` (in this case `["user"]`) is called. Think of this function as a cleanup function or a onCleanUp function.
+
+```javascript
+onFinish({
+  id: ["user"],
+  fn: (resolve, reject) => {
+    const id = setTimeout(() => {
+      const wentGood = Math.random() > 0.5
+      wentGood ? resolve() : reject()
+    }, 1000)
+
+    // ❌ Transition will hang forever
+    return () => clearTimeout(id) // [!code --]
+  },
+})
+```
+
+This example will cause your transition to hang forever because either `resolve` or `reject` will never be called. Make sure to call them at some point, or rely on some global timeout property passed on the store declaration.
+
+The code below is the correct way to clean up a timeout.
+
+```javascript
+onFinish({
+  id: ["user"],
+  fn: (resolve, reject) => {
+    const id = setTimeout(() => {
+      const wentGood = Math.random() > 0.5
+      wentGood ? resolve() : reject()
+    }, 1000)
+
+    // ✅ Subtransition settle
+    return () => { // [!code ++]
+      resolve() // [!code ++]
+      clearTimeout(id) // [!code ++]
+    } // [!code ++]
+  },
+})
+```
+
+### Should I always clear up?
+Don't clear up by default, only if you have a good reason to do so.
+
+## Why you need an id?
+
+Think of your onFinish callback as a promise that's doing some async work. Now, you might want this work to be unique across your app, this work has a name, has some identity. 
+
+You can reuse the same onFinish object (same id and fn) across different subtransitions to reference this identity, but here's the thing - what happens when this work is not settled yet and a new one comes in? 
+
+- Should we run this new callback immediately? 
+- Should we kill whatever the previous callback was doing? 
+- Should we cancel the async work that's already running? 
+
+The `id` is what give you the ability to target this identity when controlling the lifecycle.
+
+## The `isLast()` property
+Multiple `onFinish` callbacks can be called with the same `id`, and they might take a while to settle. When calling a new `onFinish` callback with this same `id`, you can check if this is the last one (no other operation of this identity is running).
+
+```javascript
+onFinish({
+  id: ["todo"],
+  fn: (resolve, reject, { isLast }) => {
+    if (!isLast()) return
+    console.log(`
+      *All* todo related async actions have finished!
+      Now we can fetch most recent data.
+    `)
+    getNewDataFromAPI()
+      .then(resolve)
+      .catch(reject)
+  }
+})
+```
+
+## dispatchAsync vs Manual Revalidation
+
+When you need to trigger revalidation after a subtransition completes, you have two approaches: using `dispatchAsync` or manually calling the revalidation function.
+
+### Using dispatchAsync
+
+```javascript
+async()
+  .setName("toggle-todo")
+  .onFinish({
+    id: ["revalidate-todos"],
+    fn: (resolve, reject, { isLast }) => {
+      if (!isLast()) return
+      
+      dispatchAsync({
+        type: "fetch-todos",
+        transition: ["revalidate-todos"],
+        beforeDispatch: ({ action, store, transition }) => {
+          if (!isLast()) return
+          store.abort(transition)
+          return action
+        },
+      }, { onAbort: "noop" })
+        .then(resolve)
+        .catch(reject)
+
+      return () => {
+        store.abort(["revalidate-todos"])
+      }
+    },
+  })
+  .promise(async ctx => {
+    await toggleTodoInDb(action.todoId, ctx.signal)
+  })
+```
+
+### Manual Revalidation
+
+```javascript
+async()
+  .setName("toggle-todo")
+  .onFinish({
+    id: ["revalidate-todos"],
+    fn: (resolve, reject, { isLast }) => {
+      if (!isLast()) return
+      
+      // Direct promise call instead of dispatchAsync
+      getTodosFromDb()
+        .then(todos => {
+          set({ todos })
+          resolve()
+        })
+        .catch(reject)
+    },
+  })
+  .promise(async ctx => {
+    await toggleTodoInDb(action.todoId, ctx.signal)
+  })
+```
+
+## Why prefer `dispatchAsync`
+
+### 1. **Conflict Resolution**
+The `dispatchAsync` function inherits all conflict resolution features from Saphyra's `dispatch`:
+
+```javascript
+dispatchAsync({
+  type: "fetch-todos",
+  transition: ["revalidate-todos"],
+  beforeDispatch({ action, store, transition }) {
+    if (store.transitions.isHappeningUnique(transition)) {
+      store.abort(transition) // Cancel previous operation
+    }
+    return action
+  },
+})
+```
+
+This allows you to implement various conflict resolution strategies like canceling previous operations, debouncing, throttling, rate limiting, enqueuing operations (wip), and more.
+
+### 2. **Keep the same mental model**
+Don't re-invent the wheel, Saphyra already has a way to clean up async operations, aka transitions. Keep the same mental model and do the Saphyra way.
+
+<Step>
+```javascript tab="DispatchAsync"
+onFinish({
+  id: ["todo"],
+  fn: (resolve, reject) => {
+    dispatchAsync({
+      type: "revalidate",
+      transition: ["revalidate-todos"],
+    })
+      .then(resolve)
+      .catch(reject)
+
+    return () => store.abort(["revalidate-todos"])
+  }
+})
+```
+```javascript tab="Manual Revalidation"
+onFinish({
+  id: ["todo"],
+  fn: (resolve, reject) => {
+    const controller = new AbortController()
+    getTodosFromDb(controller.signal)
+      .then(todos => {
+        if (controller.signal.aborted) {
+          return resolve()
+        }
+        set({ todos })
+        resolve()
+      })
+      .catch(reject)
+
+    return () => controller.abort()
+  }
+})
+```
+</Step>
+
+### 3. **Batching + Race Condition Prevention**
+Since `dispatchAsync` leverages Saphyra's transition system, if many of these promises are triggered with the same transition key, they result will be batched and commited at once. Differently from manual revalidation, where the promises are not aware of each other.
+
+### 4. **Better Error Handling**
+Since `dispatchAsync` is a native Saphyra module, it automatically handles error communication internally. With manual revalidation, you must manually communicate errors to Saphyra's error system.
+```javascript
+onFinish({
+  id: ["todo"],
+  fn: (resolve, reject) => {
+    getTodosFromDb(controller.signal)
+      .then(todos => {
+        set({ todos })
+        resolve()
+      })
+      .catch(error => {
+        store.emitError(error) // [!code ++]
+        reject(error)
+      })
+  }
+})
+```
+
+## FAQ
+
+### 2. When should I use onFinish vs just putting the logic in the main promise?
+TODO: Clarify the use cases and trade-offs between onFinish and inline logic
+- separar action de revalidacao
+- com onFinish, ele roda o clean up do fn (cancelar revalidation) quando \*COMECA a subtransition\*, ou seja, antes de disparar a nova proxima action. com manual revalidation, ele roda o clean up (vindo do beforeDispatch) quando \*TERMINA a proxima action\*.
+  - da pra resolver isso sempre rodando store.abort(transition) antes de disparar a nova proxima action.
+- consegue rodar sempre que for o ultimo
+- nao precisa envolver sua logica com esse boiler plate
+  - teria que criar um `async().promise(withRevalidation(async ctx => {}))`, o que é um padrao bem ruim
+- consegue rodar condicionalmente com base se todas operacoes deram erro ou nao
+
+- fora de ergonomics:
+  - quando seu POST retorna a entidade/lista ja atualizada
+
+### 5. What's the difference between `dispatchAsync` and regular `dispatch`?
+TODO: Explain the differences and when to use each
+
+### 6. Can I have multiple onFinish callbacks with different IDs on the same subtransition?
+TODO: Clarify composition and organization of multiple onFinish callbacks
+
+### 7. What happens if the main promise rejects but the onFinish callback resolves (or vice versa)?
+TODO: Explain error handling and state consistency scenarios
+
+### 8. How does the `id` array work? Can I use strings, numbers, or objects?
+TODO: Detail the identity system and valid ID types
+
+### 9. Is there a timeout mechanism if onFinish never settles?
+TODO: Explain timeout handling and prevention of infinite hanging
+
+### 10. Can I use onFinish with synchronous operations, or is it only for async?
+TODO: Clarify synchronous vs asynchronous usage patterns
+

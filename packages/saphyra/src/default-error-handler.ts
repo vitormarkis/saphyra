@@ -1,9 +1,8 @@
-import { $$onDevMode } from "./helpers/log"
 import type { StoreErrorHandler } from "./types"
 
 export const defaultErrorHandler: StoreErrorHandler = error => {
   function onError(error: string) {
-    $$onDevMode(() => console.error("[Saphyra] ", error))
+    console.error("[Saphyra] ", error)
   }
 
   if (!error) {

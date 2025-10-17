@@ -42,53 +42,38 @@ const newCountStore = newStoreDef()
 <Step>  
 ### Instantiation
 
-Define your store's lifecycle, local or global.
+Define your store's lifecycle.
 
-```js tab="Local"
+```js
+import { useNewStore } from "saphyra/react"
+
 function App() {
-  const [countStore, setCountStore] = useState(newCountStore({}))
+  const [countStore, resetStore, isLoading] = useNewStore(
+    () => newCountStore({})
+  )
 }
-```
-
-```js tab="Global"
-export const countStore = newCountStore({})
 ```
 
 </Step>  
 <Step>  
-### Rendering state
+### Reading state
 
 A Saphyra store is a plain JavaScript object instance. To integrate it with the React lifecycle, you need to use hooks to translate the store state into React state.
 
 Saphyra provides a helper called `createStoreUtils`, which generates many useful hooks and utilities to make this integration a breeze.
 
-```js tab="Local"
+```js
 import { newStoreDef } from "saphyra"
-import { createStoreUtils } from "saphyra/react"
+import { useNewStore, createStoreUtils } from "saphyra/react"
 
 const newCountStore = newStoreDef()
 const CountStore = createStoreUtils()
 
 function App() {
-  const [countStore, setCountStore] = useState(() =>
-    newCountStore({ count: 0 })
+  const [countStore, resetStore, isLoading] = useNewStore(
+    () => newCountStore({ count: 0 })
   )
-  const count = CountStore.useCommittedSelector(s => s.count, countStore) // [!code ++]
-
-  return <span>{count}</span> // [!code ++]
-}
-```
-
-```js tab="Global"
-import { newStoreDef } from "saphyra"
-import { createStoreUtils } from "saphyra/react"
-
-const newCountStore = newStoreDef()
-const countStore = newCountStore({ count: 0 })
-const CountStore = createStoreUtils(countStore)
-
-function App() {
-  const count = CountStore.useCommittedSelector(s => s.count, countStore) // [!code ++]
+  const count = CountStore.useSelector(s => s.count, countStore) // [!code ++]
 
   return <span>{count}</span> // [!code ++]
 }
@@ -96,56 +81,33 @@ function App() {
 
 </Step>  
 <Step>  
-### Setting state
+### Writting state
 
-There are two ways to update state in a Saphyra store:
+Use `setState` for non-critical updates, such as UI state changes from color pickers, control form inputs, etc.
 
-#### `dispatch`
-
-Use this for actions — first-class commands that drive your store logic.
-
-#### `setState`
-
-Use this for non-critical updates, such as UI state changes from color pickers, control form inputs, etc.
-
-```js tab="Local"
+```js
 import { newStoreDef } from "saphyra"
-import { createStoreUtils } from "saphyra/react"
+import { useNewStore, createStoreUtils } from "saphyra/react"
 
 const newCountStore = newStoreDef()
 const CountStore = createStoreUtils()
 
 function App() {
-  const [countStore, setCountStore] = useState(() =>
-    newCountStore({ count: 0 })
+  const [countStore, resetStore, isLoading] = useNewStore(
+    () => newCountStore({ count: 0 })
   )
-  const count = CountStore.useCommittedSelector(s => s.count, countStore)
-  const setToTen = () => countStore.setState({ count: 10 }) // [!code ++]
+  const count = CountStore.useSelector(s => s.count, countStore)
 
   return (
     <div>
       <span>{count}</span>
-      <button onClick={setToTen}>Set to 10</button> // [!code ++]
-    </div>
-  )
-}
-```
-
-```js tab="Global"
-import { newStoreDef } from "saphyra"
-
-const newCountStore = newStoreDef()
-const countStore = newCountStore({ count: 0 })
-const CountStore = createStoreUtils(countStore)
-
-function App() {
-  const count = CountStore.useCommittedSelector(s => s.count, countStore)
-  const setToTen = () => countStore.setState({ count: 10 }) // [!code ++]
-
-  return (
-    <div>
-      <span>{count}</span>
-      <button onClick={setToTen}>Set to 10</button> // [!code ++]
+      <button 
+        onClick={() => {
+          countStore.setState({ count: 10 }) // [!code ++]
+        }}
+      >
+        Set to 10
+      </button>
     </div>
   )
 }
@@ -155,23 +117,22 @@ function App() {
 <Step>  
 ### Providing with Context
 
-In case you stick with local (recommended), the `CountStore` module exposes a `Provider` component that you can use to provide the store state to children. It also provides a hook called `useStore` to consume the context.
+The `CountStore` module exposes a `Context` component that you can use to provide the store state to children. It also provides a hook called `useStore` to consume the context.
 
 ```js
 import { newStoreDef } from "saphyra"
+import { useNewStore, createStoreUtils } from "saphyra/react"
 
 const newCountStore = newStoreDef()
 const CountStore = createStoreUtils()
 
 function CountProvider({ initialCount, children }) {
-  const [countStore, setCountStore] = useState(() =>
-    newCountStore({ count: initialCount })
+  const [countStore, resetStore, isLoading] = useNewStore(
+    () => newCountStore({ count: initialCount })
   )
 
   return (
-    <CountStore.Context.Provider value={[countStore, setCountStore]}>
-      {" "}
-      // [!code ++]
+    <CountStore.Context.Provider value={[countStore, resetStore, isLoading]}> // [!code ++]
       {children}
     </CountStore.Context.Provider> // [!code ++]
   )
@@ -179,11 +140,27 @@ function CountProvider({ initialCount, children }) {
 
 function Children() {
   const [countStore] = CountStore.useStore()
-  const count = CountStore.useCommittedSelector(s => s.count)
+  const count = CountStore.useSelector(s => s.count)
+  const setToTen = () => countStore.setState({ count: 10 })
 
-  // ...
+  return (
+    <div>
+      <span>{count}</span>
+      <button onClick={setToTen}>Set to 10</button>
+    </div>
+  )
+}
+
+function App() {
+  return (
+    <CountProvider initialCount={0}>
+      <Children />
+    </CountProvider>
+  )
 }
 ```
+
+
 
 ### We're all set up
 
@@ -193,16 +170,9 @@ These are the basic concepts. Now, let's explore what makes Saphyra unique and p
 
 #### Next Steps:
 
-- [Actions](/docs/actions)
 - [Transitions](/docs/transitions)
+- [On Construct](/docs/on-construct)
+- [Actions](/docs/actions)
 
 </Step>  
 </Steps>
-
-<iframe
-  style={{
-    width: "100%",
-    height: "500px",
-  }}
-  src="https://stackblitz.com/edit/vitejs-vite-k5otaxhv?embed=1&file=src%2FApp.tsx&hideExplorer=1&theme=dark"
-/>
