@@ -7,7 +7,10 @@ import { MobileNavigation } from "./MobileNavigation"
 type RootLayoutWrapperProps = {} & PropsWithChildren
 
 export function RootLayoutWrapper({ children }: RootLayoutWrapperProps) {
-  const [isSidebarVisible, setIsSidebarVisible] = useState(true)
+  console.log("import.meta.env", import.meta.env)
+  const [isSidebarVisible, setIsSidebarVisible] = useState(
+    !(import.meta.env.VITE_PUBLIC_SIDEBAR_VISIBLE === "false")
+  )
 
   useEffect(() => {
     Object.assign(window, {

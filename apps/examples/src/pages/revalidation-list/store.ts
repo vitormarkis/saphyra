@@ -1,5 +1,6 @@
 import {
   AsyncPromiseOnFinishProps,
+  Dispatch,
   DispatchAsync,
   EventsTuple,
   newStoreDef,
@@ -65,28 +66,30 @@ export const newRevalidationListStore = newStoreDef<
     set,
     diff,
     async,
+    dispatch,
     dispatchAsync,
     optimistic,
     store,
   }) {
-    const revalidateList = createRevalidateList(dispatchAsync, store)
+    const revalidateList = createRevalidateList(dispatch, dispatchAsync, store)
 
     const settings = settingsStore.getState()
     if (action.type === "revalidate-todos") {
+      // async()
+      //   .setName("fetch() hitting API")
+      //   .promise(async ctx => {
+      //     const todos = await getTodosFromDb(ctx.signal)
+      //     set({ todos })
+      //   })
       async()
-        .setName("fetch() hitting API")
-        .promise(async ctx => {
-          const todos = await getTodosFromDb(ctx.signal)
-          set({ todos })
-        })
+        .setName("batch")
+        .setTimeout(() => {}, 500)
     }
 
     if (action.type === "toggle-todo") {
       const todoIndex = state.todos.findIndex(todo => todo.id === action.todoId)
+      const optimisticCompleted = !state.$completedTodos.includes(action.todoId)
       if (settings.optimistic) {
-        const optimisticCompleted = !state.$completedTodos.includes(
-          action.todoId
-        )
         optimistic(s => ({
           todos: s.todos.map(todo =>
             todo.id === action.todoId
@@ -103,14 +106,20 @@ export const newRevalidationListStore = newStoreDef<
         )
         .promise(async ctx => {
           await toggleTodoInDb(action.todoId, ctx.signal)
+          set(s => ({
+            todos: s.todos.map(todo =>
+              todo.id === action.todoId
+                ? { ...todo, completed: optimisticCompleted }
+                : todo
+            ),
+          }))
         })
     }
 
     if (action.type === "toggle-disabled") {
       const todoIndex = state.todos.findIndex(todo => todo.id === action.todoId)
+      const optimisticDisabled = !state.todos[todoIndex].disabled
       if (settings.optimistic) {
-        const optimisticDisabled = !state.todos[todoIndex].disabled
-
         optimistic(s => ({
           todos: s.todos.map(todo =>
             todo.id === action.todoId
@@ -126,6 +135,13 @@ export const newRevalidationListStore = newStoreDef<
         )
         .promise(async ctx => {
           await toggleTodoDisabledInDb(action.todoId, ctx.signal)
+          set(s => ({
+            todos: s.todos.map(todo =>
+              todo.id === action.todoId
+                ? { ...todo, disabled: optimisticDisabled }
+                : todo
+            ),
+          }))
         })
     }
 
@@ -188,6 +204,13 @@ export const newRevalidationListStore = newStoreDef<
 })
 
 function createRevalidateList(
+  dispatch: Dispatch<
+    RevalidationListState,
+    RevalidationListActions,
+    EventsTuple,
+    any,
+    any
+  >,
   dispatchAsync: DispatchAsync<
     RevalidationListState,
     RevalidationListActions,
@@ -211,20 +234,20 @@ function createRevalidateList(
     return {
       id: ["revalidate-todo-list", ...batchKeyMaybe],
       fn: (resolve, reject, { isLast }) => {
-        dispatchAsync(
-          {
-            type: "revalidate-todos",
-            transition: ["revalidate-todo-list", ...batchKeyMaybe],
-            beforeDispatch: ({ action, store, transition }) => {
-              if (!isLast()) return
-              store.abort(transition)
-              return action
-            },
+        dispatch({
+          type: "noop",
+          transition: ["revalidate-todo-list", ...batchKeyMaybe],
+          beforeDispatch: ({ action, store, transition }) => {
+            if (!isLast()) return
+            store.abort(transition)
+            return action
           },
-          { onAbort: "noop" }
-        )
-          .then(resolve)
-          .catch(reject)
+          onTransitionEnd: ({ aborted, error }) => {
+            if (aborted) return
+            if (error) return reject(error)
+            resolve(true)
+          },
+        })
 
         return () => {
           store.abort(["revalidate-todo-list", ...batchKeyMaybe])

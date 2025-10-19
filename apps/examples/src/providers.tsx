@@ -19,7 +19,7 @@ export function Providers({ children }: ProvidersProps) {
   }, [])
 
   const displayGoToSourceButton = !(
-    import.meta.env.VITE_SHOW_GO_TO_SOURCE === "false"
+    import.meta.env.VITE_PUBLIC_SHOW_GO_TO_SOURCE === "false"
   )
 
   return (
