@@ -90,3 +90,23 @@ const counter = builder()
   .build()
 
 counter.state.value = 10
+
+type Diff<TState, TSelectors extends readonly ((state: TState) => any)[]> = {
+  on: TSelectors
+  run: (...args: SelectorValues<TState, TSelectors>) => void
+}
+
+export function createDiff<TState>(prevState: TState, newState: TState) {
+  function diff<const TSelectors extends ((state: TState) => any)[]>({
+    on,
+    run,
+  }: Diff<TState, TSelectors>) {
+    const hasChanges = on.some(
+      selector => selector(prevState) !== selector(newState)
+    )
+    if (hasChanges) {
+      run(...on.map(selector => selector(newState)))
+    }
+  }
+  return diff
+}

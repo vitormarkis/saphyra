@@ -9,6 +9,7 @@ import { createStoreUtils, useBootstrapError, useNewStore } from "saphyra/react"
 import { queryClient } from "~/query-client"
 import { Waterfall } from "~/devtools/waterfall"
 import { Button } from "~/components/ui/button"
+import { createDiff } from "../new-lib/new"
 
 type DebouncedSearchEvents = {}
 
@@ -38,6 +39,18 @@ const newDebouncedSearch = newStoreDef<
     }
   },
   reducer({ prevState, state, action, set, async, diff, optimistic, store }) {
+    const diff2 = createDiff(prevState, state)
+    diff2({
+      on: [s => s.$users, s => s.name],
+      run(users, name) {
+        
+      },
+    })
+    diff()
+      .on(s => s.$users, s => s.name)
+      .run(users, name) {
+        
+      })
     if (action.type === "change-name") {
       optimistic({ name: action.name })
       set({ name: action.name })
