@@ -18,6 +18,7 @@ import {
 } from "saphyra/react"
 import { Waterfall } from "~/devtools/waterfall"
 import { noop } from "~/lib/utils"
+import { createDiffBuilder } from "../new-lib/new"
 
 export type SelectedRole = "user" | "admin"
 
@@ -89,6 +90,13 @@ const newAuthStore = newStoreDef<
           set({ $permissions: permissions })
         })
     }
+
+    const diffBuilder = createDiffBuilder(prevState, state)
+    diffBuilder()
+      .on([s => s.username, s => s.role])
+      .run((username, role) => {
+        console.log(`Welcome ${username}! Your role is [${role}].`)
+      })
 
     return state
   },

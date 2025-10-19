@@ -1,4 +1,4 @@
-import { randomUUID } from "crypto"
+// import { randomUUID } from "crypto"
 import { EventsTuple } from "saphyra"
 
 type Selector<TState> = (state: TState) => unknown
@@ -282,54 +282,54 @@ const [emitReset, onReset] = createEvent()
 const [emitIncremented, onIncremented] = createEvent()
 const [emitDecremented, onDecremented] = createEvent()
 const [emitResetted, onResetted] = createEvent()
-const counter = st()
-  .state(newSubject => ({
-    count: newSubject(
-      0,
-      onIncremented(count => () => count),
-      onDecremented(count => () => count),
-      onResetted(() => () => 0)
-    )
-      .actions({
-        increment: emitIncrement,
-        decrement: emitDecrement,
-        reset: emitReset,
-      })
-      .optimistic(
-        onIncrement(delta => current => current + delta),
-        onDecrement(delta => current => current - delta),
-        onReset(() => () => 0)
-      ),
-  }))
-  .effects(newEffect => [
-    newEffect([
-      onIncrement(),
-      (delta, { async, deps }) => {
-        async().promise(async () => {
-          const newCount = await deps.increment(delta)
-          emitIncremented(newCount)
-        })
-      },
-    ]),
-    newEffect([
-      onDecrement(),
-      (delta, { async, deps }) => {
-        async().promise(async () => {
-          const newCount = await deps.decrement(delta)
-          emitDecremented(newCount)
-        })
-      },
-    ]),
-    newEffect([
-      onReset(),
-      (_, { async, deps }) => {
-        async().promise(async () => {
-          await deps.reset()
-          emitResetted(0)
-        })
-      },
-    ]),
-  ])
+// const counter = st()
+//   .state(newSubject => ({
+//     count: newSubject(
+//       0,
+//       onIncremented(count => () => count),
+//       onDecremented(count => () => count),
+//       onResetted(() => () => 0)
+//     )
+//       .actions({
+//         increment: emitIncrement,
+//         decrement: emitDecrement,
+//         reset: emitReset,
+//       })
+//       .optimistic(
+//         onIncrement(delta => current => current + delta),
+//         onDecrement(delta => current => current - delta),
+//         onReset(() => () => 0)
+//       ),
+//   }))
+//   .effects(newEffect => [
+//     newEffect([
+//       onIncrement(),
+//       (delta, { async, deps }) => {
+//         async().promise(async () => {
+//           const newCount = await deps.increment(delta)
+//           emitIncremented(newCount)
+//         })
+//       },
+//     ]),
+//     newEffect([
+//       onDecrement(),
+//       (delta, { async, deps }) => {
+//         async().promise(async () => {
+//           const newCount = await deps.decrement(delta)
+//           emitDecremented(newCount)
+//         })
+//       },
+//     ]),
+//     newEffect([
+//       onReset(),
+//       (_, { async, deps }) => {
+//         async().promise(async () => {
+//           await deps.reset()
+//           emitResetted(0)
+//         })
+//       },
+//     ]),
+//   ])
 
 /**
  * SAPHYRA VERSION
