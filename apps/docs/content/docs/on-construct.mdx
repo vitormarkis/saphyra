@@ -150,7 +150,7 @@ const newNameStore = newStoreDef({
   },
   reducer({ state, diff, set }) {
     diff()
-      .on(s => s.name)
+      .on([s => s.name])
       .run(name => {
         const [$firstName, $lastName] = name.split(" ")
         set({ $firstName, $lastName }) // derived values // [!code ++]
@@ -173,7 +173,7 @@ const newProductsStore = newStoreDef({
   },
   reducer({ state, diff, set, async }) {
     diff()
-      .on(s => s.category)
+      .on([s => s.category])
       .run(category => {
         async().promise(async ({ signal }) => {
           const products = await fetchProducts(category, signal) // [!code ++]

@@ -16,7 +16,7 @@ type State = {
 const store = newStoreDef<State>({
   reducer({ state, set, diff, async, deps }) {
     diff()
-      .on(s => s.query)
+      .on([s => s.query])
       .run(query => {
         async().promise(async ({ signal }) => {
           const movies = await deps.fetchMovies(query, signal)
