@@ -142,45 +142,45 @@ export const newRevalidationListStore = newStoreDef<
         })
     }
 
-    if (diff(["todos"])) {
-      set({ $todosById: groupByKey(state.todos, "id") })
-    }
-
-    if (diff(["todos"])) {
-      set({
-        $completedTodos: state.todos
-          .filter(todo => todo.completed)
-          .map(todo => todo.id),
+    diff()
+      .on([s => s.todos])
+      .run(todos => {
+        set({
+          $todosById: groupByKey(todos, "id"),
+          $completedTodos: todos
+            .filter(todo => todo.completed)
+            .map(todo => todo.id),
+        })
       })
-    }
 
     // Async Effects
     if (settings.prefixPairs) {
-      if (diff(["$completedTodos"])) {
-        const pairs = getPairs({
-          completedTodos: state.$completedTodos,
-          todosById: state.$todosById,
-        })
+      diff()
+        .on([s => s.$completedTodos, s => s.$todosById])
+        .run((completedTodos, todosById) => {
+          const pairs = getPairs({ completedTodos, todosById })
 
-        const tuples = Object.values(pairs).filter(tuple => tuple.length === 2)
-        const shouldGroup = tuples.length > 0
-        if (shouldGroup) {
-          async()
-            .setName("prefix-pairs-batch")
-            .promise(async () => {
-              const promises = tuples.map(async tuple => {
-                const [first, second] = tuple
-                await dispatchAsync({
-                  type: "prefix-pairs",
-                  pairIds: [first, second],
-                  transition: ["prefix-pairs", `${first}-${second}`],
-                  beforeDispatch: preventNextOne,
+          const tuples = Object.values(pairs).filter(
+            tuple => tuple.length === 2
+          )
+          const shouldGroup = tuples.length > 0
+          if (shouldGroup) {
+            async()
+              .setName("prefix-pairs-batch")
+              .promise(async () => {
+                const promises = tuples.map(async tuple => {
+                  const [first, second] = tuple
+                  await dispatchAsync({
+                    type: "prefix-pairs",
+                    pairIds: [first, second],
+                    transition: ["prefix-pairs", `${first}-${second}`],
+                    beforeDispatch: preventNextOne,
+                  })
                 })
+                await Promise.all(promises)
               })
-              await Promise.all(promises)
-            })
-        }
-      }
+          }
+        })
     }
 
     return state

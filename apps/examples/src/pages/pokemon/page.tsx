@@ -48,24 +48,26 @@ const newPokemonStore = newStoreDef<
       )
     }
 
-    if (diff(["currentPokemonId"])) {
-      console.log(
-        `%c 66- ${prefix}-pokemon id changed, firing async ${++count}`,
-        "color: fuchsia"
-      )
-      async().promise(async ({ signal }) => {
-        await sleep(1000, "", signal)
-        const pokemon = await getPokemon({
-          id: state.currentPokemonId,
-          signal,
-        })
+    diff()
+      .on([s => s.currentPokemonId])
+      .run(currentPokemonId => {
         console.log(
-          `%c 66- ${prefix}-got pokemon data, setting ${++count}`,
+          `%c 66- ${prefix}-pokemon id changed, firing async ${++count}`,
           "color: fuchsia"
         )
-        set({ $pokemon: pokemon })
+        async().promise(async ({ signal }) => {
+          await sleep(1000, "", signal)
+          const pokemon = await getPokemon({
+            id: currentPokemonId,
+            signal,
+          })
+          console.log(
+            `%c 66- ${prefix}-got pokemon data, setting ${++count}`,
+            "color: fuchsia"
+          )
+          set({ $pokemon: pokemon })
+        })
       })
-    }
 
     return state
   },

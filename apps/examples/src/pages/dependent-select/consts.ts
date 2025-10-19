@@ -1,4 +1,4 @@
-import { TodoType } from "./types"
+import { TodoType } from "../revalidation-list/types"
 
 export const INITIAL_TODOS: TodoType[] = [
   {

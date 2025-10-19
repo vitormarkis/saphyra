@@ -13,12 +13,16 @@ type SettingsState = {
 
 const newSettingsStore = newStoreDef<SettingsState>({
   reducer({ state, set, diff }) {
-    if (diff(["errorAlways"])) {
-      if (state.errorAlways) set({ errorSometimes: false })
-    }
-    if (diff(["errorSometimes"])) {
-      if (state.errorSometimes) set({ errorAlways: false })
-    }
+    diff()
+      .on([s => s.errorAlways])
+      .run(errorAlways => {
+        if (errorAlways) set({ errorSometimes: false })
+      })
+    diff()
+      .on([s => s.errorSometimes])
+      .run(errorSometimes => {
+        if (errorSometimes) set({ errorAlways: false })
+      })
 
     return state
   },

@@ -1,7 +1,6 @@
 import { range } from "~/lib/range"
-import { TodoType } from "../types"
 import { settingsStore } from "../settings-store"
-import { createLuck } from "~/lib/create-luck"
+import { TodoType } from "~/pages/revalidation-list/types"
 
 export let FAKE_TODOS_DB: TodoType[] = [
   {

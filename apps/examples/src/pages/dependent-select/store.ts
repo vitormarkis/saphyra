@@ -69,12 +69,14 @@ export const newDependentSelectStore = newStoreDef<
         })
     }
 
-    if (diff(["selectedTag"])) {
-      dispatch({
-        type: "fetch-posts",
-        tag: state.selectedTag,
+    diff()
+      .on([s => s.selectedTag])
+      .run(tag => {
+        dispatch({
+          type: "fetch-posts",
+          tag,
+        })
       })
-    }
 
     return state
   },

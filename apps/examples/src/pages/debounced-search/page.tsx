@@ -43,22 +43,24 @@ const newDebouncedSearch = newStoreDef<
       set({ name: action.name })
     }
 
-    if (diff(["name"])) {
-      const cachedUsers = queryClient.getQueryData<any[]>(
-        getUserListQueryOptions({ name: state.name }).queryKey
-      )
+    diff()
+      .on([s => s.name])
+      .run(name => {
+        const cachedUsers = queryClient.getQueryData<any[]>(
+          getUserListQueryOptions({ name }).queryKey
+        )
 
-      if (cachedUsers) {
-        set({ $users: cachedUsers })
-      } else {
-        async()
-          .setName(`query: [${action.name}]`)
-          .promise(async ({ signal }) => {
-            const users = await listUsers(state.name, signal)
-            set({ $users: users })
-          })
-      }
-    }
+        if (cachedUsers) {
+          set({ $users: cachedUsers })
+        } else {
+          async()
+            .setName(`query: [${action.name}]`)
+            .promise(async ({ signal }) => {
+              const users = await listUsers(name, signal)
+              set({ $users: users })
+            })
+        }
+      })
 
     return state
   },

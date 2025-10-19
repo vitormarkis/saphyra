@@ -86,32 +86,32 @@ const newMemoryGame = newStoreDef<
       })
     }
 
-    if (diff(["cards"])) {
-      set(s => ({
-        $cardIdList: s.cards.map(card => card.id),
-      }))
-      set(s => ({
-        $cardById: s.cards.reduce(...reduceGroupById()),
-      }))
-      set(s => ({
-        $visibleCardsIdList: filterVisible(s.cards),
-      }))
-      set(s => ({
-        $matchedCardsIdList: filterMatched(s.cards),
-      }))
-    }
+    diff()
+      .on([s => s.cards])
+      .run(cards => {
+        set({
+          $cardIdList: cards.map(card => card.id),
+          $cardById: cards.reduce(...reduceGroupById()),
+          $visibleCardsIdList: filterVisible(cards),
+          $matchedCardsIdList: filterMatched(cards),
+        })
+      })
 
-    if (diff(["$visibleCardsIdList"])) {
-      set(s => ({
-        $visibleCardsIdListSet: new Set(s.$visibleCardsIdList),
-      }))
-    }
+    diff()
+      .on([s => s.$visibleCardsIdList])
+      .run(visibleCardsIdList => {
+        set({
+          $visibleCardsIdListSet: new Set(visibleCardsIdList),
+        })
+      })
 
-    if (diff(["$matchedCardsIdList"])) {
-      set(s => ({
-        $matchedCardsIdListSet: new Set(s.$matchedCardsIdList),
-      }))
-    }
+    diff()
+      .on([s => s.$matchedCardsIdList])
+      .run(matchedCardsIdList => {
+        set({
+          $matchedCardsIdListSet: new Set(matchedCardsIdList),
+        })
+      })
 
     if (state.$visibleCardsIdList.length === 2) {
       dispatch({
