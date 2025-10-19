@@ -1,4 +1,3 @@
-import { createDiffOnKeyChange } from "./diff"
 import { createSubject } from "./Subject"
 import {
   OptimisticRegistry,
@@ -13,7 +12,6 @@ import type {
   AsyncBuilder,
   AsyncPromiseProps,
   DefaultActions,
-  Diff,
   Dispatch,
   GenericStoreMethods,
   GenericStoreValues,
@@ -70,6 +68,7 @@ import { PromiseWithResolvers } from "./polyfills/promise-with-resolvers"
 import { randomString } from "./helpers/randomString"
 import { SUB_BRANCH_PREFIX } from "./consts"
 import { deleteImmutably } from "./helpers/delete-immutably"
+import { createDiffBuilder, Diff } from "./helpers/diff-builder"
 
 export type ExternalProps = Record<string, any> | null
 
@@ -465,8 +464,7 @@ export function newStoreDef<
     )
 
     const createDiff = (oldState: TState, newState: TState) => {
-      const [, diff] = createDiffOnKeyChange(oldState, newState)
-      return diff
+      return createDiffBuilder(oldState, newState)
     }
 
     const createOptimisticScheduler: Met["createOptimisticScheduler"] = (

@@ -18,12 +18,14 @@ describe("async-diff", () => {
           set({ count: action.value })
         }
 
-        if (diff(["count"])) {
-          async().promise(async ({ signal }) => {
-            await sleep(100, "", signal)
-            set({ $data: String(state.count) })
+        diff()
+          .on([s => s.count])
+          .run(count => {
+            async().promise(async ({ signal }) => {
+              await sleep(100, "", signal)
+              set({ $data: String(count) })
+            })
           })
-        }
 
         return state
       },
@@ -43,12 +45,14 @@ describe("async-diff", () => {
           set({ count: action.value })
         }
 
-        if (diff(["count"])) {
-          async().promise(async ({ signal }) => {
-            await sleep(100, "", signal)
-            set({ $data: String(state.count) })
+        diff()
+          .on([s => s.count])
+          .run(count => {
+            async().promise(async ({ signal }) => {
+              await sleep(100, "", signal)
+              set({ $data: String(count) })
+            })
           })
-        }
 
         return state
       },
@@ -76,12 +80,14 @@ describe("async-diff", () => {
           set({ count: action.value })
         }
 
-        if (diff(["count"])) {
-          async().promise(async ({ signal }) => {
-            await sleep(100, "", signal)
-            set({ $data: String(state.count) })
+        diff()
+          .on([s => s.count])
+          .run(count => {
+            async().promise(async ({ signal }) => {
+              await sleep(100, "", signal)
+              set({ $data: String(count) })
+            })
           })
-        }
 
         return state
       },
@@ -109,12 +115,14 @@ describe("async-diff", () => {
           set({ count: action.value })
         }
 
-        if (diff(["count"])) {
-          async().promise(async ({ signal }) => {
-            await sleep(100, "", signal)
-            dispatch({ type: "set-data" })
+        diff()
+          .on([s => s.count])
+          .run(() => {
+            async().promise(async ({ signal }) => {
+              await sleep(100, "", signal)
+              dispatch({ type: "set-data" })
+            })
           })
-        }
 
         return state
       },

@@ -508,8 +508,6 @@ export type AsyncModule = {
 
 export type AsyncBuilder = () => AsyncModule
 
-export type Diff<TState> = (keys: (keyof TState)[]) => boolean
-
 export type TransitionsExtension = {
   transitions: TransitionsStore
 }
