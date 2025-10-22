@@ -1421,6 +1421,7 @@ export function newStoreDef<
                 applySetterOnState(setterOrPartialState, newState)
               }
             } else {
+              applySetterOnState(setterOrPartialState, newState)
               store.setState(setterOrPartialState, { transition })
             }
           }
