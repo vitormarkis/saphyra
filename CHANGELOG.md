@@ -1,3 +1,12 @@
+### v0.12.0
+- Breaking Change: Reducer prop `diff()` use builder pattern now.
+- Breaking Change: 
+- Fix: Upon scheduling subtransitions asynchronously, run it immediately.
+- Fix: Write to reducer prop state even if non sync `set()` is called. 
+- Fix: `useSelector` reads from the optimistic state by default when no passing a selector.
+- Fix: Fix `onFinish` API.
+- Feat: Add ability to abort many transitions by passing `"*"` or `"..."` to the `abort` method.
+
 ### v0.11.0
 - Rename `async().timer` to `async().setTimeout`
 
