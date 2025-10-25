@@ -1,6 +1,29 @@
 ### v0.12.0
 - Breaking Change: Reducer prop `diff()` use builder pattern now.
-- Breaking Change: 
+#### The reason for the change:
+The previous `diff()` module, you had to pass an array of keys in order to check if any of those keys have changed. But this approach has some limitations:
+- You can't check if nested properties have changed.
+- There is no relationship between the keys and the values you use inside the `if` scope.
+
+```javascript
+// Bad ❌
+if (diff(["name"])) {
+  // Checking for `name` but using `$lastName`?
+  console.log(`My last name is ${state.$lastName}`)
+}
+```
+The new `diff()` module doesn't have these limitations, you can check if any nested property has changed, and you can ensure there is a relationship between the values being checked and the values being used inside the `callback` scope.
+```javascript
+// Good ✅
+diff()
+  .on([s => s.name])
+  .run(name => {
+    const [, lastName] = name.split(" ")
+    console.log(`My last name is ${lastName}`)
+  })
+```
+
+- Breaking Change: BeforeDispatch API `createAsync` function is now the `async` module.
 - Fix: Upon scheduling subtransitions asynchronously, run it immediately.
 - Fix: Write to reducer prop state even if non sync `set()` is called. 
 - Fix: `useSelector` reads from the optimistic state by default when no passing a selector.
