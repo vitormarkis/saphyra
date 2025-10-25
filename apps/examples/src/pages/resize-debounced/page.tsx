@@ -1,9 +1,11 @@
-import React, { useEffect } from "react"
+import React, { memo, useEffect, useRef } from "react"
 import { newStoreDef } from "saphyra"
 import { createStoreUtils, useHistory, useNewStore } from "saphyra/react"
 import { toast } from "sonner"
+import { Waterfall } from "~/devtools/waterfall"
 import { cn } from "~/lib/cn"
 import { extractErrorMessage } from "~/lib/extract-error-message"
+import { noop } from "~/lib/utils"
 
 type ResizeDebouncedState = {
   $width: number
@@ -11,12 +13,6 @@ type ResizeDebouncedState = {
 }
 
 type ResizeDebouncedActions =
-  | {
-      type: "resize-async"
-      payload: {
-        width: number
-      }
-    }
   | {
       type: "new-width"
       payload: {
@@ -41,46 +37,20 @@ const newStore = newStoreDef<
   ResizeDebouncedState,
   ResizeDebouncedActions
 >({
-  reducer({
-    prevState,
-    state,
-    action,
-    set,
-    async,
-    dispatchAsync,
-    store,
-    optimistic,
-  }) {
+  config: {
+    onCommitTransition(props) {
+      noop()
+    },
+  },
+  reducer({ state, action, set, optimistic }) {
     if (action.type === "resize") {
       optimistic({ $width: action.payload.width })
-      async().promise(async () => {
-        await new Promise(resolve => setTimeout(resolve))
-        await dispatchAsync({
-          type: "resize-async",
-          payload: { width: action.payload.width },
-          transition: ["random"],
-        })
-      })
+      set({ $width: action.payload.width })
     }
 
-    if (action.type === "resize-async") {
-      async().promise(async () => {
-        await new Promise(resolve => setTimeout(resolve))
-        dispatchAsync({
-          type: "new-width",
-          payload: { width: action.payload.width },
-        })
-      })
+    if (!state.$width) {
+      set({ $width: 200 })
     }
-
-    set({
-      $width: (() => {
-        if (action.type === "new-width") {
-          return action.payload.width
-        }
-        return state.$width ?? 200
-      })(),
-    })
 
     return state
   },
@@ -111,8 +81,7 @@ export function ResizeDebouncedPage() {
 }
 
 function Content() {
-  const optimisticState = Store.useSelector()
-  const committedState = Store.useCommittedSelector()
+  const [store] = Store.useStore()
   return (
     <div className="flex flex-col gap-4">
       <h2 className="text-lg font-bold">What is happening?</h2>
@@ -126,7 +95,7 @@ function Content() {
         CTRL Z and CTRL Y to undo and redo.
       </p>
       <pre className="p-2 rounded border">
-        {JSON.stringify({ optimisticState, committedState }, null, 2)}
+        <PreState />
       </pre>
       <div className="p-2 rounded border flex-1">
         <strong>Optimistic</strong>
@@ -134,33 +103,64 @@ function Content() {
         <strong>Committed</strong>
         <Box strategy="committed" />
       </div>
+      <div className="relative flex flex-col gap-4 py-4 overflow-y-scroll basis-0 grow h-full p-2 rounded-md border">
+        <Waterfall
+          store={store}
+          extractErrorMessage={extractErrorMessage}
+        />
+      </div>
     </div>
   )
+}
+
+function PreState() {
+  const optimisticState = Store.useSelector()
+  const committedState = Store.useCommittedSelector()
+  return JSON.stringify({ optimisticState, committedState }, null, 2)
 }
 
 type BoxProps = React.ComponentProps<"div"> & {
   strategy: "optimistic" | "committed"
 }
 
-const Box = React.forwardRef<React.ElementRef<"div">, BoxProps>(
-  ({ className, strategy, ...props }, ref) => {
-    const width =
-      strategy === "optimistic"
-        ? Store.useSelector(s => s.$width)
-        : Store.useCommittedSelector(s => s.$width)
+const Box = memo(({ className, strategy, ...props }: BoxProps) => {
+  const [store] = Store.useStore()
+  const initialState = store.getOptimisticState()
+  const elRef = useRef<HTMLDivElement>(null)
 
-    return (
-      <div
-        ref={ref}
-        className={cn("h-40 bg-blue-500 relative", className)}
-        style={{ width }}
-        {...props}
-      >
-        <Handle />
-      </div>
-    )
+  if (strategy === "optimistic") {
+    Store.useStoreDiff({
+      on: [s => s.$width],
+      run(width) {
+        const element = elRef.current
+        if (!element) return
+        element.style.width = `${width}px`
+      },
+    })
   }
-)
+
+  if (strategy === "committed") {
+    Store.useCommittedStoreDiff({
+      on: [s => s.$width],
+      run(width) {
+        const element = elRef.current
+        if (!element) return
+        element.style.width = `${width}px`
+      },
+    })
+  }
+
+  return (
+    <div
+      ref={elRef}
+      className={cn("h-40 bg-blue-500 relative", className)}
+      style={{ width: initialState.$width }}
+      {...props}
+    >
+      <Handle />
+    </div>
+  )
+})
 
 type HandleProps = React.ComponentProps<"i">
 
@@ -191,8 +191,9 @@ const Handle = React.forwardRef<React.ElementRef<"i">, HandleProps>(
               transition: ["resize"],
               beforeDispatch({ async, transition, store, action }) {
                 store.abort(transition)
-                // return action
-                async().setTimeout(() => store.dispatch(action), 50)
+                async()
+                  .setName("debounce")
+                  .setTimeout(() => store.dispatch(action), 500)
               },
             })
           }

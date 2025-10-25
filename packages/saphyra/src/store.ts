@@ -681,7 +681,7 @@ export function newStoreDef<
         )
       }
       derivationsRegistry?.clear(transition)
-      store.transitions.meta.delete(transitionKey)
+      // store.transitions.meta.delete(transitionKey)
 
       store.parentTransitionRegistry = deleteImmutably(
         store.parentTransitionRegistry,
@@ -1060,7 +1060,9 @@ export function newStoreDef<
         initialAction.transition,
         initialController.signal,
         asyncOp => {
-          if (initialController.signal?.aborted) debugger
+          if (initialController.signal?.aborted) {
+            noop()
+          }
           asyncOperations.push(asyncOp)
         },
         "before-dispatch-async",

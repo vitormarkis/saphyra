@@ -6,6 +6,7 @@ import {
   useSyncExternalStore,
 } from "react"
 import type {
+  SomeStoreGeneric,
   StoreErrorHandler,
   StoreInstantiatorGeneric,
   Transition,
@@ -101,9 +102,7 @@ export function createStoreUtils<
     return useSyncExternalStore(
       cb => store.subscribe(cb),
       () => {
-        const state =
-          store.transitionsState.state[transition.join(":")] ??
-          store.getOptimisticState()
+        const state = getTransitionState(transition, store)
         // For transition states, we need to inject cached getters manually
         const stateWithGetters = (store as any).derivationsRegistry
           ? (store as any).derivationsRegistry.injectCachedGetters(
@@ -114,9 +113,7 @@ export function createStoreUtils<
         return finalSelector(stateWithGetters)
       },
       () => {
-        const state =
-          store.transitionsState.state[transition.join(":")] ??
-          store.getOptimisticState()
+        const state = getTransitionState(transition, store)
         // For transition states, we need to inject cached getters manually
         const stateWithGetters = (store as any).derivationsRegistry
           ? (store as any).derivationsRegistry.injectCachedGetters(
@@ -160,11 +157,78 @@ export function createStoreUtils<
       : exact([undefined, true])
   }
 
+  function useStoreDiff<
+    TState,
+    const TSelectors extends ((state: TState) => any)[],
+  >(props: UseStoreDiffProps<TState, TSelectors>, store = getDefaultStore()) {
+    return useStoreDiffImpl<TState, TSelectors>(
+      props,
+      () => store.getOptimisticState(),
+      store
+    )
+  }
+
+  function useCommittedStoreDiff<
+    TState,
+    const TSelectors extends ((state: TState) => any)[],
+  >(props: UseStoreDiffProps<TState, TSelectors>, store = getDefaultStore()) {
+    return useStoreDiffImpl<TState, TSelectors>(
+      props,
+      () => store.getState(),
+      store
+    )
+  }
+
+  function useTransitionStoreDiff<
+    TState,
+    const TSelectors extends ((state: TState) => any)[],
+  >(
+    transition: Transition,
+    props: UseStoreDiffProps<TState, TSelectors>,
+    store = getDefaultStore()
+  ) {
+    return useStoreDiffImpl<TState, TSelectors>(
+      props,
+      () => getTransitionState(transition, store),
+      store
+    )
+  }
+
+  function useStoreDiffImpl<
+    TState,
+    const TSelectors extends ((state: TState) => any)[],
+  >(
+    { on: selectors, run: callback }: UseStoreDiffProps<TState, TSelectors>,
+    getState: () => TState,
+    store = getDefaultStore()
+  ) {
+    const prevValuesRef = useRef<any[]>([])
+
+    useEffect(() => {
+      const handler = () => {
+        const currentValues = selectors.map(selector => selector(getState()))
+        if (
+          currentValues.every(
+            (value, index) => value === prevValuesRef.current[index]
+          )
+        ) {
+          return
+        }
+        prevValuesRef.current = currentValues
+        callback(...(currentValues as SelectorValues<TState, TSelectors>))
+      }
+      return store.subscribe(handler)
+    }, [store])
+  }
+
   const utils: StoreUtils<TState, TStore> = {
     Context,
     useSelector,
+    useStoreDiff,
     useCommittedSelector,
+    useCommittedStoreDiff,
     useTransitionSelector,
+    useTransitionStoreDiff,
     useStore,
     useTransition,
     useErrorHandlers,
@@ -197,7 +261,42 @@ export type StoreUtils<
   useLazyValue: <const TTransition extends any[], TPromiseResult, R>(
     options: LazyValueOptions<TState, TTransition, TPromiseResult, R>
   ) => [R, false] | [undefined, true]
+  useStoreDiff<const TSelectors extends ((state: TState) => any)[]>(
+    props: UseStoreDiffProps<TState, TSelectors>,
+    store?: TStore
+  ): void
+  useCommittedStoreDiff<const TSelectors extends ((state: TState) => any)[]>(
+    props: UseStoreDiffProps<TState, TSelectors>,
+    store?: TStore
+  ): void
+  useTransitionStoreDiff<const TSelectors extends ((state: TState) => any)[]>(
+    transition: Transition,
+    props: UseStoreDiffProps<TState, TSelectors>,
+    store?: TStore
+  ): void
   createLazyOptions: <const TTransition extends any[], TPromiseResult, R>(
     options: LazyValueOptions<TState, TTransition, TPromiseResult, R>
   ) => LazyValueOptions<TState, TTransition, TPromiseResult, R>
+}
+
+type SelectorValues<TState, T extends readonly ((state: TState) => any)[]> = {
+  [K in keyof T]: ReturnType<T[K]>
+}
+
+type UseStoreDiffProps<
+  TState,
+  TSelectors extends readonly ((state: TState) => any)[],
+> = {
+  on: TSelectors
+  run: (...args: SelectorValues<TState, TSelectors>) => void
+}
+
+function getTransitionState<
+  TStore extends SomeStoreGeneric,
+  TState extends TStore["state"],
+>(transition: Transition, store: TStore): TState {
+  return (
+    store.transitionsState.state[transition.join(":")] ??
+    store.getOptimisticState()
+  )
 }

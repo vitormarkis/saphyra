@@ -13,6 +13,7 @@ export function toastWithResult({
     const id = toast.error(
       `[Transaction] Changes we're not applied! Reason: ${fromErrorToMessage(error)}`
     )
+    meta.toasts_id_list ??= new Set()
     meta.toasts_id_list.add(id)
     return
   }

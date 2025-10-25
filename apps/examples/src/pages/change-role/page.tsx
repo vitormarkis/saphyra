@@ -55,7 +55,6 @@ const newAuthStore = newStoreDef<
     getFirstPermission: {
       selectors: [s => s.$permissions],
       evaluator: permissions => {
-        console.log("77- CALCULATING FIRST PERMISSION")
         return permissions[0]
       },
     },
@@ -115,6 +114,46 @@ export function ChangeRolePage() {
   useEffect(() => {
     Object.assign(window, { authStore })
   }, [authStore])
+
+  Auth.useStoreDiff(
+    {
+      on: [s => s.role],
+      run(role) {
+        console.log(
+          `%c [Optimistic] Role changed to ${role}`,
+          "color: aquamarine"
+        )
+      },
+    },
+    authStore
+  )
+
+  Auth.useCommittedStoreDiff(
+    {
+      on: [s => s.role],
+      run(role) {
+        console.log(
+          `%c [Committed] Role changed to ${role}`,
+          "color: chartreuse"
+        )
+      },
+    },
+    authStore
+  )
+
+  Auth.useTransitionStoreDiff(
+    ["auth", "role"],
+    {
+      on: [s => s.role],
+      run(role) {
+        console.log(
+          `%c [["auth", "role"] Transition] Role changed to ${role}`,
+          "color: greenyellow"
+        )
+      },
+    },
+    authStore
+  )
 
   if (error != null) {
     return (

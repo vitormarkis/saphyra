@@ -1,3 +1,8 @@
+### v0.13.0
+- Add `useStoreDiff` hooks to subscribe to changes in the store state.
+- Add `useCommittedStoreDiff` hooks to subscribe to changes in the committed store state.
+- Add `useTransitionStoreDiff` hooks to subscribe to changes in the transition store state.
+
 ### v0.12.0
 - Breaking Change: Reducer prop `diff()` use builder pattern now.
 #### The reason for the change:
