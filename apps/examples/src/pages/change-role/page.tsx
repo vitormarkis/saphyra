@@ -43,9 +43,11 @@ const newAuthStore = newStoreDef<
   { vitor: "markis" }
 >({
   config: {
-    onPushToHistory({ history, state, transition }) {
-      if (!!transition) return [state]
-      return [...history, state]
+    defaults: {
+      onPushToHistory({ history, state, transition }) {
+        if (!!transition) return [state]
+        return [...history, state]
+      },
     },
     onCommitTransition(props) {
       noop()

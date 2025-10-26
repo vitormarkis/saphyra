@@ -49,11 +49,13 @@ const newMemoryGame = newStoreDef<
   MemoryGameActions
 >({
   config: {
-    onPushToHistory({ history, state, transition, from }) {
-      if (from === "dispatch" && !!transition) {
-        return []
-      }
-      return [...history, state]
+    defaults: {
+      onPushToHistory({ history, state, transition, from }) {
+        if (from === "dispatch" && !!transition) {
+          return []
+        }
+        return [...history, state]
+      },
     },
   },
   onConstruct({ initialProps }) {

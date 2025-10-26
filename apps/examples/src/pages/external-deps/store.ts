@@ -52,9 +52,11 @@ export const newPostsStore = newStoreDef<
   IExternalDepsDependencies
 >({
   config: {
-    onPushToHistory({ history, state, transition }) {
-      if (!!transition) return []
-      return [...history, state]
+    defaults: {
+      onPushToHistory({ history, state, transition }) {
+        if (!!transition) return []
+        return [...history, state]
+      },
     },
   },
   derivations: {

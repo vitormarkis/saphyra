@@ -213,7 +213,7 @@ type CreateStoreOptionsConfig<
     TUncontrolledState,
     TDeps
   >
-  defaults: CreateStoreOptionsDefaultsConfig<
+  defaults?: CreateStoreOptionsDefaultsConfig<
     TState,
     TActions,
     TEvents,
