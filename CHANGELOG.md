@@ -1,3 +1,28 @@
+### v0.14.0
+Add ability to configure a set of default behavior at the store definition level:
+```javascript
+const newStore = newStoreDef({
+  config: {
+    defaults: {
+      transition: ["general-transition"],
+      beforeDispatch: ({ transition, store, action }) => {
+        store.abort(transition)
+        return action
+      },
+      onTransitionEnd: ({ error }) => {
+        const success = !error
+        if (success) console.log("Transition ended successfully")
+        if (error) console.log("Transition ended with error", error)
+      },
+      onPushToHistory: ({ history, state }) => {
+        return [...history, state]
+      },
+    },
+  },
+})
+```
+These can be overridden by the user on demand at dispatch level.
+
 ### v0.13.0
 - Add `useStoreDiff` hooks to subscribe to changes in the store state.
 - Add `useCommittedStoreDiff` hooks to subscribe to changes in the committed store state.
