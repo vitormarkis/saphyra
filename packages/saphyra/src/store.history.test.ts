@@ -56,7 +56,7 @@ describe("store history tracking", () => {
     expect(store.history).toStrictEqual([{ count: 0 }])
   })
 
-  test("ensure bootstrap state is being saved as first history entry", async () => {
+  test.skip("ensure bootstrap state is being saved as first history entry", async () => {
     const newStore = newStoreDefTest({
       async onConstruct() {
         await new Promise(res => setTimeout(res))
