@@ -10,8 +10,10 @@ import {
 import {
   getStoreTransitionInfoShallowCopy,
   newStore,
+  newStoreDefTest,
   TestCounterStore,
 } from "./test.utils"
+import { noop } from "./fn/noop"
 
 let store: TestCounterStore
 let spy_completeTransition: MockInstance<any>
@@ -182,5 +184,106 @@ describe("before dispatch: cancel previous", () => {
         expect(spy_emitError).not.toHaveBeenCalled()
       })
     })
+  })
+})
+
+describe("ensure cancel previous works when passed as default", () => {
+  const newStore = newStoreDefTest({
+    config: {
+      onCommitTransition(_props) {
+        noop()
+      },
+      defaults: {
+        beforeDispatch: cancelPrevious,
+      },
+    },
+    reducer({ state, action, set, async, dispatchAsync }) {
+      if (action.type === "increment-async") {
+        async().promise(async () => {
+          await new Promise(res => setTimeout(res))
+          set(s => ({ count: s.count + 1 }))
+        })
+      }
+
+      if (action.type === "increment-nested-async") {
+        const random = () => Math.random().toString(36).substring(2, 6)
+        async()
+          .setName("first-increment")
+          .promise(async () => {
+            await dispatchAsync({
+              type: "increment-async",
+              transition: [...(action.transition ?? []), random()],
+            })
+          })
+        async()
+          .setName("second-increment")
+          .promise(async () => {
+            await dispatchAsync({
+              type: "increment-async",
+              transition: [...(action.transition ?? []), random()],
+            })
+          })
+      }
+      return state
+    },
+  })
+
+  test("dispatch + async action", async () => {
+    const store = newStore({ count: 0 })
+    store.dispatch({
+      type: "increment-async",
+      transition: ["counter"],
+    })
+    store.dispatch({
+      type: "increment-async",
+      transition: ["counter"],
+    })
+    await store.waitFor(["counter"])
+    expect(store.getState()).toEqual({ count: 1 })
+  })
+
+  test("dispatchAsync + async action", async () => {
+    const store = newStore({ count: 0 })
+    store.dispatchAsync({
+      type: "increment-async",
+      transition: ["counter"],
+    })
+    store.dispatchAsync({
+      type: "increment-async",
+      transition: ["counter"],
+    })
+    await new Promise(res => setTimeout(res))
+    expect(store.getState()).toEqual({ count: 1 })
+  })
+
+  test("dispatch + nested async actions", async () => {
+    const store = newStore({ count: 0 })
+    Object.assign(globalThis, { __store: store })
+    store.dispatch({
+      type: "increment-nested-async",
+      transition: ["counter"],
+    })
+    store.dispatch({
+      type: "increment-nested-async",
+      transition: ["counter"],
+    })
+    await store.waitFor(["counter"])
+    expect(store.getState()).toEqual({ count: 2 })
+  })
+
+  test("dispatch + nested async - allow on demand", async () => {
+    const store = newStore({ count: 0 })
+    store.dispatch({
+      type: "increment-nested-async",
+      transition: ["counter"],
+      beforeDispatch: ({ action }: any) => action,
+    })
+    store.dispatch({
+      type: "increment-nested-async",
+      transition: ["counter"],
+      beforeDispatch: ({ action }: any) => action,
+    })
+    await store.waitFor(["counter"])
+    expect(store.getState()).toEqual({ count: 4 })
   })
 })

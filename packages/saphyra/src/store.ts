@@ -39,6 +39,8 @@ import type {
   OnTransitionEndProps,
   OnCommitTransitionConfig,
   SomeStoreGeneric,
+  OnTransitionEnd,
+  BeforeDispatch,
 } from "./types"
 import { EventEmitter, EventsTuple } from "./event-emitter"
 import { noop } from "./fn/noop"
@@ -204,14 +206,39 @@ type CreateStoreOptionsConfig<
   TDeps,
 > = {
   runOptimisticUpdateOn?: RunOptimisticUpdateOn<TActions>
-  onPushToHistory?: OnPushToHistory<
+  onCommitTransition?: OnCommitTransitionConfig<
     TState,
     TActions,
     TEvents,
     TUncontrolledState,
     TDeps
   >
-  onCommitTransition?: OnCommitTransitionConfig<
+  defaults: CreateStoreOptionsDefaultsConfig<
+    TState,
+    TActions,
+    TEvents,
+    TUncontrolledState,
+    TDeps
+  >
+}
+
+type CreateStoreOptionsDefaultsConfig<
+  TState extends Record<string, any>,
+  TActions extends ActionShape,
+  TEvents extends EventsTuple,
+  TUncontrolledState extends Record<string, any>,
+  TDeps,
+> = {
+  transition?: Transition
+  onTransitionEnd?: OnTransitionEnd<
+    TState,
+    TActions,
+    TUncontrolledState,
+    TDeps,
+    TEvents
+  >
+  beforeDispatch?: BeforeDispatch<TState, TActions, TEvents>
+  onPushToHistory?: OnPushToHistory<
     TState,
     TActions,
     TEvents,
@@ -264,7 +291,13 @@ const defaultRunOptimisticUpdateOn = <TActions extends ActionShape>(
 ) => {
   return true
 }
-const defaultOnPushToHistory = <
+const defaultBeforeDispatchNoop: BeforeDispatch<any, any, any> = ({
+  action,
+}) => {
+  return action
+}
+
+const defaultOnPushToHistoryFn = <
   TState extends Record<string, any>,
   TActions extends ActionShape,
   TEvents extends EventsTuple,
@@ -283,6 +316,24 @@ const defaultOnPushToHistory = <
   const lastState = history[history.length - 1]
   if (shallowCompare(lastState, state)) return history
   return [...history, state]
+}
+
+const defaultOnPushToHistoryFnNoop = <
+  TState extends Record<string, any>,
+  TActions extends ActionShape,
+  TEvents extends EventsTuple,
+  TUncontrolledState extends Record<string, any>,
+  TDeps,
+>({
+  history,
+}: OnPushToHistoryProps<
+  TState,
+  TActions,
+  TEvents,
+  TUncontrolledState,
+  TDeps
+>) => {
+  return history
 }
 
 export function newStoreDef<
@@ -335,10 +386,14 @@ export function newStoreDef<
     TDeps
   >
   const {
-    onPushToHistory = defaultOnPushToHistory,
     runOptimisticUpdateOn = defaultRunOptimisticUpdateOn,
     onCommitTransition = defaultOnCommitTransition,
+    defaults,
   } = globalConfig ?? {}
+  const defaultTransition = defaults?.transition
+  const defaultOnTransitionEnd = defaults?.onTransitionEnd
+  const defaultOnPushToHistory =
+    defaults?.onPushToHistory ?? defaultOnPushToHistoryFn
 
   // Create derivations registry if derivations are provided
   const derivationsRegistry = derivations
@@ -597,7 +652,7 @@ export function newStoreDef<
         baseState: store.state,
         store,
       })
-      const pushToHistoryCb = action.onPushToHistory ?? onPushToHistory
+      const pushToHistoryCb = action.onPushToHistory ?? defaultOnPushToHistory
       const [newState, newHistory] = handleNewStateToHistory({
         state: newStateFromSetters,
         getNewHistoryStack: state =>
@@ -909,14 +964,19 @@ export function newStoreDef<
         transition.join(":")
       )
       const newController = new AbortController()
+      store.transitions.setController(transition, newController)
       controller?.signal.addEventListener("abort", () => {
-        store.transitions.setController(transition, newController)
+        // store.transitions.setController(transition, newController)
         // store.cleanUpTransition(transition!, { code: 20 }) // <- like this!
       })
       controller?.abort()
     }
 
     const dispatchAsync: Met["dispatchAsync"] = (initialAction, options) => {
+      const action = {
+        ...initialAction,
+        transition: initialAction.transition ?? defaultTransition,
+      }
       const resolver = PromiseWithResolvers<TState>()
       if (options?.signal?.aborted) {
         throw { code: 20, reason: "Signal is already aborted" }
@@ -937,14 +997,15 @@ export function newStoreDef<
         } else {
           resolver.resolve(props.state)
         }
-        initialAction.onTransitionEnd?.(props)
+        const onTransitionEndFn =
+          action.onTransitionEnd ?? defaultOnTransitionEnd
+        onTransitionEndFn?.(props)
       }
 
-      const unsub = dispatch({
-        ...initialAction,
+      dispatch({
+        ...action,
         onTransitionEnd,
       })
-      options?.signal?.addEventListener("abort", () => unsub())
       return resolver.promise
     }
 
@@ -974,6 +1035,10 @@ export function newStoreDef<
     }
 
     const dispatch: Met["dispatch"] = (initialAction: Action) => {
+      const action = {
+        ...initialAction,
+        transition: initialAction.transition ?? defaultTransition,
+      }
       if (store.isDisposed) {
         $$onDebugMode(() =>
           console.warn("Attempted to dispatch on disposed store")
@@ -982,7 +1047,7 @@ export function newStoreDef<
       }
       const when = labelWhen(new Date())
       return dispatchInternal({
-        action: initialAction,
+        action,
         setterOrPartialState: null,
         when,
       })
@@ -1012,6 +1077,7 @@ export function newStoreDef<
     ): (() => void) => {
       let newState = cloneObj(store.state)
       let prevState: TState | null = null
+      const isSet = !!setterOrPartialState
       if (initialAction.transition) {
         prevState = getTransitionState(store, initialAction.transition)
         if (setterOrPartialState) {
@@ -1027,17 +1093,11 @@ export function newStoreDef<
         }
       }
 
-      const defaultBeforeDispatch = (
-        props: BeforeDispatchOptions<
-          TState,
-          ActionRedispatch,
-          TEvents,
-          TUncontrolledState,
-          TDeps
-        >
-      ) => {
-        return props.action
+      const createDefaultBeforeDispatchDispatchImpl = () => {
+        if (isSet) return defaultBeforeDispatchNoop
+        return defaults?.beforeDispatch ?? defaultBeforeDispatchNoop
       }
+      const defaultBeforeDispatch = createDefaultBeforeDispatchDispatchImpl()
       const { beforeDispatch = defaultBeforeDispatch } = initialAction
 
       if (initialAction.transition && initialAction.controller) {
@@ -1069,7 +1129,9 @@ export function newStoreDef<
         () => {
           const t = initialAction.transition
           if (!t) return
-          opts.action.onTransitionEnd?.({
+          const onTransitionEndFn =
+            initialAction.onTransitionEnd ?? defaultOnTransitionEnd
+          onTransitionEndFn?.({
             events: store.events,
             meta: store.transitions.meta.get(t),
             state: store.state,
@@ -1111,11 +1173,11 @@ export function newStoreDef<
       asyncOperations.forEach(asyncOperation => asyncOperation.fn?.())
 
       const transitionKey = initialAction?.transition?.join(":")
-      if (transitionKey && initialAction?.onTransitionEnd) {
+      const onTransitionEnd =
+        initialAction.onTransitionEnd ?? defaultOnTransitionEnd
+      if (transitionKey && onTransitionEnd) {
         store.onTransitionEndCallbacks[transitionKey] ??= new Set()
-        store.onTransitionEndCallbacks[transitionKey].add(
-          initialAction.onTransitionEnd
-        )
+        store.onTransitionEndCallbacks[transitionKey].add(onTransitionEnd)
       }
 
       if (!rootAction) {
@@ -1186,7 +1248,8 @@ export function newStoreDef<
       } else {
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const _previousState = newState
-        const pushToHistoryCb = rootAction.onPushToHistory ?? onPushToHistory
+        const pushToHistoryCb =
+          rootAction.onPushToHistory ?? defaultOnPushToHistory
         const [historyLatestState, newHistory] = handleNewStateToHistory({
           state: newState,
           getNewHistoryStack: state =>
@@ -1254,7 +1317,7 @@ export function newStoreDef<
       const actionResult = handleAction(action, {
         when,
       })
-      const pushToHistoryCb = action.onPushToHistory ?? onPushToHistory
+      const pushToHistoryCb = action.onPushToHistory ?? defaultOnPushToHistory
       const [historyLatestState, newHistory] = handleNewStateToHistory({
         state: actionResult.newState,
         getNewHistoryStack: state =>
@@ -1392,7 +1455,9 @@ export function newStoreDef<
             from: "action",
             onAbort: () => {
               if (!action.transition) return
-              action.onTransitionEnd?.({
+              const onTransitionEnd =
+                action.onTransitionEnd ?? defaultOnTransitionEnd
+              onTransitionEnd?.({
                 events: store.events,
                 meta: store.transitions.meta.get(action.transition),
                 state: store.state,
@@ -1434,10 +1499,15 @@ export function newStoreDef<
               action.transition?.join(":") === transition?.join(":")
             const safeAction = {
               ...action,
-              transition: action.transition ?? rootAction.transition ?? null,
+              transition:
+                action.transition ??
+                rootAction.transition ??
+                defaultTransition ??
+                null,
             }
             if (isSync && sameTransition) {
               // actionsQueue.push(safeAction)
+              // const futurePrevState = cloneObj(newState) // I think this is right
               const producedState = reducer({
                 ...contextFn(newState),
                 action: safeAction,
@@ -1518,7 +1588,12 @@ export function newStoreDef<
               > = (() => {
                 if (propsAction.onPushToHistory)
                   return propsAction.onPushToHistory
-                return ({ history }) => history
+                /**
+                 * Don't use user default before dispatch here because it's
+                 * suposed to be a short lived branch, created only to leverage
+                 * Saphyra internals and extract a list of setters, should never interact with the history
+                 */
+                return defaultOnPushToHistoryFnNoop
               })()
 
               const onTransitionEnd = (
@@ -1558,7 +1633,10 @@ export function newStoreDef<
                 _guard: "is-sub-transition",
               })
 
-              return dispatchAsync(transitionAction, options)
+              return dispatchAsync(transitionAction, {
+                onAbort: options?.onAbort ?? "noop",
+                signal: controller.signal,
+              })
             },
             deps,
             isOptimistic: false,
@@ -1938,16 +2016,6 @@ export function newStoreDef<
         "bootstrap"
       )
 
-      const isOkToPushToHistory = (() => {
-        const isTransitioning = Object.keys(store.transitions.state).length > 0
-
-        if (isTransitioning) return false
-        return true
-      })()
-
-      if (isOkToPushToHistory) {
-        store.history = [store.state]
-      }
       store.historyRedo = []
     }
 
