@@ -701,3 +701,7 @@ export type OnCommitTransitionConfig<
     TDeps
   >
 ) => void
+
+export type ExtractActionDispatch<TStore extends SomeStoreGeneric> = Parameters<
+  TStore["dispatch"]
+>[0]
