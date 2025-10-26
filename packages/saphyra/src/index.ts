@@ -9,5 +9,10 @@ export * from "./transitions-state"
 export * from "./cached-getter"
 export * from "./derivations-registry"
 export * from "./helpers"
+export {
+  createDerivationsConfig,
+  DerivationBuilder,
+  type DerivationsConfigFn,
+} from "./helpers/derivations-builder"
 export * from "./utils"
 export * from "./async-operation"

@@ -63,6 +63,10 @@ import { mockEventEmitter } from "./helpers/mock-event-emitter"
 import { $$onDevMode, $$onDebugMode } from "./helpers/log"
 import { TransitionsStateStore } from "./transitions-state"
 import { DerivationsRegistry } from "./derivations-registry"
+import {
+  createDerivationsConfig,
+  type DerivationsConfigFn,
+} from "./helpers/derivations-builder"
 import { waitFor as waitForFn } from "./fn/wait-for"
 import { newAsyncOperation } from "./async-operation"
 import { shallowCompare } from "./helpers/shallow-compare"
@@ -274,7 +278,7 @@ type CreateStoreOptions<
     TUncontrolledState,
     TDeps
   >
-  derivations?: DerivationsConfig<TState>
+  derivations?: DerivationsConfigFn<TState>
 }
 
 export type StoreConstructorConfig<TDeps> = {
@@ -395,9 +399,8 @@ export function newStoreDef<
   const defaultOnPushToHistory =
     defaults?.onPushToHistory ?? defaultOnPushToHistoryFn
 
-  // Create derivations registry if derivations are provided
   const derivationsRegistry = derivations
-    ? new DerivationsRegistry<TState>(derivations)
+    ? new DerivationsRegistry<TState>(createDerivationsConfig(derivations))
     : null
 
   function createStore(
