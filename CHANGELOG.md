@@ -1,3 +1,6 @@
+### v0.14.1
+- Fix: Add signal to `async().setTimeout` callback.
+
 ### v0.14.0
 Add ability to configure a set of default behavior at the store definition level:
 ```javascript
