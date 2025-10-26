@@ -11,6 +11,7 @@ import {
   AsyncPromiseConfig,
   AsyncPromiseOnFinishProps,
   AsyncPromiseProps,
+  AsyncSetTimeoutProps,
   AsyncTimerConfig,
   DefaultActions,
   SomeStore,
@@ -205,7 +206,7 @@ export function createAsync<
     onAsyncOperation(asyncOperation)
   }
   const wrapTimeout = (
-    callback: () => void,
+    callback: ({ signal }: AsyncSetTimeoutProps) => void,
     time = 0,
     config?: AsyncTimerConfig,
     emitBar?: boolean
@@ -231,7 +232,7 @@ export function createAsync<
         : () => {}
       const timerId = setTimeout(() => {
         try {
-          callback()
+          callback({ signal })
           finishBar("success")
           cleanUpList.delete(cleanUp)
           store.transitions.doneKey(
@@ -307,7 +308,10 @@ export function createAsync<
       return {}
     }
 
-    const setTimeout = (callback: () => void, time?: number) => {
+    const setTimeout = (
+      callback: ({ signal }: AsyncSetTimeoutProps) => void,
+      time?: number
+    ) => {
       wrapTimeout(
         callback,
         time,

@@ -454,6 +454,10 @@ export type AsyncPromiseProps = {
   signal: AbortSignal
 }
 
+export type AsyncSetTimeoutProps = {
+  signal: AbortSignal
+}
+
 export type PromiseResult<T> = {
   onSuccess: (callback: (value: T) => void) => void
 }
@@ -499,7 +503,7 @@ export type AsyncModule = {
     props?: AsyncPromiseOnFinishProps | undefined
   ) => Pick<AsyncModule, "promise" | "setTimeout">
   setTimeout: (
-    callback: () => void,
+    callback: (props: AsyncSetTimeoutProps) => void,
     time?: number,
     config?: AsyncTimerConfig
   ) => void
