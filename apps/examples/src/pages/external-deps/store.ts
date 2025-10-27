@@ -59,10 +59,10 @@ export const newPostsStore = newStoreDef<
       },
     },
   },
-  derivations: {
-    getPosts: {
-      selectors: [s => s.posts],
-      evaluator: posts => {
+  derivations: d => ({
+    getPosts: d()
+      .on([s => s.posts])
+      .evaluate(posts => {
         console.log("77- CALCULATING LONG LIST")
         return posts.reduce(
           (acc: any, post: PostType) => {
@@ -74,9 +74,8 @@ export const newPostsStore = newStoreDef<
           },
           { byId: {}, byUserId: {}, postsId: [] }
         )
-      },
-    },
-  },
+      }),
+  }),
   async onConstruct({ signal, deps }) {
     const [posts, likedPosts] = await Promise.all([
       deps.fetchPosts(signal),

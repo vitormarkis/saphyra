@@ -5,12 +5,11 @@ import { SomeStoreGeneric, Transition } from "./types"
 describe("ensure proper transition cleanup", () => {
   test("success", async () => {
     const newStore = newStoreDefTest({
-      derivations: {
-        getCount: {
-          selectors: [s => s.count],
-          evaluator: s => s.count,
-        },
-      },
+      derivations: d => ({
+        getCount: d()
+          .on([s => s.count])
+          .evaluate(s => s.count),
+      }),
       reducer({ state, action, set, async }) {
         if (action.type === "increment") {
           async().promise(async () => {
@@ -33,12 +32,11 @@ describe("ensure proper transition cleanup", () => {
 
   test("error", async () => {
     const newStore = newStoreDefTest({
-      derivations: {
-        getCount: {
-          selectors: [s => s.count],
-          evaluator: s => s.count,
-        },
-      },
+      derivations: d => ({
+        getCount: d()
+          .on([s => s.count])
+          .evaluate(s => s.count),
+      }),
       reducer({ state, action, async }) {
         if (action.type === "increment") {
           async().promise(async () => {
@@ -63,12 +61,11 @@ describe("ensure proper transition cleanup", () => {
 
   test("dispatch async", async () => {
     const newStore = newStoreDefTest({
-      derivations: {
-        getCount: {
-          selectors: [s => s.count],
-          evaluator: s => s.count,
-        },
-      },
+      derivations: d => ({
+        getCount: d()
+          .on([s => s.count])
+          .evaluate(s => s.count),
+      }),
       reducer({ state, action, async, dispatchAsync, set }) {
         if (action.type === "increment-impl") {
           set(s => ({ count: s.count + 1 }))

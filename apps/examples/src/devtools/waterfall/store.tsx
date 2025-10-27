@@ -119,9 +119,7 @@ export const newWaterfallStore = newStoreDef<
   derivations: d => ({
     getName: d()
       .on([s => s.barFilters])
-      .evaluate(name => {
-        return 20
-      }),
+      .evaluate(() => "20"),
     getCurrentSorters: d()
       .on([s => s.barSorters])
       .evaluate(barSorters => {
@@ -130,7 +128,7 @@ export const newWaterfallStore = newStoreDef<
             const [currentFilter] = filters
             return [properties, currentFilter]
           })
-        )
+        ) as CurrentSorters
       }),
     getSortersFnList: d()
       .on([s => s.getCurrentSorters()])

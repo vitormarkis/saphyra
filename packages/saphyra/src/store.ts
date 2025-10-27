@@ -2,7 +2,6 @@ import { createSubject } from "./Subject"
 import {
   OptimisticRegistry,
   RemoveDollarSignProps,
-  DerivationsConfig,
   RemoveFunctionProps,
   StoreInternalContextEnum,
 } from "./types"

@@ -53,19 +53,18 @@ const newAuthStore = newStoreDef<
       noop()
     },
   },
-  derivations: {
-    getFirstPermission: {
-      selectors: [s => s.$permissions],
-      evaluator: permissions => {
+  derivations: d => ({
+    getFirstPermission: d()
+      .on([s => s.$permissions])
+      .evaluate(permissions => {
         return permissions[0]
-      },
-    },
-    getWelcomeMessage: {
-      selectors: [s => s.username, s => s.role],
-      evaluator: (username, role) =>
-        `Welcome ${username}! Your role is [${role}].`,
-    },
-  },
+      }),
+    getWelcomeMessage: d()
+      .on([s => s.username, s => s.role])
+      .evaluate(
+        (username, role) => `Welcome ${username}! Your role is [${role}].`
+      ),
+  }),
   reducer({ prevState, state, action, diff, set, async, events, optimistic }) {
     if (action?.type === "change-role") {
       optimistic({ role: action.role })

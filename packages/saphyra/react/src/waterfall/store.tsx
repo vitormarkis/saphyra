@@ -113,45 +113,37 @@ export const newWaterfallStore = newStoreDef<
       highlightingTransition: null,
     }
   },
-  derivations: {
-    getCurrentSorters: {
-      selectors: [s => s.barSorters],
-      evaluator(barSorters: BarSorters) {
+  derivations: d => ({
+    getCurrentSorters: d()
+      .on([s => s.barSorters])
+      .evaluate(barSorters => {
         return Object.fromEntries(
           Object.entries(barSorters).map(([properties, filters]) => {
             const [currentFilter] = filters
             return [properties, currentFilter]
           })
-        )
-      },
-    },
-    getSortersFnList: {
-      selectors: [s => s.getCurrentSorters()],
-      evaluator(currentSorters: CurrentSorters) {
+        ) as CurrentSorters
+      }),
+    getSortersFnList: d()
+      .on([s => s.getCurrentSorters()])
+      .evaluate(currentSorters => {
         return Object.values(currentSorters)
           .map(filterType => filterType?.sorter)
-          .filter(nonNullable)
-      },
-    },
-    getFiltersFnList: {
-      selectors: [s => s.barFilters],
-      evaluator(barFilters: BarFilters) {
+          .filter(nonNullable) as BarSort[]
+      }),
+    getFiltersFnList: d()
+      .on([s => s.barFilters])
+      .evaluate(barFilters => {
         return Object.values(barFilters).map(filterType => filterType?.filter)
-      },
-    },
-    getDisplayingBars: {
-      selectors: [
+      }),
+    getDisplayingBars: d()
+      .on([
         s => s.bars,
         s => s.getFiltersFnList(),
         s => s.getSortersFnList(),
         s => s.query,
-      ],
-      evaluator(
-        bars: BarType[],
-        filterFnList: BarFilter[],
-        sortersFnList: BarSort[],
-        query: string
-      ) {
+      ])
+      .evaluate((bars, filterFnList, sortersFnList, query) => {
         bars = bars.filter(bar => {
           return filterFnList.some(createFilter => {
             const filter = createFilter(query)
@@ -167,37 +159,32 @@ export const newWaterfallStore = newStoreDef<
           return 0
         })
         return bars
-      },
-    },
-    getConfig: {
-      selectors: [s => s.bars, s => s.now],
-      evaluator: (bars, now) => {
+      }),
+    getConfig: d()
+      .on([s => s.bars, s => s.now])
+      .evaluate((bars, now) => {
         return bars.reduce(...reduceConfig(now))
-      },
-    },
-    getDisplayingBarsIdList: {
-      selectors: [s => s.getDisplayingBars()],
-      evaluator(displayingBars: BarType[]) {
+      }),
+    getDisplayingBarsIdList: d()
+      .on([s => s.getDisplayingBars()])
+      .evaluate(displayingBars => {
         return displayingBars.map(bar => bar.id)
-      },
-    },
-    getLinesAmount: {
-      selectors: [s => s.getConfig(), s => s.distance],
-      evaluator(config, distance) {
+      }),
+    getLinesAmount: d()
+      .on([s => s.getConfig(), s => s.distance])
+      .evaluate((config, distance) => {
         return Math.ceil((config.max - config.min) / distance)
-      },
-    },
-    getLines: {
-      selectors: [s => s.getLinesAmount()],
-      evaluator(linesAmount: number) {
+      }),
+    getLines: d()
+      .on([s => s.getLinesAmount()])
+      .evaluate(linesAmount => {
         return Array.from({ length: linesAmount }).map(
           (_, idx): LineType => ({ idx })
         )
-      },
-    },
-    getBarsByBarId: {
-      selectors: [s => s.bars],
-      evaluator: bars => {
+      }),
+    getBarsByBarId: d()
+      .on([s => s.bars])
+      .evaluate(bars => {
         return bars.reduce(
           (acc: Record<string, BarType>, bar: BarType) => {
             acc[bar.id] = bar
@@ -205,15 +192,13 @@ export const newWaterfallStore = newStoreDef<
           },
           {} as Record<string, BarType>
         )
-      },
-    },
-    getIsSomeRunning: {
-      selectors: [s => s.bars],
-      evaluator(bars: BarType[]) {
+      }),
+    getIsSomeRunning: d()
+      .on([s => s.bars])
+      .evaluate(bars => {
         return bars.some(bar => bar.status === "running")
-      },
-    },
-  },
+      }),
+  }),
   reducer({ state, action, store, dispatch }) {
     switch (action.type) {
       case "refresh": {
