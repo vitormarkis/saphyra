@@ -622,13 +622,28 @@ export function newStoreDef<
         console.log("%c 00) k applying setters", "color: orange", setters)
       )
 
+      const baseState = cloneObj(
+        (() => {
+          const defaultState = store.state
+          const parentTransition = store.parentTransitionRegistry[transitionKey]
+          if (parentTransition) {
+            const parentTransitionKey = parentTransition.join(":")
+            const parentState =
+              store.transitionsState.state[parentTransitionKey]
+            if (parentState) {
+              return parentState
+            }
+          }
+          return defaultState
+        })()
+      )
       const newStateFromSetters = setters.reduce(
         (acc: TState, stateOrSetter, _index) => {
           const setter = mergeSetterWithState(ensureSetter(stateOrSetter))
           const newState = setter(acc)
           return mergeObj(acc, newState) as TState
         },
-        cloneObj(store.state)
+        baseState
       )
 
       clearTransitionState(transition)
@@ -651,7 +666,7 @@ export function newStoreDef<
         setterOrPartialStateList: setters,
         state: newStateFromSetters,
         transition,
-        baseState: store.state,
+        baseState,
         store,
       })
       const pushToHistoryCb = action.onPushToHistory ?? defaultOnPushToHistory
