@@ -109,3 +109,35 @@ test("should create dispatch async sub branch state from parent state", async ()
   expect(store.getState()).toEqual({ count: 2 })
   expect(store.history).toEqual([{ count: 0 }, { count: 2 }])
 })
+
+test("should discard branch if dispatch async fails", async () => {
+  const newStore = newStoreDefTest({
+    reducer({ state, action, set, dispatchAsync, async }) {
+      if (action.type === "increment-async") {
+        async().promise(async () => {
+          await Promise.all([
+            dispatchAsync({ type: "increment" }),
+            dispatchAsync({ type: "increment" }),
+            dispatchAsync({ type: "increment", shouldError: true }),
+          ])
+        })
+      }
+
+      if (action.type === "increment") {
+        const { shouldError = false } = action
+        async().promise(async () => {
+          await new Promise(resolve => setTimeout(resolve))
+          if (shouldError) throw new Error("Error")
+          set(s => ({ count: s.count + 1 }))
+        })
+      }
+
+      return state
+    },
+  })
+
+  const store = newStore({ count: 0 })
+  store.dispatch({ type: "increment-async", transition: ["test"] })
+  await store.waitFor(["test"])
+  expect(store.history).toStrictEqual([{ count: 0 }])
+})
