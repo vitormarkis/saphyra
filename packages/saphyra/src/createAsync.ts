@@ -280,10 +280,10 @@ export function createAsync<
     let onFinishObj: undefined | AsyncPromiseOnFinishProps
 
     const onFinish: AsyncModule["onFinish"] = _onFinishObj => {
-      if (!_name)
-        throw new Error(
-          "Name is required when using async().promise.onFinish, call .setName before .promise"
-        )
+      // if (!_name)
+      //   throw new Error(
+      //     "Name is required when using async().promise.onFinish, call .setName before .promise"
+      //   )
 
       onFinishObj = _onFinishObj
 
