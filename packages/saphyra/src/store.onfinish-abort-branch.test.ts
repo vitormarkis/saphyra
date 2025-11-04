@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest"
+import { beforeEach, afterEach, describe, expect, test, vi } from "vitest"
 import { newStoreDefTest } from "./test.utils"
 import { AsyncPromiseOnFinishProps } from "./types"
 
@@ -43,6 +43,14 @@ const createRevalidate = (dispatchAsync: any) => {
   })
 }
 
+beforeEach(() => {
+  vi.useFakeTimers()
+})
+
+afterEach(() => {
+  vi.useRealTimers()
+})
+
 describe("revalidation fails", () => {
   test("onFinish should abort branch when dispatchAsync rejects", async () => {
     const { getTodos, toggleTodo } = createTodoHelpers([
@@ -77,13 +85,16 @@ describe("revalidation fails", () => {
 
     const store = newStore({})
 
-    await store
+    const promise = store
       .dispatchAsync({
         type: "toggle-todo",
         todoId: 1,
         transition: ["toggle"],
       })
       .catch(() => {})
+
+    await vi.runAllTimersAsync()
+    await promise
 
     expect(store.history).toStrictEqual([
       {
@@ -127,7 +138,7 @@ describe("revalidation fails", () => {
 
     const store = newStore({})
 
-    store
+    const promise1 = store
       .dispatchAsync({
         type: "toggle-todo",
         todoId: 1,
@@ -135,15 +146,18 @@ describe("revalidation fails", () => {
       })
       .catch(() => {})
 
-    await new Promise(resolve => setTimeout(resolve, 50))
+    await vi.advanceTimersByTimeAsync(50)
 
-    await store
+    const promise2 = store
       .dispatchAsync({
         type: "toggle-todo",
         todoId: 2,
         transition: ["toggle", "2"],
       })
       .catch(() => {})
+
+    await vi.runAllTimersAsync()
+    await Promise.all([promise1, promise2])
 
     expect(store.history).toStrictEqual([
       {
@@ -190,14 +204,16 @@ describe("revalidation succeeds", () => {
 
     const store = newStore({})
 
-    await store.dispatchAsync({
+    const promise = store.dispatchAsync({
       type: "toggle-todo",
       todoId: 1,
       transition: ["toggle"],
     })
 
-    expect(store.history).toHaveLength(2) // Right, but needs onConstruct refactor.
-    // expect(store.history).toHaveLength(1) // Wrong, but it's the current behavior.
+    await vi.runAllTimersAsync()
+    await promise
+
+    expect(store.history).toHaveLength(2)
     expect(store.history).toStrictEqual([
       {
         todos: [{ id: 1, completed: false }],
@@ -243,19 +259,22 @@ describe("revalidation succeeds", () => {
 
     const store = newStore({})
 
-    store.dispatchAsync({
+    const promise1 = store.dispatchAsync({
       type: "toggle-todo",
       todoId: 1,
       transition: ["toggle", "1"],
     })
 
-    await new Promise(resolve => setTimeout(resolve, 50))
+    await vi.advanceTimersByTimeAsync(50)
 
-    await store.dispatchAsync({
+    const promise2 = store.dispatchAsync({
       type: "toggle-todo",
       todoId: 2,
       transition: ["toggle", "2"],
     })
+
+    await vi.runAllTimersAsync()
+    await Promise.all([promise1, promise2])
 
     expect(store.history[0]).toStrictEqual({
       todos: [
