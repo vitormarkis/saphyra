@@ -1,7 +1,7 @@
 {
   "name": "saphyra",
   "description": "A tool for creating declarative stores and managing state that embraces async behavior.",
-  "version": "0.7.9-beta.1",
+  "version": "0.7.11",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.mjs",
@@ -44,7 +44,7 @@
     "pr": "prettier --write src",
     "test": "vitest --config vitest.config.ts --silent",
     "test:debug": "vitest --config vitest.config.ts --inspect-brk --browser --no-file-parallelism",
-    "build": "npm run build:js && npm run build:css",
+    "build": "npm run build:js",
     "build:js": "tsup",
     "build:css": "npx postcss react/src/waterfall/waterfall.css -o dist/waterfall.css",
     "build-vite": "vite build",

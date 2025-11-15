@@ -8,6 +8,7 @@ import {
 } from "./types"
 import { createAsync, errorNoTransition } from "./createAsync"
 import { runSuccessCallback, TransitionsStore } from "./transitions-store"
+import { InfiniteLoopError } from "./infinite-loop-error"
 import type {
   Async,
   AsyncPromiseProps,
@@ -225,6 +226,7 @@ type CreateStoreOptionsConfig<
     TUncontrolledState,
     TDeps
   >
+  maxSyncDispatchCount?: number
 }
 
 /**
@@ -340,6 +342,7 @@ export function newStoreDef<
   const {
     onPushToHistory = defaultOnPushToHistory,
     runOptimisticUpdateOn = defaultRunOptimisticUpdateOn,
+    maxSyncDispatchCount = 1000,
   } = globalConfig ?? {}
 
   // Create derivations registry if derivations are provided
@@ -771,6 +774,10 @@ export function newStoreDef<
           return
         }
 
+        if (error instanceof InfiniteLoopError) {
+          throw error
+        }
+
         handleError(error, action.transition)
       }
     }
@@ -1178,6 +1185,14 @@ export function newStoreDef<
               }
               if (isSync) {
                 actionsQueue.push(safeAction)
+                if (actionsQueue.length > maxSyncDispatchCount) {
+                  throw new InfiniteLoopError(
+                    `Infinite loop detected: exceeded ${maxSyncDispatchCount} synchronous dispatches. ` +
+                      `Last action type: "${(action as any).type}". ` +
+                      `This usually happens when an action dispatches itself or triggers a circular chain of dispatches. ` +
+                      `You can increase this limit by setting maxSyncDispatchCount in the store config.`
+                  )
+                }
               } else {
                 store.dispatch(safeAction)
               }
