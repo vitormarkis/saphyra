@@ -7,6 +7,7 @@ import {
 } from "./types"
 import { createAsync, errorNoTransition } from "./createAsync"
 import { runSuccessCallback, TransitionsStore } from "./transitions-store"
+import { InfiniteLoopError } from "./infinite-loop-error"
 import type {
   AsyncBuilder,
   AsyncPromiseProps,
@@ -223,6 +224,7 @@ type CreateStoreOptionsConfig<
     TUncontrolledState,
     TDeps
   >
+  maxSyncDispatchCount?: number
 }
 
 type CreateStoreOptionsDefaultsConfig<
@@ -392,6 +394,7 @@ export function newStoreDef<
     runOptimisticUpdateOn = defaultRunOptimisticUpdateOn,
     onCommitTransition = defaultOnCommitTransition,
     defaults,
+    maxSyncDispatchCount = 1000,
   } = globalConfig ?? {}
   const defaultTransition = defaults?.transition
   const defaultOnTransitionEnd = defaults?.onTransitionEnd
@@ -1046,6 +1049,10 @@ export function newStoreDef<
           return () => {}
         }
 
+        if (error instanceof InfiniteLoopError) {
+          throw error
+        }
+
         handleError(error, action.transition)
         return () => {}
       }
@@ -1436,6 +1443,7 @@ export function newStoreDef<
         props?.optimisticState ?? store.optimisticState
       )
       const { createAsync = defaultInnerCreateAsync } = props ?? {}
+      let syncDispatchCount = 0
 
       const transition = rootAction.transition
       const controller = ensureAbortController({
@@ -1522,6 +1530,15 @@ export function newStoreDef<
                 null,
             }
             if (isSync && sameTransition) {
+              syncDispatchCount++
+              if (syncDispatchCount > maxSyncDispatchCount) {
+                throw new InfiniteLoopError(
+                  `Infinite loop detected: exceeded ${maxSyncDispatchCount} synchronous dispatches. ` +
+                    `Last action type: "${(action as any).type}". ` +
+                    `This usually happens when an action dispatches itself or triggers a circular chain of dispatches. ` +
+                    `You can increase this limit by setting maxSyncDispatchCount in the store config.`
+                )
+              }
               // actionsQueue.push(safeAction)
               // const futurePrevState = cloneObj(newState) // I think this is right
               const producedState = reducer({
