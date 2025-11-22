@@ -1796,7 +1796,7 @@ export function newStoreDef<
       dispatchInternal({
         action: {
           type: "noop",
-          transition: options?.transition ?? null,
+          transition: options?.transition ?? defaultTransition ?? null,
         } as Action,
         setterOrPartialState,
         when,
