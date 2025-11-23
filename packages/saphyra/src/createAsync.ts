@@ -24,7 +24,7 @@ import { isNewActionError, labelWhen } from "./utils"
 
 export const errorNoTransition = () =>
   new Error(
-    "No transition! If you want to deal with async operations in your reducer, you must pass a transition to your action."
+    "No transition! Your reducer triggered async operations without a transition. Add one to your action or set a default transition on your store definition."
   )
 
 export function createAsync<

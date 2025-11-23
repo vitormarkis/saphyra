@@ -447,7 +447,7 @@ describe("Error handlers are called in all user land code scenarios", () => {
         expect(capturedErrors).toHaveLength(1)
         expect(capturedErrors[0].error).toBeInstanceOf(Error)
         expect((capturedErrors[0].error as Error).message).toBe(
-          "No transition! If you want to deal with async operations in your reducer, you must pass a transition to your action."
+          "No transition! Your reducer triggered async operations without a transition. Add one to your action or set a default transition on your store definition."
         )
         expect(capturedErrors[0].transition).toBeUndefined()
       }

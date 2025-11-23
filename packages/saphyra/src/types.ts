@@ -31,6 +31,15 @@ export type DispatchAsync<
   options?: { onAbort: "resolve" | "reject" | "noop"; signal?: AbortSignal }
 ) => Promise<TState>
 
+export type SetStateAsync<TState extends Record<string, any>> = (
+  setterOrPartialState: SetterOrPartialState<TState>,
+  transition?: TransitionNullable,
+  options?: {
+    onAbort?: "resolve" | "reject" | "noop"
+    signal?: AbortSignal
+  }
+) => Promise<TState>
+
 export type ClassicAction<
   TState extends Record<string, any>,
   TActions extends ActionShape,
@@ -221,6 +230,7 @@ export type GenericStoreMethods<
     setterOrPartialState: SetterOrPartialState<TState>,
     options?: SetStateOptions
   ): void
+  setStateAsync: SetStateAsync<TState>
   registerOptimistic: InnerReducerOptimistic<TState>
   createOptimisticScheduler(
     transition: TransitionNullable,

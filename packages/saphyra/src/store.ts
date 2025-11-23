@@ -992,11 +992,24 @@ export function newStoreDef<
       controller?.abort()
     }
 
-    const dispatchAsync: Met["dispatchAsync"] = (initialAction, options) => {
-      const action = {
-        ...initialAction,
-        transition: initialAction.transition ?? defaultTransition,
+    const dispatchAsyncImpl = (params: {
+      action?: ClassicAction<
+        TState,
+        TActions,
+        TEvents,
+        TUncontrolledState,
+        TDeps
+      >
+      setterOrPartialState?: SetterOrPartialState<TState>
+      options?: {
+        transition?: TransitionNullable
+        onAbort?: "resolve" | "reject" | "noop"
+        signal?: AbortSignal
       }
+    }): Promise<TState> => {
+      const { action: initialAction, setterOrPartialState, options } = params
+      const transition =
+        initialAction?.transition ?? options?.transition ?? defaultTransition
       const resolver = PromiseWithResolvers<TState>()
       if (options?.signal?.aborted) {
         throw { code: 20, reason: "Signal is already aborted" }
@@ -1017,16 +1030,49 @@ export function newStoreDef<
         } else {
           resolver.resolve(props.state)
         }
-        const onTransitionEndFn =
-          action.onTransitionEnd ?? defaultOnTransitionEnd
-        onTransitionEndFn?.(props)
+        if (initialAction) {
+          const onTransitionEndFn =
+            initialAction.onTransitionEnd ?? defaultOnTransitionEnd
+          onTransitionEndFn?.(props)
+        }
       }
 
-      dispatch({
-        ...action,
-        onTransitionEnd,
-      })
+      if (initialAction) {
+        dispatch({
+          ...initialAction,
+          transition,
+          onTransitionEnd,
+        })
+      } else if (setterOrPartialState) {
+        const when = labelWhen(new Date())
+        dispatchInternal({
+          action: {
+            type: "noop",
+            transition,
+            onTransitionEnd,
+          } as Action,
+          setterOrPartialState,
+          when,
+        })
+      } else {
+        throw new Error("No action or setterOrPartialState provided")
+      }
       return resolver.promise
+    }
+
+    const dispatchAsync: Met["dispatchAsync"] = (initialAction, options) => {
+      return dispatchAsyncImpl({ action: initialAction, options })
+    }
+
+    const setStateAsync: Met["setStateAsync"] = (
+      setterOrPartialState,
+      transition,
+      options
+    ) => {
+      return dispatchAsyncImpl({
+        setterOrPartialState,
+        options: { ...options, transition },
+      })
     }
 
     type DispatchInternalProps = {
@@ -1891,6 +1937,7 @@ export function newStoreDef<
       dispatch,
       dispatchAsync,
       setState,
+      setStateAsync,
       registerOptimistic,
       registerErrorHandler,
       handleError,
