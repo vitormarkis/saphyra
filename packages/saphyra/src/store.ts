@@ -9,6 +9,7 @@ import { createAsync, errorNoTransition } from "./createAsync"
 import { runSuccessCallback, TransitionsStore } from "./transitions-store"
 import { InfiniteLoopError } from "./infinite-loop-error"
 import type {
+  ActionHistoryEntry,
   AsyncBuilder,
   AsyncPromiseProps,
   DefaultActions,
@@ -45,7 +46,12 @@ import type {
 import { EventEmitter, EventsTuple } from "./event-emitter"
 import { noop } from "./fn/noop"
 import { ErrorsStore } from "./errors-store"
-import { checkTransitionIsNested, isNewActionError, labelWhen } from "./utils"
+import {
+  checkTransitionIsNested,
+  createAncestor,
+  isNewActionError,
+  labelWhen,
+} from "./utils"
 import { getSnapshotAction } from "./helpers/get-snapshot-action"
 import { Rollback } from "./helpers/rollback"
 import invariant from "tiny-invariant"
@@ -496,6 +502,7 @@ export function newStoreDef<
       historyRedo: [],
       errorHandlers: new Set(),
       settersRegistry: {},
+      actionHistoryRegistry: {},
       optimisticRegistry: new OptimisticRegistry(),
       state: {} as TState,
       optimisticState: {} as TState,
@@ -607,6 +614,28 @@ export function newStoreDef<
       noop()
     }
 
+    const addActionHistoryEntry = (
+      action: Action,
+      setterOrPartialState: SetterOrPartialState<TState> | null,
+      transition: Transition
+    ) => {
+      const source = (action as any).__source ?? "dispatch"
+      const historyEntry: ActionHistoryEntry<TActions, TState> = {
+        action,
+        timestamp: new Date(),
+        depth: transition.length,
+        source,
+        ...(setterOrPartialState ? { setterOrPartialState } : {}),
+      }
+
+      const ancestors = createAncestor<string>(transition)
+      ancestors.forEach((ancestor: string[]) => {
+        const key = ancestor.join(":")
+        store.actionHistoryRegistry[key] ??= []
+        store.actionHistoryRegistry[key].push(historyEntry)
+      })
+    }
+
     const commitTransition: Met["commitTransition"] = (transition, action) => {
       if (!transition) {
         debugger
@@ -664,6 +693,11 @@ export function newStoreDef<
         store.parentTransitionRegistry,
         transitionKey
       )
+      const actionHistory = store.actionHistoryRegistry[transitionKey] ?? []
+      store.actionHistoryRegistry = deleteImmutably(
+        store.actionHistoryRegistry,
+        transitionKey
+      )
       onCommitTransition({
         action,
         setterOrPartialStateList: setters,
@@ -671,6 +705,7 @@ export function newStoreDef<
         transition,
         baseState,
         store,
+        actionHistory,
       })
       const pushToHistoryCb = action.onPushToHistory ?? defaultOnPushToHistory
       const [newState, newHistory] = handleNewStateToHistory({
@@ -695,6 +730,7 @@ export function newStoreDef<
         setters,
         store,
         transition,
+        actionHistory,
         error: null,
       })
       subject.notify()
@@ -748,6 +784,10 @@ export function newStoreDef<
       store.errors.delete(transitionKey)
 
       store.optimisticRegistry.clear(transitionKey)
+      store.actionHistoryRegistry = deleteImmutably(
+        store.actionHistoryRegistry,
+        transitionKey
+      )
       store.transitions.controllers.clear(transitionKey)
       if (store.transitions.cleanUpList[transitionKey]) {
         store.transitions.cleanUpList = deleteImmutably(
@@ -776,12 +816,15 @@ export function newStoreDef<
       store.notify()
       $$onDebugMode(() => console.log("66- clearing optimistic"))
 
+      const actionHistory = store.actionHistoryRegistry[transitionKey] ?? []
+
       performOnTransitionEndCallbacks({
         newState: store.state,
         setters: [],
         store,
         transition,
         error,
+        actionHistory,
       })
 
       const newActionAbort = isNewActionError(error)
@@ -1042,7 +1085,8 @@ export function newStoreDef<
           ...initialAction,
           transition,
           onTransitionEnd,
-        })
+          __source: "dispatchAsync",
+        } as any)
       } else if (setterOrPartialState) {
         const when = labelWhen(new Date())
         dispatchInternal({
@@ -1050,7 +1094,8 @@ export function newStoreDef<
             type: "noop",
             transition,
             onTransitionEnd,
-          } as Action,
+            __source: "setStateAsync",
+          } as any,
           setterOrPartialState,
           when,
         })
@@ -1201,6 +1246,8 @@ export function newStoreDef<
           if (!t) return
           const onTransitionEndFn =
             initialAction.onTransitionEnd ?? defaultOnTransitionEnd
+          const transitionKey = t.join(":")
+          const actionHistory = store.actionHistoryRegistry[transitionKey] ?? []
           onTransitionEndFn?.({
             events: store.events,
             meta: store.transitions.meta.get(t),
@@ -1211,6 +1258,7 @@ export function newStoreDef<
             aborted: true,
             setterOrPartialStateList: [],
             store,
+            actionHistory,
           })
         }
       )
@@ -1286,6 +1334,20 @@ export function newStoreDef<
         )
       }
       handleRegisterTransition(rootAction, store)
+
+      if (rootAction.transition) {
+        const actionWithBeforeDispatch = {
+          ...rootAction,
+          ...(initialAction.beforeDispatch
+            ? { beforeDispatch: initialAction.beforeDispatch }
+            : {}),
+        }
+        addActionHistoryEntry(
+          actionWithBeforeDispatch,
+          setterOrPartialState,
+          rootAction.transition
+        )
+      }
 
       /**
        * Sobreescrevendo controller, quando na verdade cada action
@@ -1525,20 +1587,24 @@ export function newStoreDef<
             },
             from: "action",
             onAbort: () => {
-              if (!action.transition) return
-              const onTransitionEnd =
-                action.onTransitionEnd ?? defaultOnTransitionEnd
-              onTransitionEnd?.({
-                events: store.events,
-                meta: store.transitions.meta.get(action.transition),
-                state: store.state,
-                transition: action.transition,
-                transitionStore: store.transitions,
-                error: { code: 20 },
-                aborted: true,
-                setterOrPartialStateList: [],
-                store,
-              })
+              // if (!action.transition) return
+              // const onTransitionEnd =
+              //   action.onTransitionEnd ?? defaultOnTransitionEnd
+              // const transitionKey = action.transition.join(":")
+              // const actionHistory =
+              //   store.actionHistoryRegistry[transitionKey] ?? []
+              // onTransitionEnd?.({
+              //   events: store.events,
+              //   meta: store.transitions.meta.get(action.transition),
+              //   state: store.state,
+              //   transition: action.transition,
+              //   transitionStore: store.transitions,
+              //   error: { code: 20 },
+              //   aborted: true,
+              //   setterOrPartialStateList: [],
+              //   store,
+              //   actionHistory,
+              // })
             },
           })
           prevState = getStateToUseOnAction(prevState, "prev")
@@ -1843,7 +1909,8 @@ export function newStoreDef<
         action: {
           type: "noop",
           transition: options?.transition ?? defaultTransition ?? null,
-        } as Action,
+          __source: "setState",
+        } as any,
         setterOrPartialState,
         when,
       })
@@ -2312,21 +2379,29 @@ function initiateSubBranchState({
   })
 }
 
-type PerformOnTransitionEndCallbacksProps<TState> = {
+type PerformOnTransitionEndCallbacksProps<
+  TState extends Record<string, any>,
+  TActions extends ActionShape,
+> = {
   store: SomeStoreGeneric
   transition: Transition
   newState: TState
   setters: SetterOrPartialState<TState>[]
   error: unknown | null
+  actionHistory: ActionHistoryEntry<TActions, TState>[]
 }
 
-function performOnTransitionEndCallbacks<TState>({
+function performOnTransitionEndCallbacks<
+  TState extends Record<string, any>,
+  TActions extends ActionShape,
+>({
   newState,
   setters,
   store,
   transition,
   error,
-}: PerformOnTransitionEndCallbacksProps<TState>) {
+  actionHistory,
+}: PerformOnTransitionEndCallbacksProps<TState, TActions>) {
   const transitionKey = transition.join(":")
   const onTransitionEndCallbacks =
     store.onTransitionEndCallbacks[transitionKey] ?? new Set()
@@ -2343,6 +2418,7 @@ function performOnTransitionEndCallbacks<TState>({
       setterOrPartialStateList: setters,
       error,
       store,
+      actionHistory,
     })
   })
   if (!isAborted) {

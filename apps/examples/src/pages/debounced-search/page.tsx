@@ -9,6 +9,7 @@ import { createStoreUtils, useBootstrapError, useNewStore } from "saphyra/react"
 import { queryClient } from "~/query-client"
 import { Waterfall } from "~/devtools/waterfall"
 import { Button } from "~/components/ui/button"
+import { noop } from "~/lib/utils"
 
 type DebouncedSearchEvents = {}
 
@@ -32,6 +33,11 @@ const newDebouncedSearch = newStoreDef<
   DebouncedSearchActions,
   DebouncedSearchEvents
 >({
+  config: {
+    onCommitTransition(props) {
+      noop()
+    },
+  },
   onConstruct({ initialProps }) {
     return {
       name: initialProps.initialName ?? "",

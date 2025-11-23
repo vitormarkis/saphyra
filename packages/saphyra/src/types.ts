@@ -107,6 +107,17 @@ type SettersRegistry<TState> = Record<
   Array<SetterOrPartialState<TState>>
 >
 
+export type ActionHistoryEntry<
+  TActions extends ActionShape,
+  TState extends Record<string, any> = Record<string, any>,
+> = {
+  action: TActions
+  timestamp: Date
+  depth: number
+  source: "dispatch" | "setState" | "dispatchAsync" | "setStateAsync"
+  setterOrPartialState?: SetterOrPartialState<TState>
+}
+
 export type KeyAbort = `abort::${string}`
 
 export type EventsFormat = EventsTuple | Record<KeyAbort, []>
@@ -153,6 +164,7 @@ export type GenericStoreValues<
   optimisticState: TState
   errorHandlers: Set<StoreErrorHandler>
   settersRegistry: SettersRegistry<TState>
+  actionHistoryRegistry: Record<string, ActionHistoryEntry<TActions, TState>[]>
   optimisticRegistry: OptimisticRegistry<TState>
   transitionsState: TransitionsStateStore<TState>
   name?: string
@@ -440,6 +452,7 @@ export type OnTransitionEndProps<
   aborted?: boolean
   setterOrPartialStateList: SetterOrPartialState<TState>[]
   store: SomeStore<TState, TActions, TEvents, TUncontrolledState, TDeps>
+  actionHistory: ActionHistoryEntry<TActions, TState>[]
 }
 
 export type OnTransitionEnd<
@@ -698,6 +711,7 @@ type OnCommitTransitionProps<
   store: SomeStore<TState, TActions, TEvents, TUncontrolledState, TDeps>
   state: TState
   baseState: TState
+  actionHistory: ActionHistoryEntry<TActions, TState>[]
 }
 
 export type OnCommitTransitionConfig<
