@@ -554,7 +554,7 @@ type BarProps = {
   seeingElement: string | null
 }
 
-export const Bar = forwardRef(function Bar({
+export function Bar({
   barId,
   hover,
   seeingElement,
@@ -674,7 +674,7 @@ export const Bar = forwardRef(function Bar({
       </div>
     </div>
   )
-})
+}
 
 type LineProps = {
   idx: number
