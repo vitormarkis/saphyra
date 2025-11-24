@@ -503,6 +503,7 @@ export function newStoreDef<
       errorHandlers: new Set(),
       settersRegistry: {},
       actionHistoryRegistry: {},
+      asyncOperationsHistoryRegistry: {},
       optimisticRegistry: new OptimisticRegistry(),
       state: {} as TState,
       optimisticState: {} as TState,
@@ -636,6 +637,18 @@ export function newStoreDef<
       })
     }
 
+    const addAsyncOperationHistoryEntry = (
+      asyncOperation: AsyncOperation,
+      transition: Transition
+    ) => {
+      const ancestors = createAncestor<string>(transition)
+      ancestors.forEach((ancestor: string[]) => {
+        const key = ancestor.join(":")
+        store.asyncOperationsHistoryRegistry[key] ??= []
+        store.asyncOperationsHistoryRegistry[key].push(asyncOperation)
+      })
+    }
+
     const commitTransition: Met["commitTransition"] = (transition, action) => {
       if (!transition) {
         debugger
@@ -698,6 +711,12 @@ export function newStoreDef<
         store.actionHistoryRegistry,
         transitionKey
       )
+      const asyncOperationsHistory =
+        store.asyncOperationsHistoryRegistry[transitionKey] ?? []
+      store.asyncOperationsHistoryRegistry = deleteImmutably(
+        store.asyncOperationsHistoryRegistry,
+        transitionKey
+      )
       onCommitTransition({
         action,
         setterOrPartialStateList: setters,
@@ -706,6 +725,7 @@ export function newStoreDef<
         baseState,
         store,
         actionHistory,
+        asyncOperationsHistory,
       })
       const pushToHistoryCb = action.onPushToHistory ?? defaultOnPushToHistory
       const [newState, newHistory] = handleNewStateToHistory({
@@ -731,6 +751,7 @@ export function newStoreDef<
         store,
         transition,
         actionHistory,
+        asyncOperationsHistory,
         error: null,
       })
       subject.notify()
@@ -788,6 +809,10 @@ export function newStoreDef<
         store.actionHistoryRegistry,
         transitionKey
       )
+      store.asyncOperationsHistoryRegistry = deleteImmutably(
+        store.asyncOperationsHistoryRegistry,
+        transitionKey
+      )
       store.transitions.controllers.clear(transitionKey)
       if (store.transitions.cleanUpList[transitionKey]) {
         store.transitions.cleanUpList = deleteImmutably(
@@ -817,6 +842,8 @@ export function newStoreDef<
       $$onDebugMode(() => console.log("66- clearing optimistic"))
 
       const actionHistory = store.actionHistoryRegistry[transitionKey] ?? []
+      const asyncOperationsHistory =
+        store.asyncOperationsHistoryRegistry[transitionKey] ?? []
 
       performOnTransitionEndCallbacks({
         newState: store.state,
@@ -825,6 +852,7 @@ export function newStoreDef<
         transition,
         error,
         actionHistory,
+        asyncOperationsHistory,
       })
 
       const newActionAbort = isNewActionError(error)
@@ -904,12 +932,19 @@ export function newStoreDef<
 
       const defaultOnAsyncOperation = (asyncOp: AsyncOperation) =>
         asyncOp.fn?.()
+      const wrappedOnAsyncOperation = (asyncOp: AsyncOperation) => {
+        if (transition) {
+          addAsyncOperationHistoryEntry(asyncOp, transition)
+        }
+        const callback = onAsyncOperation ?? defaultOnAsyncOperation
+        callback(asyncOp)
+      }
       return createAsync(
         store,
         when,
         transition,
         signal ?? initialAbort.controller!.signal,
-        onAsyncOperation ?? defaultOnAsyncOperation,
+        wrappedOnAsyncOperation,
         "store-create-async",
         () => {}
       )
@@ -1238,6 +1273,9 @@ export function newStoreDef<
           if (initialController.signal?.aborted) {
             noop()
           }
+          if (initialAction.transition) {
+            addAsyncOperationHistoryEntry(asyncOp, initialAction.transition)
+          }
           asyncOperations.push(asyncOp)
         },
         "before-dispatch-async",
@@ -1248,6 +1286,8 @@ export function newStoreDef<
             initialAction.onTransitionEnd ?? defaultOnTransitionEnd
           const transitionKey = t.join(":")
           const actionHistory = store.actionHistoryRegistry[transitionKey] ?? []
+          const asyncOperationsHistory =
+            store.asyncOperationsHistoryRegistry[transitionKey] ?? []
           onTransitionEndFn?.({
             events: store.events,
             meta: store.transitions.meta.get(t),
@@ -1259,6 +1299,7 @@ export function newStoreDef<
             setterOrPartialStateList: [],
             store,
             actionHistory,
+            asyncOperationsHistory,
           })
         }
       )
@@ -1579,6 +1620,9 @@ export function newStoreDef<
             transition: action.transition,
             signal,
             onAsyncOperation: asyncOp => {
+              if (action.transition) {
+                addAsyncOperationHistoryEntry(asyncOp, action.transition)
+              }
               if (isSync) {
                 asyncOperations.push(asyncOp)
               } else {
@@ -2097,6 +2141,7 @@ export function newStoreDef<
           BOOTSTRAP_TRANSITION,
           signal,
           asyncOp => {
+            addAsyncOperationHistoryEntry(asyncOp, BOOTSTRAP_TRANSITION)
             asyncOperations.push(asyncOp)
           },
           "on-construct-async"
@@ -2389,6 +2434,7 @@ type PerformOnTransitionEndCallbacksProps<
   setters: SetterOrPartialState<TState>[]
   error: unknown | null
   actionHistory: ActionHistoryEntry<TActions, TState>[]
+  asyncOperationsHistory: AsyncOperation[]
 }
 
 function performOnTransitionEndCallbacks<
@@ -2401,6 +2447,7 @@ function performOnTransitionEndCallbacks<
   transition,
   error,
   actionHistory,
+  asyncOperationsHistory,
 }: PerformOnTransitionEndCallbacksProps<TState, TActions>) {
   const transitionKey = transition.join(":")
   const onTransitionEndCallbacks =
@@ -2419,6 +2466,7 @@ function performOnTransitionEndCallbacks<
       error,
       store,
       actionHistory,
+      asyncOperationsHistory,
     })
   })
   if (!isAborted) {

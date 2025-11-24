@@ -165,6 +165,7 @@ export type GenericStoreValues<
   errorHandlers: Set<StoreErrorHandler>
   settersRegistry: SettersRegistry<TState>
   actionHistoryRegistry: Record<string, ActionHistoryEntry<TActions, TState>[]>
+  asyncOperationsHistoryRegistry: Record<string, AsyncOperation[]>
   optimisticRegistry: OptimisticRegistry<TState>
   transitionsState: TransitionsStateStore<TState>
   name?: string
@@ -453,6 +454,7 @@ export type OnTransitionEndProps<
   setterOrPartialStateList: SetterOrPartialState<TState>[]
   store: SomeStore<TState, TActions, TEvents, TUncontrolledState, TDeps>
   actionHistory: ActionHistoryEntry<TActions, TState>[]
+  asyncOperationsHistory: AsyncOperation[]
 }
 
 export type OnTransitionEnd<
@@ -712,6 +714,7 @@ type OnCommitTransitionProps<
   state: TState
   baseState: TState
   actionHistory: ActionHistoryEntry<TActions, TState>[]
+  asyncOperationsHistory: AsyncOperation[]
 }
 
 export type OnCommitTransitionConfig<
