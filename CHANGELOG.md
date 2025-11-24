@@ -1,3 +1,34 @@
+### v0.14.9
+- Feat: Add `asyncOperationsHistory` to `onCommitTransition` and `onTransitionEnd` callbacks.
+  - `asyncOperationsHistory` contains all async operations (promises, timeouts) that were created during the transition.
+  - This makes it easier to debug and understand what async operations happened during a transition.
+
+### v0.14.8
+- Feat: Add `actionHistory` to `onCommitTransition` and `onTransitionEnd` callbacks.
+  - `actionHistory` contains all actions and setStates that were called during the transition, including their source, depth, and timestamp.
+  - This makes it easier to debug and understand what actions were dispatched during a transition.
+
+### v0.14.7
+- Feat: add `setStateAsync` as one of the store methods.
+  - Work just like `setState`, but returns a promise that you can await and the sure that all derived states and async effects are settled on the next line.
+  - You need to pass a transition to the `setStateAsync` method, or set a default.
+
+### v0.14.6
+- Fix: Limit the number of synchronous dispatches to prevent infinite loops.
+  - You can configure the limit by setting the `maxSyncDispatchCount` in the store definition config.
+
+### v0.14.5
+- Fix: Allow `onFinish` object to be created without a name.
+
+### v0.14.4
+- Fix: Prevent to write on reducer state if `set` was async.
+
+### v0.14.3
+- Fix: When resolving `dispatchAsync`, commit transition using `parentTransition` as base state instead of the current main state.
+
+### v0.14.2
+- Feat: Add `defaults` object to the store definition config.
+
 ### v0.14.1
 - Fix: Add signal to `async().setTimeout` callback.
 
@@ -33,6 +64,7 @@ These can be overridden by the user on demand at dispatch level.
 
 ### v0.12.0
 - Breaking Change: Reducer prop `diff()` use builder pattern now.
+
 #### The reason for the change:
 The previous `diff()` module, you had to pass an array of keys in order to check if any of those keys have changed. But this approach has some limitations:
 - You can't check if nested properties have changed.
