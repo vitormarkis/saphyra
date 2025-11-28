@@ -33,14 +33,17 @@ export function waitFor(
   timeout = 5000
 ): Promise<WaitForResult> {
   const resolver = PromiseWithResolvers<WaitForResult>()
+  const transitionKey = transition.join(":")
   const transitionIsOngoing = store.transitions.isHappeningUnique(transition)
   if (!transitionIsOngoing) {
+    const error = store.errors.state[transitionKey]
+    if (error) {
+      return Promise.resolve({ success: false, reason: "error", error })
+    }
     return Promise.resolve({ success: true, reason: "completed" })
   }
 
   let isResolved = false
-
-  const transitionKey = transition.join(":")
 
   const timeoutId = setTimeout(() => {
     if (!isResolved) {

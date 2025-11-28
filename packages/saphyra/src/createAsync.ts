@@ -101,6 +101,10 @@ export function createAsync<
       async function handlePromise(promise: Promise<T>) {
         if (!transition) throw errorNoTransition()
 
+        // Prevent unhandled rejection from the user's promise
+        // (errors will be caught by the try-catch below)
+        // promise.catch(() => {})
+
         // const clearSubtransitionDoneEvent = store.transitions.allEvents.on(
         //   "subtransition-done",
         //   id => {
@@ -110,6 +114,9 @@ export function createAsync<
         // )
 
         const racePromise = PromiseWithResolvers<T>()
+        // Prevent unhandled rejection for abort errors and other errors
+        // (errors are already handled by store.transitions.emitError)
+        racePromise.promise.catch(() => {})
 
         const finishBar = emitBar
           ? newBar(transitionString, labelWhen(new Date()), label)
@@ -193,7 +200,9 @@ export function createAsync<
         }
       }
       // Set timeout here just to prevent sync reads/writes
-      handlePromise(promiseFn({ signal }))
+      handlePromise(promiseFn({ signal })).catch(() => {
+        // Error is already handled by store.transitions.emitError
+      })
     }
     const asyncOperation = newAsyncOperation({
       fn,

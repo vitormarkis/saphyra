@@ -46,12 +46,7 @@ import type {
 import { EventEmitter, EventsTuple } from "./event-emitter"
 import { noop } from "./fn/noop"
 import { ErrorsStore } from "./errors-store"
-import {
-  checkTransitionIsNested,
-  createAncestor,
-  isNewActionError,
-  labelWhen,
-} from "./utils"
+import { checkTransitionIsNested, isNewActionError, labelWhen } from "./utils"
 import { getSnapshotAction } from "./helpers/get-snapshot-action"
 import { Rollback } from "./helpers/rollback"
 import invariant from "tiny-invariant"
@@ -231,6 +226,8 @@ type CreateStoreOptionsConfig<
     TDeps
   >
   maxSyncDispatchCount?: number
+  maxAsyncOperationsCount?: number
+  maxActionsCount?: number
 }
 
 type CreateStoreOptionsDefaultsConfig<
@@ -401,6 +398,8 @@ export function newStoreDef<
     onCommitTransition = defaultOnCommitTransition,
     defaults,
     maxSyncDispatchCount = 1000,
+    maxAsyncOperationsCount = 500,
+    maxActionsCount = 1000,
   } = globalConfig ?? {}
   const defaultTransition = defaults?.transition
   const defaultOnTransitionEnd = defaults?.onTransitionEnd
@@ -620,6 +619,11 @@ export function newStoreDef<
       setterOrPartialState: SetterOrPartialState<TState> | null,
       transition: Transition
     ) => {
+      const controller = store.transitions.controllers.get(transition)
+      if (controller && controller.signal.aborted) {
+        return
+      }
+
       const source = (action as any).__source ?? "dispatch"
       const historyEntry: ActionHistoryEntry<TActions, TState> = {
         action,
@@ -629,24 +633,74 @@ export function newStoreDef<
         ...(setterOrPartialState ? { setterOrPartialState } : {}),
       }
 
-      const ancestors = createAncestor<string>(transition)
-      ancestors.forEach((ancestor: string[]) => {
-        const key = ancestor.join(":")
-        store.actionHistoryRegistry[key] ??= []
-        store.actionHistoryRegistry[key].push(historyEntry)
-      })
+      const transitionKey = transition.join(":")
+      store.actionHistoryRegistry[transitionKey] ??= []
+      if (
+        store.actionHistoryRegistry[transitionKey].length >= maxActionsCount
+      ) {
+        throw new InfiniteLoopError(
+          `Infinite loop detected: exceeded ${maxActionsCount} actions in history. ` +
+            `You can increase this limit by setting maxActionsCount in the store config.`
+        )
+      }
+      store.actionHistoryRegistry[transitionKey].push(historyEntry)
+
+      let parentTransition = store.parentTransitionRegistry[transitionKey]
+      while (parentTransition) {
+        const parentKey = parentTransition.join(":")
+        if (parentKey === transitionKey) break
+        store.actionHistoryRegistry[parentKey] ??= []
+        store.actionHistoryRegistry[parentKey].push(historyEntry)
+        if (store.actionHistoryRegistry[parentKey].length >= maxActionsCount) {
+          throw new InfiniteLoopError(
+            `Infinite loop detected: exceeded ${maxActionsCount} actions in history. ` +
+              `You can increase this limit by setting maxActionsCount in the store config.`
+          )
+        }
+        parentTransition = store.parentTransitionRegistry[parentKey]
+      }
     }
 
     const addAsyncOperationHistoryEntry = (
       asyncOperation: AsyncOperation,
       transition: Transition
     ) => {
-      const ancestors = createAncestor<string>(transition)
-      ancestors.forEach((ancestor: string[]) => {
-        const key = ancestor.join(":")
-        store.asyncOperationsHistoryRegistry[key] ??= []
-        store.asyncOperationsHistoryRegistry[key].push(asyncOperation)
-      })
+      const transitionKey = transition.join(":")
+
+      const controller = store.transitions.controllers.get(transition)
+      if (controller && controller.signal.aborted) {
+        return
+      }
+
+      store.asyncOperationsHistoryRegistry[transitionKey] ??= []
+      if (
+        store.asyncOperationsHistoryRegistry[transitionKey].length >=
+        maxAsyncOperationsCount
+      ) {
+        throw new InfiniteLoopError(
+          `Infinite loop detected: exceeded ${maxAsyncOperationsCount} async operations in history. ` +
+            `You can increase this limit by setting maxAsyncOperationsCount in the store config.`
+        )
+      }
+      store.asyncOperationsHistoryRegistry[transitionKey].push(asyncOperation)
+
+      let parentTransition = store.parentTransitionRegistry[transitionKey]
+      while (parentTransition) {
+        const parentKey = parentTransition.join(":")
+        if (parentKey === transitionKey) break
+        store.asyncOperationsHistoryRegistry[parentKey] ??= []
+        store.asyncOperationsHistoryRegistry[parentKey].push(asyncOperation)
+        if (
+          store.asyncOperationsHistoryRegistry[parentKey].length >=
+          maxAsyncOperationsCount
+        ) {
+          throw new InfiniteLoopError(
+            `Infinite loop detected: exceeded ${maxAsyncOperationsCount} async operations in history. ` +
+              `You can increase this limit by setting maxAsyncOperationsCount in the store config.`
+          )
+        }
+        parentTransition = store.parentTransitionRegistry[parentKey]
+      }
     }
 
     const commitTransition: Met["commitTransition"] = (transition, action) => {
@@ -813,6 +867,10 @@ export function newStoreDef<
         store.asyncOperationsHistoryRegistry,
         transitionKey
       )
+      const controller = store.transitions.controllers.get(transition)
+      if (controller && !controller.signal.aborted) {
+        controller.abort()
+      }
       store.transitions.controllers.clear(transitionKey)
       if (store.transitions.cleanUpList[transitionKey]) {
         store.transitions.cleanUpList = deleteImmutably(
@@ -1039,6 +1097,10 @@ export function newStoreDef<
       TUncontrolledState,
       TDeps
     >["abort"] = transition => {
+      abortWithError(transition, { code: 20 })
+    }
+
+    const abortWithError = (transition: TransitionNullable, error: unknown) => {
       const transitionKey = transition?.join(":") ?? null
       // Should this check run always or just when on-Finish-Clean-Up?
       if (
@@ -1056,7 +1118,7 @@ export function newStoreDef<
       if (!isHappening || !transition) return
       const controller = store.transitions.controllers.get(transition)
       // I would love to run `cleanUpTransition` as an event listener of the signal abortion
-      cleanUpTransition(transition!, { code: 20 })
+      cleanUpTransition(transition!, error)
       store.transitions.allEvents.emit(
         "transition-aborted",
         transition.join(":")
@@ -1067,7 +1129,22 @@ export function newStoreDef<
         // store.transitions.setController(transition, newController)
         // store.cleanUpTransition(transition!, { code: 20 }) // <- like this!
       })
-      controller?.abort()
+      if (controller && !controller.signal.aborted) {
+        controller.abort()
+      }
+    }
+
+    // Wrap emitError to bubble up errors to parent transitions
+    const originalEmitError = store.transitions.emitError.bind(
+      store.transitions
+    )
+    store.transitions.emitError = (transition: Transition, error: unknown) => {
+      originalEmitError(transition, error)
+      const transitionKey = transition.join(":")
+      const parentTransition = store.parentTransitionRegistry[transitionKey]
+      if (parentTransition && (error as any)?.code !== 20) {
+        abortWithError(parentTransition, error)
+      }
     }
 
     const dispatchAsyncImpl = (params: {
@@ -1094,6 +1171,8 @@ export function newStoreDef<
       }
       const onTransitionEnd = (props: any) => {
         if (options?.signal?.aborted) {
+          // Don't reject if onAbort is "noop" - just return without settling
+          if (options?.onAbort === "noop") return
           return resolver.reject({ code: 20 })
         }
 
@@ -1457,6 +1536,7 @@ export function newStoreDef<
         store.errors.setState({
           [transitionKey]: error,
         })
+        store.transitions.events.error.emit(transitionKey, error)
       }
     }
 
@@ -1675,8 +1755,6 @@ export function newStoreDef<
 
           const dispatchReducerHandler = (action: Action): (() => void) => {
             if (signal.aborted) return noop
-            const sameTransition =
-              action.transition?.join(":") === transition?.join(":")
             const safeAction = {
               ...action,
               transition:
@@ -1685,8 +1763,19 @@ export function newStoreDef<
                 defaultTransition ??
                 null,
             }
+            const sameTransition =
+              safeAction.transition?.join(":") === transition?.join(":")
+
             if (isSync && sameTransition) {
               syncDispatchCount++
+              if (syncDispatchCount > maxActionsCount) {
+                throw new InfiniteLoopError(
+                  `Infinite loop detected: exceeded ${maxActionsCount} actions in history. ` +
+                    `Last action type: "${(action as any).type}". ` +
+                    `This usually happens when an action dispatches itself or triggers a circular chain of dispatches. ` +
+                    `You can increase this limit by setting maxActionsCount in the store config.`
+                )
+              }
               if (syncDispatchCount > maxSyncDispatchCount) {
                 throw new InfiniteLoopError(
                   `Infinite loop detected: exceeded ${maxSyncDispatchCount} synchronous dispatches. ` +
@@ -1794,6 +1883,13 @@ export function newStoreDef<
                   TEvents
                 >
               ) => {
+                if (props.error && (props.error as any).code !== 20) {
+                  if (rootAction.transition) {
+                    abortWithError(rootAction.transition, props.error)
+                  }
+                  return propsAction.onTransitionEnd?.(props)
+                }
+
                 props.setterOrPartialStateList.forEach(setterOrPartialState => {
                   if (!rootAction.transition) {
                     debugger
@@ -1822,10 +1918,25 @@ export function newStoreDef<
                 _guard: "is-sub-transition",
               })
 
-              return dispatchAsync(transitionAction, {
-                onAbort: options?.onAbort ?? "noop",
-                signal: controller.signal,
-              })
+              try {
+                const promise = dispatchAsync(transitionAction, {
+                  onAbort: options?.onAbort ?? "noop",
+                  signal: controller.signal,
+                })
+
+                // Prevent unhandled rejection for abort errors and InfiniteLoopError
+                promise.catch(error => {
+                  if ((error as any)?.code === 20) return
+                  if ((error as any)?.name === "InfiniteLoopError") return
+                })
+
+                return promise
+              } catch {
+                // Handle synchronous errors (like InfiniteLoopError)
+                // Return a promise that never settles since the error is already handled
+                // by the store's error handling mechanism
+                return new Promise(() => {})
+              }
             },
             deps,
             isOptimistic: false,
@@ -1873,11 +1984,22 @@ export function newStoreDef<
         if (!transition) {
           throw error
         } else {
+          const transitionKey = transition.join(":")
+          const parentTransition = store.parentTransitionRegistry[transitionKey]
+
           const isHappening = store.transitions.isHappeningUnique(transition)
           if (isHappening) {
             cleanUpTransition(transition, error)
           } else {
             handleError(error, transition)
+          }
+
+          if (parentTransition && (error as any)?.code !== 20) {
+            abortWithError(parentTransition, error)
+          }
+
+          if ((error as any)?.name === "InfiniteLoopError") {
+            throw error
           }
         }
       }

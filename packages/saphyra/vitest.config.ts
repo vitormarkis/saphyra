@@ -17,6 +17,7 @@ const vitestTestConfig = {
     reporters: ["verbose"],
     testTimeout: 999_999,
     timeout: 999_999,
+    setupFiles: ["./src/test-setup.ts"],
   },
 }
 

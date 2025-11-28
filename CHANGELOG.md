@@ -1,3 +1,9 @@
+### v0.14.10
+- Fix: Limit the number of actions and async operations in history to prevent infinite loops.
+  - Added `maxActionsCount` configuration option (default: 1000) to limit action history entries per transition.
+  - Added `maxAsyncOperationsCount` configuration option (default: 500) to limit async operations history entries per transition.
+  - You can configure these limits by setting `maxActionsCount` and `maxAsyncOperationsCount` in the store definition config.
+
 ### v0.14.9
 - Feat: Add `asyncOperationsHistory` to `onCommitTransition` and `onTransitionEnd` callbacks.
   - `asyncOperationsHistory` contains all async operations (promises, timeouts) that were created during the transition.
