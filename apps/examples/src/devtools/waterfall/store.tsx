@@ -16,6 +16,8 @@ type LineType = {
   idx: number
 }
 
+export const BAR_KINDS = ["queue", "onFinish", "user"] as const
+
 export type WaterfallState = {
   stop: boolean
   bars: BarType[]
@@ -27,6 +29,7 @@ export type WaterfallState = {
   barSorters: BarSorters
   barFilters: BarFilters
   query: string
+  selectedBarKinds: BarKind[]
 
   getName: () => string
   getCurrentSorters: () => CurrentSorters
@@ -92,6 +95,12 @@ type WaterfallAction =
         transitionName: string
       }
     }
+  | {
+      type: "set-bar-kind-filter"
+      payload: {
+        selectedBarKinds: BarKind[]
+      }
+    }
 
 type WaterfallUncontrolledState = {
   clearTimeout: NodeJS.Timeout
@@ -115,6 +124,7 @@ export const newWaterfallStore = newStoreDef<
       barFilters,
       query: "",
       highlightingTransition: null,
+      selectedBarKinds: [],
     }
   },
   derivations: d => ({
@@ -149,24 +159,30 @@ export const newWaterfallStore = newStoreDef<
         s => s.getFiltersFnList(),
         s => s.getSortersFnList(),
         s => s.query,
+        s => s.selectedBarKinds,
       ])
-      .evaluate((bars, filterFnList, sortersFnList, query) => {
-        bars = bars.filter(bar => {
-          return filterFnList.some(createFilter => {
-            const filter = createFilter(query)
-            return filter(bar)
-          })
-        })
-        bars = bars.toSorted((a, b) => {
-          for (const fn of sortersFnList) {
-            if (!fn) continue
-            const result = fn(a, b)
-            if (result != null) return result
+      .evaluate(
+        (bars, filterFnList, sortersFnList, query, selectedBarKinds) => {
+          if (selectedBarKinds.length > 0) {
+            bars = bars.filter(bar => selectedBarKinds.includes(bar.kind))
           }
-          return 0
-        })
-        return bars
-      }),
+          bars = bars.filter(bar => {
+            return filterFnList.some(createFilter => {
+              const filter = createFilter(query)
+              return filter(bar)
+            })
+          })
+          bars = bars.toSorted((a, b) => {
+            for (const fn of sortersFnList) {
+              if (!fn) continue
+              const result = fn(a, b)
+              if (result != null) return result
+            }
+            return 0
+          })
+          return bars
+        }
+      ),
     getConfig: d()
       .on([s => s.bars, s => s.now])
       .evaluate((bars, now) => {
@@ -287,6 +303,10 @@ export const newWaterfallStore = newStoreDef<
 
     if (action.type === "hover-out-transition-name") {
       state.highlightingTransition = null
+    }
+
+    if (action.type === "set-bar-kind-filter") {
+      state.selectedBarKinds = action.payload.selectedBarKinds
     }
 
     return state

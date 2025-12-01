@@ -11,7 +11,14 @@ import {
   useState,
   useSyncExternalStore,
 } from "react"
-import { newWaterfallStore, WaterfallState, WaterfallStore, WF } from "./store"
+import {
+  BAR_KINDS,
+  newWaterfallStore,
+  WaterfallState,
+  WaterfallStore,
+  WF,
+} from "./store"
+import { Select } from "@base-ui-components/react/select"
 import { cn } from "~/lib/cn"
 import { SomeStoreGeneric } from "saphyra"
 import { BarSorters } from "./sorters"
@@ -96,29 +103,8 @@ export function Waterfall({ store, extractErrorMessage }: WaterfallProps) {
 type WaterfallControllerProps = {}
 
 export function WaterfallController({}: WaterfallControllerProps) {
-  const distance = WF.useCommittedSelector(s => s.distance)
   const query = WF.useCommittedSelector(s => s.query)
-  const [localDistance, setLocalDistance] = useReducer(
-    (distance: number, newDistance: number) => {
-      if (isNaN(newDistance)) return distance
-      if (newDistance > 5_000) return distance
-      if (newDistance < 0) return distance
-      return newDistance
-    },
-    distance
-  )
-
-  const clearTimeout = WF.useCommittedSelector(s => s.clearTimeout)
-  const [localClearTimeout, setLocalClearTimeout] = useReducer(
-    (clearTimeout: number, newClearTimeout: number) => {
-      if (isNaN(newClearTimeout)) return clearTimeout
-      if (newClearTimeout > 5_000) return clearTimeout
-      if (newClearTimeout < 0) return clearTimeout
-      return newClearTimeout
-    },
-    clearTimeout
-  )
-
+  const selectedBarKinds = WF.useCommittedSelector(s => s.selectedBarKinds)
   const [waterfallStore] = WF.useStore()
 
   return (
@@ -141,45 +127,15 @@ export function WaterfallController({}: WaterfallControllerProps) {
       </div>
 
       <div className="flex gap-2 items-center">
-        <input
-          type="text"
-          value={localClearTimeout}
-          onChange={e => {
-            setLocalClearTimeout(Number(e.target.value))
-          }}
-          className="tabular-nums"
-          style={{
-            // @ts-ignore
-            fieldSizing: "content",
-          }}
-          onKeyDown={e => {
-            if (e.key === "Enter") {
-              waterfallStore.setState({
-                clearTimeout: localClearTimeout,
-              })
-            }
+        <BarKindSelect
+          value={selectedBarKinds}
+          onValueChange={values => {
+            waterfallStore.dispatch({
+              type: "set-bar-kind-filter",
+              payload: { selectedBarKinds: values },
+            })
           }}
         />
-        <input
-          type="text"
-          value={localDistance}
-          onChange={e => {
-            setLocalDistance(Number(e.target.value))
-          }}
-          className="tabular-nums"
-          style={{
-            // @ts-ignore
-            fieldSizing: "content",
-          }}
-          onKeyDown={e => {
-            if (e.key === "Enter") {
-              waterfallStore.setState({
-                distance: localDistance,
-              })
-            }
-          }}
-        />
-
         <Button
           className="h-6"
           onClick={() => {
@@ -192,6 +148,68 @@ export function WaterfallController({}: WaterfallControllerProps) {
         </Button>
       </div>
     </div>
+  )
+}
+
+const BAR_KIND_LABELS: Record<BarKind, string> = {
+  queue: "Queue",
+  onFinish: "On Finish",
+  user: "User",
+}
+
+type BarKindSelectProps = {
+  value: BarKind[]
+  onValueChange: (values: BarKind[]) => void
+}
+
+function BarKindSelect({ value, onValueChange }: BarKindSelectProps) {
+  const displayValue =
+    value.length === BAR_KINDS.length
+      ? "All kinds"
+      : value.length === 0
+        ? "All kinds"
+        : value.map(k => BAR_KIND_LABELS[k]).join(", ")
+
+  return (
+    <Select.Root
+      multiple
+      value={value}
+      onValueChange={onValueChange}
+    >
+      <Select.Trigger className="flex items-center gap-1 px-2 h-6 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm rounded hover:bg-gray-50 dark:hover:bg-gray-800 min-w-[100px] outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+        <Select.Value>
+          {() => <span className="truncate">{displayValue}</span>}
+        </Select.Value>
+        <Select.Icon className="ml-auto">
+          <ChevronDown size={14} />
+        </Select.Icon>
+      </Select.Trigger>
+      <Select.Portal>
+        <Select.Positioner
+          sideOffset={4}
+          className="z-50"
+        >
+          <Select.Popup className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg overflow-hidden">
+            <Select.List className="p-1">
+              {BAR_KINDS.map(kind => (
+                <Select.Item
+                  key={kind}
+                  value={kind}
+                  className="flex items-center gap-2 px-2 py-1.5 text-sm rounded cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 data-[highlighted]:bg-gray-100 dark:data-[highlighted]:bg-gray-800 outline-none"
+                >
+                  <span className="w-4 h-4 flex items-center justify-center">
+                    <Select.ItemIndicator>
+                      <Check size={12} />
+                    </Select.ItemIndicator>
+                  </span>
+                  <Select.ItemText>{BAR_KIND_LABELS[kind]}</Select.ItemText>
+                </Select.Item>
+              ))}
+            </Select.List>
+          </Select.Popup>
+        </Select.Positioner>
+      </Select.Portal>
+    </Select.Root>
   )
 }
 
@@ -803,7 +821,7 @@ import { BarType } from "./types"
 import { error } from "console"
 import { extractErrorMessage } from "~/lib/extract-error-message"
 import { useNewStore } from "saphyra/react"
-import { ChevronUp } from "lucide-react"
+import { Check, ChevronDown, ChevronUp } from "lucide-react"
 import { Button } from "~/components/ui/button"
 
 export const RefContext =

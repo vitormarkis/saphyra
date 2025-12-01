@@ -462,6 +462,7 @@ export function createAsync<
           )
           store.transitions.doneSubtransition(`$queue:${queueId}`)
           queueWaitBar?.("success")
+          queueWaitBar = null
         }
 
         const promiseAsyncOperation = newAsyncOperation({
@@ -613,6 +614,7 @@ export function createAsync<
               )
               store.transitions.doneSubtransition(`$queue:${queueId}`)
               queueWaitBar?.("fail", error)
+              queueWaitBar = null
             }
 
             // Clean up hanging onFinish callbacks when queue aborts
