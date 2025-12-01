@@ -176,13 +176,6 @@ export function createAsync<
         } catch (error) {
           if (label) store.transitions.doneSubtransition(label)
           if (onFinishId) store.transitions.doneFinish(onFinishId)
-          if (onFinish) {
-            runOnFinishCallback({
-              onFinish,
-              error,
-              cleanUpList,
-            })
-          }
 
           const aborted = isNewActionError(error)
           if (aborted) {
