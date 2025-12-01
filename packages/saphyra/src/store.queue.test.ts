@@ -305,7 +305,14 @@ describe("queue API", () => {
     store.dispatch({ type: "increment", index: 2, transition: ["inc", 2] })
     store.dispatch({ type: "increment", index: 3, transition: ["inc", 3] })
 
-    await store.flushQueue()
+    const [inc1WaitFor, inc2WaitFor, inc3WaitFor] = await Promise.all([
+      store.waitFor(["inc", 1]),
+      store.waitFor(["inc", 2]),
+      store.waitFor(["inc", 3]),
+    ])
+    expect(inc1WaitFor.reason).toBe("completed")
+    expect(inc2WaitFor.reason).toBe("completed")
+    expect(inc3WaitFor.reason).toBe("completed")
 
     expect(store.getState().count).toBe(3)
     expect(isLastResults).toHaveLength(3)
