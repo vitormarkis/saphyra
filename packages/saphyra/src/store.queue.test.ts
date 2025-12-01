@@ -328,6 +328,201 @@ describe("queue API", () => {
   })
 })
 
+describe("queue with diff()", () => {
+  it("should run two async.promise with same queue key sequentially when second is triggered via diff() from the first", async () => {
+    const newStore = newStoreDefTest({
+      reducer({ action, state, set, async, diff }) {
+        if (action.type === "fetch") {
+          set({ $phase: "fetching" })
+          async()
+            .queue(["data"])
+            .promise(async () => {
+              await new Promise(r => setTimeout(r, 10))
+              set({ count: 1 })
+            })
+        }
+
+        diff()
+          .on([s => s.$phase])
+          .run(phase => {
+            if (phase === "fetching") {
+              async()
+                .queue(["data"])
+                .promise(async () => {
+                  await new Promise(r => setTimeout(r, 10))
+                  set({ count: 2 })
+                })
+            }
+          })
+
+        return state
+      },
+    })
+    const store = newStore({ $phase: "idle", count: 0 })
+    await store.waitForBootstrap()
+
+    store.dispatch({ type: "fetch", transition: ["fetch"] })
+
+    await new Promise(r => setTimeout(r, 15))
+    expect(store.transitions.isHappening(["fetch"])).toBe(true)
+
+    await new Promise(r => setTimeout(r, 10))
+    expect(store.transitions.isHappening(["fetch"])).toBe(false)
+    expect(store.getState().count).toBe(2)
+  })
+
+  it("should execute handler async before diff async when both use same queue key", async () => {
+    const executionOrder: string[] = []
+
+    const newStore = newStoreDefTest({
+      reducer({ action, state, set, async, diff }) {
+        if (action.type === "fetch") {
+          set({ $phase: "fetching" })
+          async()
+            .queue(["data"])
+            .promise(async () => {
+              executionOrder.push("handler:start")
+              await new Promise(r => setTimeout(r, 10))
+              executionOrder.push("handler:end")
+            })
+        }
+
+        diff()
+          .on([s => s.$phase])
+          .run(phase => {
+            if (phase === "fetching") {
+              async()
+                .queue(["data"])
+                .promise(async () => {
+                  executionOrder.push("diff:start")
+                  await new Promise(r => setTimeout(r, 10))
+                  executionOrder.push("diff:end")
+                })
+            }
+          })
+
+        return state
+      },
+    })
+    const store = newStore({ $phase: "idle", count: 0 })
+    await store.waitForBootstrap()
+
+    store.dispatch({ type: "fetch", transition: ["fetch"] })
+
+    await new Promise(r => setTimeout(r, 25))
+    expect(store.transitions.isHappening(["fetch"])).toBe(false)
+
+    expect(executionOrder).toEqual([
+      "handler:start",
+      "handler:end",
+      "diff:start",
+      "diff:end",
+    ])
+  })
+
+  it("should run handler and diff async in parallel when using different queue keys", async () => {
+    const executionLog: { event: string; time: number }[] = []
+    const startTime = Date.now()
+
+    const newStore = newStoreDefTest({
+      reducer({ action, state, set, async, diff }) {
+        if (action.type === "fetch") {
+          set({ $phase: "fetching" })
+          async()
+            .queue(["queue-a"])
+            .promise(async () => {
+              executionLog.push({
+                event: "a:start",
+                time: Date.now() - startTime,
+              })
+              await new Promise(r => setTimeout(r, 10))
+              executionLog.push({
+                event: "a:end",
+                time: Date.now() - startTime,
+              })
+            })
+        }
+
+        diff()
+          .on([s => s.$phase])
+          .run(phase => {
+            if (phase === "fetching") {
+              async()
+                .queue(["queue-b"])
+                .promise(async () => {
+                  executionLog.push({
+                    event: "b:start",
+                    time: Date.now() - startTime,
+                  })
+                  await new Promise(r => setTimeout(r, 10))
+                  executionLog.push({
+                    event: "b:end",
+                    time: Date.now() - startTime,
+                  })
+                })
+            }
+          })
+
+        return state
+      },
+    })
+    const store = newStore({ $phase: "idle" })
+    await store.waitForBootstrap()
+
+    store.dispatch({ type: "fetch", transition: ["fetch"] })
+
+    await new Promise(r => setTimeout(r, 15))
+    expect(store.transitions.isHappening(["fetch"])).toBe(false)
+
+    const aStart = executionLog.find(e => e.event === "a:start")!.time
+    const bStart = executionLog.find(e => e.event === "b:start")!.time
+    expect(Math.abs(aStart - bStart)).toBeLessThan(5)
+  })
+
+  it("should fail diff async when handler async fails with same queue key", async () => {
+    const errors: unknown[] = []
+
+    const newStore = newStoreDefTest({
+      reducer({ action, state, set, async, diff }) {
+        if (action.type === "fetch") {
+          set({ $phase: "fetching" })
+          async()
+            .queue(["data"])
+            .promise(async () => {
+              await new Promise(r => setTimeout(r, 10))
+              throw new Error("Handler failed")
+            })
+        }
+
+        diff()
+          .on([s => s.$phase])
+          .run(phase => {
+            if (phase === "fetching") {
+              async()
+                .queue(["data"])
+                .promise(async () => {
+                  await new Promise(r => setTimeout(r, 10))
+                })
+            }
+          })
+
+        return state
+      },
+    })
+    const store = newStore(
+      { $phase: "idle", count: 0 },
+      { errorHandlers: [e => errors.push(e)] }
+    )
+    await store.waitForBootstrap()
+
+    store.dispatch({ type: "fetch", transition: ["fetch"] })
+
+    await new Promise(r => setTimeout(r, 50))
+    expect(store.transitions.isHappening(["fetch"])).toBe(false)
+    expect(errors.length).toBeGreaterThanOrEqual(1)
+  })
+})
+
 describe("must work with on finish api", () => {
   it("on finish api only", async () => {
     let api_count = 0
