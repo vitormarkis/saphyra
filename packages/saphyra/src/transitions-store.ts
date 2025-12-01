@@ -79,6 +79,10 @@ export class TransitionsStore extends Subject {
     success: new Map<string, (() => void) | null>(),
     cleanUps: {} as Record<string, Set<() => void>>,
     error: new Map<string, ((error: unknown) => void) | null>(),
+    pendingResolvers: {} as Record<
+      string,
+      Set<{ reject: (error: unknown) => void }>
+    >,
   }
 
   cleanUpList: Record<string, Set<(error: unknown | null) => void>> = {}
@@ -143,6 +147,9 @@ export class TransitionsStore extends Subject {
 
   emitError(transition: Transition, error: unknown) {
     const transitionName = transition.join(":")
+
+    this.events.error.emit(transitionName, error)
+
     const errorCallback = this.callbacks.error.get(transitionName)
     errorCallback?.(error)
 
@@ -395,5 +402,23 @@ export class TransitionsStore extends Subject {
     }
 
     return isHappening
+  }
+
+  registerPendingResolver(
+    onFinishId: string,
+    resolver: { reject: (error: unknown) => void }
+  ) {
+    this.finishCallbacks.pendingResolvers[onFinishId] ??= new Set()
+    this.finishCallbacks.pendingResolvers[onFinishId].add(resolver)
+    return () => {
+      this.finishCallbacks.pendingResolvers[onFinishId]?.delete(resolver)
+    }
+  }
+
+  rejectPendingResolvers(onFinishId: string, error: unknown) {
+    const resolvers = this.finishCallbacks.pendingResolvers[onFinishId]
+    if (!resolvers) return
+    resolvers.forEach(resolver => resolver.reject(error))
+    resolvers.clear()
   }
 }

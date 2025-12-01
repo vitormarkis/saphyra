@@ -175,7 +175,10 @@ export function createAsync<
           )
         } catch (error) {
           if (label) store.transitions.doneSubtransition(label)
-          if (onFinishId) store.transitions.doneFinish(onFinishId)
+          if (onFinishId) {
+            store.transitions.doneFinish(onFinishId)
+            store.transitions.rejectPendingResolvers(onFinishId, error)
+          }
 
           const aborted = isNewActionError(error)
           if (aborted) {
@@ -374,6 +377,13 @@ const createRunOnFinishCallback = ({
     const finishOnFinishBar = onFinishId
       ? newBar(transitionString, labelWhen(new Date()), barLabel)
       : () => {}
+
+    const unregisterResolver = store.transitions.registerPendingResolver(
+      onFinishId,
+      { reject: resolver.reject }
+    )
+    resolver.promise.catch(() => {}).finally(() => unregisterResolver())
+
     const finishCleanUp = onFinishFn(
       () => resolver.resolve(),
       (error: unknown) => resolver.reject(error),
