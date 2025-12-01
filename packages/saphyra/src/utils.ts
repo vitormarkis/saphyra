@@ -1,7 +1,7 @@
 import { exact } from "./fn/common"
 import { Transition } from "./types"
 
-export function isNewActionError(error: unknown) {
+export function isAbortError(error: unknown) {
   if (typeof error !== "object") return false
   if (!error) return false
   const _error = error as any

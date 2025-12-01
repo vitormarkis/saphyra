@@ -49,7 +49,7 @@ import { ErrorsStore } from "./errors-store"
 import {
   checkTransitionIsNested,
   createAncestor,
-  isNewActionError,
+  isAbortError,
   labelWhen,
 } from "./utils"
 import { getSnapshotAction } from "./helpers/get-snapshot-action"
@@ -81,6 +81,7 @@ import { randomString } from "./helpers/randomString"
 import { SUB_BRANCH_PREFIX } from "./consts"
 import { deleteImmutably } from "./helpers/delete-immutably"
 import { createDiffBuilder, Diff } from "./helpers/diff-builder"
+import { QueueManager } from "./queue-manager"
 
 export type ExternalProps = Record<string, any> | null
 
@@ -432,6 +433,7 @@ export function newStoreDef<
     const subject = createSubject()
     const errorsStore = new ErrorsStore()
     const deps = config.deps ?? ({} as unknown as TDeps)
+    const queueManager = new QueueManager()
 
     const updateTransitionState = (
       transition: Transition,
@@ -497,6 +499,7 @@ export function newStoreDef<
         derivationsRegistry,
         updateTransitionState,
         context: null,
+        onFinishCleanUpRegistry: {},
       },
       history: [],
       historyRedo: [],
@@ -794,9 +797,15 @@ export function newStoreDef<
       error: unknown | null
     ) => {
       const transitionKey = transition.join(":")
+
       const cleanUpList = store.transitions.cleanUpList[transitionKey]
       cleanUpList?.forEach(fn => fn(error))
       store.transitions.cleanup(transitionKey)
+
+      // Emit error event for waitFor to receive (after cleanup is done)
+      if (error !== null && !isAbortError(error)) {
+        store.transitions.events.error.emit(transitionKey, error)
+      }
 
       if (transitionKey === "bootstrap") {
         errorsStore.setState({ bootstrap: error })
@@ -828,7 +837,7 @@ export function newStoreDef<
         transitionKey
       )
 
-      if (isNewActionError(error)) {
+      if (isAbortError(error)) {
         noop()
       } else {
         store.optimisticRegistry.clear(transitionKey)
@@ -855,7 +864,7 @@ export function newStoreDef<
         asyncOperationsHistory,
       })
 
-      const newActionAbort = isNewActionError(error)
+      const newActionAbort = isAbortError(error)
       if (!newActionAbort) {
         handleError(error, transition)
         $$onDevMode(() =>
@@ -946,7 +955,8 @@ export function newStoreDef<
         signal ?? initialAbort.controller!.signal,
         wrappedOnAsyncOperation,
         "store-create-async",
-        () => {}
+        () => {},
+        queueManager
       )
     }
 
@@ -1061,12 +1071,6 @@ export function newStoreDef<
         "transition-aborted",
         transition.join(":")
       )
-      const newController = new AbortController()
-      store.transitions.setController(transition, newController)
-      controller?.signal.addEventListener("abort", () => {
-        // store.transitions.setController(transition, newController)
-        // store.cleanUpTransition(transition!, { code: 20 }) // <- like this!
-      })
       controller?.abort()
     }
 
@@ -1301,7 +1305,8 @@ export function newStoreDef<
             actionHistory,
             asyncOperationsHistory,
           })
-        }
+        },
+        queueManager
       )
 
       const asyncOperations: AsyncOperation[] = []
@@ -1355,7 +1360,18 @@ export function newStoreDef<
           return () => {}
         } else {
           // Returned no action and didn't even schedule a transition,
-          // it means the action is done and there is no more computation to do
+          // it means beforeDispatch prevented the action from running
+          // Clean up parentTransitionRegistry and onTransitionEndCallbacks
+          // if (initialAction.transition) {
+          //   const transitionKey = initialAction.transition.join(":")
+          //   store.parentTransitionRegistry = deleteImmutably(
+          //     store.parentTransitionRegistry,
+          //     transitionKey
+          //   )
+          //   if (store.onTransitionEndCallbacks[transitionKey]) {
+          //     delete store.onTransitionEndCallbacks[transitionKey]
+          //   }
+          // }
           return () => {}
         }
       }
@@ -1553,7 +1569,8 @@ export function newStoreDef<
         signal,
         onAsyncOperation,
         from,
-        onAbort
+        onAbort,
+        queueManager
       )
     }
 
@@ -1650,6 +1667,7 @@ export function newStoreDef<
               //   actionHistory,
               // })
             },
+            queueManager,
           })
           prevState = getStateToUseOnAction(prevState, "prev")
           newState = getStateToUseOnAction(newState, "current")
@@ -2041,6 +2059,10 @@ export function newStoreDef<
       $$onDebugMode(() => console.log("Store disposed successfully"))
     }
 
+    const flushQueue: Met["flushQueue"] = async () => {
+      await queueManager.flush()
+    }
+
     const methods: Met = {
       createOptimisticScheduler,
       getState,
@@ -2066,6 +2088,7 @@ export function newStoreDef<
       dispose,
       emitError,
       createAsync: createAsyncInternal,
+      flushQueue,
     }
 
     store = mergeObj(subject, store, methods)
@@ -2144,7 +2167,9 @@ export function newStoreDef<
             addAsyncOperationHistoryEntry(asyncOp, BOOTSTRAP_TRANSITION)
             asyncOperations.push(asyncOp)
           },
-          "on-construct-async"
+          "on-construct-async",
+          undefined,
+          queueManager
         )
 
         async().promise(async ctx => {
@@ -2452,7 +2477,7 @@ function performOnTransitionEndCallbacks<
   const transitionKey = transition.join(":")
   const onTransitionEndCallbacks =
     store.onTransitionEndCallbacks[transitionKey] ?? new Set()
-  const isAborted = isNewActionError(error)
+  const isAborted = isAbortError(error)
   onTransitionEndCallbacks.forEach(onTransitionEnd => {
     if (!isAborted) onTransitionEndCallbacks.delete(onTransitionEnd)
     onTransitionEnd({

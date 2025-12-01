@@ -193,8 +193,7 @@ export class TransitionsStore extends Subject {
 
   get(transition: Transition): AsyncOperation[] {
     const key = transition.join(":")
-    this.state.transitions[key] ??= []
-    return this.state.transitions[key]
+    return this.state.transitions[key] ?? []
   }
 
   add(
@@ -202,8 +201,8 @@ export class TransitionsStore extends Subject {
     transitionName: string,
     asyncOperation: AsyncOperation
   ): TransitionsStoreState {
-    state.transitions[transitionName] ??= []
-    state.transitions[transitionName].push(asyncOperation)
+    const existingOperations = state.transitions[transitionName] ?? []
+    state.transitions[transitionName] = [...existingOperations, asyncOperation]
     if (state.transitions[transitionName].length === 1) {
       this.allEvents.emit("start-transition", transitionName)
     }
@@ -215,7 +214,7 @@ export class TransitionsStore extends Subject {
     asyncOperation: AsyncOperation,
     from?: string
   ) {
-    const state = { ...this.state }
+    const state = { ...this.state, transitions: { ...this.state.transitions } }
 
     const ancestors = createAncestor<string>(transition)
     const newState = ancestors.reduce(
@@ -259,30 +258,32 @@ export class TransitionsStore extends Subject {
     functionsToRun: Record<string, VoidFunction[]>
   ): TransitionsStoreState {
     if (!transitionName) return state
+    if (!state.transitions[transitionName]) return state
     const oldLength = state.transitions[transitionName].length
-    state.transitions[transitionName] = state.transitions[
-      transitionName
-    ].filter(ao => ao !== asyncOperation)
-    const newLength = state.transitions[transitionName].length
+    const filteredOperations = state.transitions[transitionName].filter(
+      ao => ao !== asyncOperation
+    )
+    const newLength = filteredOperations.length
     if (oldLength === newLength) debugger
 
-    if (state.transitions[transitionName].length <= 0) {
+    if (filteredOperations.length <= 0) {
       if (transitionName !== null) {
+        state.transitions = deleteImmutably(state.transitions, transitionName)
         functionsToRun[transitionName] ??= []
         functionsToRun[transitionName].push(() => {
           this.allEvents.emit("transition-done", transitionName)
-          this.events.done.emit(transitionName)
+          if (!options.skipDoneEvent) {
+            this.events.done.emit(transitionName)
+          }
           options.onFinishTransition({
             transitionName,
             transitionStore: this,
           })
-          this.state.transitions = deleteImmutably(
-            this.state.transitions,
-            transitionName
-          )
           // this.meta.delete(transitionName)
         })
       }
+    } else {
+      state.transitions[transitionName] = filteredOperations
     }
 
     return state
@@ -304,7 +305,7 @@ export class TransitionsStore extends Subject {
   ) {
     if (!transition) return
 
-    const state = { ...this.state }
+    const state = { ...this.state, transitions: { ...this.state.transitions } }
     const functionsToRun: Record<string, VoidFunction[]> = {}
     let meta = ""
     const newState = transition.reduce((acc, key) => {
@@ -344,13 +345,18 @@ export class TransitionsStore extends Subject {
 
   doneFinish(id: string) {
     if (!(id in this.state.finishes)) {
-      throw new Error(`Finish ${id} not found`)
+      // Already cleaned up, ignore
+      return
     }
     const finishes = { ...this.state.finishes }
     finishes[id]--
-    this.setFinishes(finishes)
-    if (finishes[id] === 0) {
+    if (finishes[id] <= 0) {
+      // Clean up completely when reaching 0
+      delete finishes[id]
+      this.setFinishes(finishes)
       this.allEvents.emit("finish-done", id)
+    } else {
+      this.setFinishes(finishes)
     }
   }
 
@@ -381,8 +387,7 @@ export class TransitionsStore extends Subject {
   isHappeningUnique(transition: TransitionNullable) {
     if (!transition) return false
     const key = transition.join(":")
-    this.state.transitions[key] ??= []
-    return this.state.transitions[key].length > 0
+    return (this.state.transitions[key]?.length ?? 0) > 0
   }
 
   isHappening(transition: TransitionNullable) {

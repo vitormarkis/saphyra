@@ -9,48 +9,60 @@ description: Cached getters provide a way to declare state derivations in a gett
 
 ```typescript
 type State = {
-  todos: Todo[]
-  filter: "all" | "completed" | "active"
-  // These will be turned into cached getters
-  getCompletedCount: () => number
-  getFilteredTodos: () => Todo[]
+  orders: Order[]
+  selectedUserId: string | null
+  getOrdersBy: () => {
+    id: Map<string, Order>
+    userId: Map<string, Order[]>
+    status: Map<string, Order[]>
+  }
+  getSelectedUserOrders: () => Order[]
+  getSelectedUserTotal: () => number
 }
 ```
 
 ### 2. Create Store with Derivations
 
 ```typescript
-const newTodoStore = newStoreDef<State>({
-  derivations: {
-    getCompletedCount: {
-      selectors: [s => s.todos],
-      evaluator: todos => todos.filter(todo => todo.completed).length,
-    },
-    getFilteredTodos: {
-      selectors: [s => s.todos, s => s.filter],
-      evaluator: (todos, filter) => {
-        if (filter === "completed") return todos.filter(todo => todo.completed)
-        if (filter === "active") return todos.filter(todo => !todo.completed)
-        return todos
-      },
-    },
-  },
+const newOrderStore = newStoreDef<State>({
+  derivations: d => ({
+    getOrdersBy: d()
+      .on([s => s.orders])
+      .evaluate(orders => ({
+        id: new Map(orders.map(o => [o.id, o])),
+        userId: Map.groupBy(orders, o => o.userId),
+        status: Map.groupBy(orders, o => o.status),
+      })),
+    getSelectedUserOrders: d()
+      .on([s => s.getOrdersBy(), s => s.selectedUserId])
+      .evaluate((ordersBy, selectedUserId) => {
+        if (!selectedUserId) return []
+        return ordersBy.userId.get(selectedUserId) ?? []
+      }),
+    getSelectedUserTotal: d()
+      .on([s => s.getSelectedUserOrders()])
+      .evaluate(selectedUserOrders =>
+        selectedUserOrders.reduce((sum, o) => sum + o.total, 0)
+      ),
+  }),
 })
 ```
 
 ### 3. Use in Components
 
-```typescript
-function TodoApp() {
-  const completedCount = TodoStore.useSelector(s => s.getCompletedCount())
-  const filteredTodos = TodoStore.useSelector(s => s.getFilteredTodos())
+```tsx
+function OrdersDashboard() {
+  const order = OrderStore.useSelector(s => s.getOrdersBy().id.get(orderId))
+  const pending = OrderStore.useSelector(s => s.getOrdersBy().status.get("pending"))
+  const userOrders = OrderStore.useSelector(s => s.getSelectedUserOrders())
+  const userTotal = OrderStore.useSelector(s => s.getSelectedUserTotal())
 
   return (
     <div>
-      <p>Completed: {completedCount}</p>
+      <p>User total: {userTotal}</p>
       <ul>
-        {filteredTodos.map(todo => (
-          <li key={todo.id}>{todo.text}</li>
+        {userOrders.map(order => (
+          <li key={order.id}>{order.name}</li>
         ))}
       </ul>
     </div>
@@ -61,22 +73,16 @@ function TodoApp() {
 ### 4. Use in Reducers
 
 ```typescript
-const TodoStore = newStoreDef<State>({
-  derivations: {
+const newOrderStore = newStoreDef<State>({
+  derivations: d => ({
     /* ... */
-  },
+  }),
   reducer: ({ state, action, set }) => {
-    if (action.type === "add-todo") {
-      // Access cached getters in reducer
-      const currentCompleted = state.getCompletedCount()
-      console.log(`Currently ${currentCompleted} todos completed`)
+    if (action.type === "select-user") {
+      const userOrders = state.getOrdersBy().userId.get(action.userId)
+      console.log(`User has ${userOrders?.length ?? 0} orders`)
 
-      set(s => ({
-        todos: [
-          ...s.todos,
-          { id: Date.now(), text: action.text, completed: false },
-        ],
-      }))
+      set({ selectedUserId: action.userId })
     }
     return state
   },
@@ -100,34 +106,87 @@ const TodoStore = newStoreDef<State>({
 
 ### Selectors
 
-Selectors extract values from the state that the derivation depends on. The order of selectors determines the order of arguments passed to the evaluator.
+Selectors extract the specific values from the state that the derivation depends on. The cache is only invalidated when **selector return values change**, not when unrelated state changes.
+
+#### Why Selectors?
+
+Selectors are especially useful with nested objects. You can drill down to the exact property you care about:
 
 ```typescript
-const store = newStoreDef({
-  derivations: {
-    getFilteredTodos: {
-      selectors: [
-        s => s.todos, // First argument to evaluator
-        s => s.filter, // Second argument to evaluator
-      ],
-      evaluator: (todos, filter) => {
-        /* ... */
-      },
-    },
-  },
+type State = {
+  user: {
+    profile: { name: string; avatar: string }
+    preferences: { theme: "light" | "dark"; language: string }
+    stats: { posts: number; followers: number }
+  }
+  getThemeStyles: () => CSSProperties
+}
+
+const store = newStoreDef<State>({
+  derivations: d => ({
+    getThemeStyles: d()
+      .on([s => s.user.preferences.theme])
+      .evaluate(theme => ({
+        background: theme === "dark" ? "#1a1a1a" : "#ffffff",
+        color: theme === "dark" ? "#ffffff" : "#1a1a1a",
+      })),
+  }),
 })
 ```
 
-### Evaluator
+Now `getThemeStyles` only recalculates when `user.preferences.theme` changes — not when `user.profile.name`, `user.stats.followers`, or any other property changes.
 
-The evaluator function receives the values from selectors as arguments and returns the computed value.
+#### Multiple Selectors
+
+The order of selectors determines the order of arguments passed to `evaluate`:
 
 ```typescript
-evaluator: (todos, filter) => {
+getFilteredTodos: d()
+  .on([
+    s => s.todos,  // First argument
+    s => s.filter, // Second argument
+  ])
+  .evaluate((todos, filter) => {
+    /* ... */
+  })
+```
+
+### Evaluate
+
+The `evaluate` callback receives the values from selectors as arguments and returns the computed value.
+
+```typescript
+.evaluate((todos, filter) => {
   if (filter === "completed") return todos.filter(todo => todo.completed)
   if (filter === "active") return todos.filter(todo => !todo.completed)
   return todos
-}
+})
+```
+
+### Which State Do They Read From?
+
+Cached getters automatically read from the appropriate state based on context:
+
+| Context | State Used |
+|---------|------------|
+| `useSelector` | Optimistic state |
+| `useCommittedSelector` | Committed state |
+| `useTransitionSelector` | Transition state |
+| Reducer (no transition) | Committed state |
+| Reducer (with transition) | Transition state |
+
+Each state layer has its own isolated cache. This means:
+
+- Optimistic changes don't affect the committed cache
+- Each transition has its own separate cache
+- Caches are invalidated independently when their respective state changes
+
+```typescript
+// Reads from optimistic state (includes pending changes)
+const todos = Store.useSelector(s => s.getFilteredTodos())
+
+// Reads from committed state (only confirmed changes)
+const todos = Store.useCommittedSelector(s => s.getFilteredTodos())
 ```
 
 ## Caching Strategy
@@ -145,7 +204,7 @@ evaluator: (todos, filter) => {
 
 1. **Keep Selectors Simple**: Selectors should be pure functions that extract values
 2. **Use Multiple Selectors**: Break down complex dependencies into multiple selectors
-3. **Avoid Side Effects**: Evaluators should be pure functions
+3. **Avoid Side Effects**: `evaluate` callbacks should be pure functions
 
 ## Examples
 
@@ -159,16 +218,14 @@ type State = {
 }
 
 const CounterStore = newStoreDef<State>({
-  derivations: {
-    getDoubledCount: {
-      selectors: [s => s.count],
-      evaluator: count => count * 2,
-    },
-    getSquaredCount: {
-      selectors: [s => s.count],
-      evaluator: count => count * count,
-    },
-  },
+  derivations: d => ({
+    getDoubledCount: d()
+      .on([s => s.count])
+      .evaluate(count => count * 2),
+    getSquaredCount: d()
+      .on([s => s.count])
+      .evaluate(count => count * count),
+  }),
 })
 ```
 
@@ -188,10 +245,10 @@ type State = {
 }
 
 const TodoStore = newStoreDef<State>({
-  derivations: {
-    getTodos: {
-      selectors: [s => s.todos],
-      evaluator: todos => {
+  derivations: d => ({
+    getTodos: d()
+      .on([s => s.todos])
+      .evaluate(todos => {
         const completed = []
         const active = []
         for (const todo of todos) {
@@ -199,28 +256,128 @@ const TodoStore = newStoreDef<State>({
           else active.push(todo)
         }
         return { completed, active }
-      },
-    },
-    getFilteredTodos: {
-      selectors: [s => s.todos, s => s.filter],
-      evaluator: (todos, filter) => {
+      }),
+    getFilteredTodos: d()
+      .on([s => s.todos, s => s.filter])
+      .evaluate((todos, filter) => {
         if (filter === "completed") return todos.filter(todo => todo.completed)
         if (filter === "active") return todos.filter(todo => !todo.completed)
         return todos
-      },
-    },
-    getSearchResults: {
-      selectors: [s => s.todos, s => s.searchTerm],
-      evaluator: (todos, searchTerm) => {
+      }),
+    getSearchResults: d()
+      .on([s => s.todos, s => s.searchTerm])
+      .evaluate((todos, searchTerm) => {
         if (!searchTerm) return todos
         return todos.filter(todo =>
           todo.text.toLowerCase().includes(searchTerm.toLowerCase())
         )
-      },
-    },
-  },
+      }),
+  }),
 })
 ```
+
+## Lookups
+
+When working with large datasets, iterating through the entire array for each lookup is expensive. A common pattern is to create indexed lookup structures that allow O(1) access.
+
+With cached getters, you can create a single derivation that indexes the source data into multiple lookup Maps. Other derivations can then depend on it, and all lookups share the same cached index.
+
+```typescript
+type State = {
+  orders: Order[]
+  selectedUserId: string | null
+  getOrdersBy: () => {
+    id: Map<string, Order>
+    userId: Map<string, Order[]>
+    status: Map<string, Order[]>
+  }
+  getSelectedUserOrders: () => Order[]
+  getSelectedUserTotal: () => number
+}
+
+const OrderStore = newStoreDef<State>({
+  derivations: d => ({
+    getOrdersBy: d()
+      .on([s => s.orders])
+      .evaluate(orders => ({
+        id: new Map(orders.map(o => [o.id, o])),
+        userId: Map.groupBy(orders, o => o.userId),
+        status: Map.groupBy(orders, o => o.status),
+      })),
+    getSelectedUserOrders: d()
+      .on([s => s.getOrdersBy(), s => s.selectedUserId])
+      .evaluate((ordersBy, selectedUserId) => {
+        if (!selectedUserId) return []
+        return ordersBy.userId.get(selectedUserId) ?? []
+      }),
+    getSelectedUserTotal: d()
+      .on([s => s.getSelectedUserOrders()])
+      .evaluate(selectedUserOrders =>
+        selectedUserOrders.reduce((sum, o) => sum + o.total, 0)
+      ),
+  }),
+})
+```
+
+### The Chain
+
+```
+orders (source)
+    │
+    ▼
+getOrdersBy() ─── indexes data once into id, userId, status
+    │
+    ▼
+getSelectedUserOrders() ─── O(1) lookup from userId index
+    │
+    ▼
+getSelectedUserTotal() ─── aggregates only the selected user's orders
+```
+
+### Usage
+
+```typescript
+// O(1) lookup by id
+const order = OrderStore.useSelector(s => s.getOrdersBy().id.get(orderId))
+
+// Get all pending orders
+const pending = OrderStore.useSelector(s => s.getOrdersBy().status.get("pending"))
+
+// Selected user's orders (already filtered)
+const userOrders = OrderStore.useSelector(s => s.getSelectedUserOrders())
+
+// Selected user's total
+const total = OrderStore.useSelector(s => s.getSelectedUserTotal())
+```
+
+### Naming Conventions
+
+**Lookup getters:** Name it after the entity + "By":
+
+- `getOrdersBy` → `getOrdersBy().id`, `getOrdersBy().userId`, `getOrdersBy().status`
+- `getUsersBy` → `getUsersBy().id`, `getUsersBy().role`, `getUsersBy().department`
+- `getProductsBy` → `getProductsBy().id`, `getProductsBy().category`, `getProductsBy().brand`
+
+This reads naturally: "get orders by id", "get orders by user id", "get orders by status".
+
+**Evaluate parameters:** When a selector calls a getter, name the parameter after the getter without the "get" prefix:
+
+```typescript
+// ❌ Generic name
+getSelectedUserTotal: d()
+  .on([s => s.getSelectedUserOrders()])
+  .evaluate(orders => orders.reduce((sum, o) => sum + o.total, 0))
+
+// ✅ Named after the getter (without "get")
+getSelectedUserTotal: d()
+  .on([s => s.getSelectedUserOrders()])
+  .evaluate(selectedUserOrders => selectedUserOrders.reduce((sum, o) => sum + o.total, 0))
+```
+
+More examples:
+- `s.getFilteredTodos()` → `filteredTodos`
+- `s.getOrdersBy()` → `ordersBy`
+- `s.getActiveUsers()` → `activeUsers`
 
 ## Migration Guide
 
@@ -279,7 +436,7 @@ const completedCount = useSelector(s => s.getCompletedCount())
 
 ## Limitations
 
-1. **Synchronous Only**: Evaluators must be synchronous functions
+1. **Synchronous Only**: `evaluate` callbacks must be synchronous functions
    - For async derivation, read [async derivation value](/docs/guides/async-derived-values)
 
 ## Troubleshooting
@@ -290,7 +447,7 @@ If cached getters are not updating:
 
 1. Check that selectors are returning the correct dependencies
 2. Verify that the state is actually changing
-3. Ensure evaluator is pure and deterministic
+3. Ensure `evaluate` callback is pure and deterministic
 
 ### Performance Issues
 
@@ -298,3 +455,46 @@ If performance is poor:
 
 1. Break down complex selectors into smaller ones
 2. Use more specific selectors to minimize cache invalidation
+
+
+
+### Cached Getters vs Derived State
+Derived states are non controlled states, that are calculated from other states (source and even derived states).
+You can derive state by using the diff() module, checking if the source changed, and then use the new value to calculate the derived state calling set().
+
+In Saphyra, cached getters are declarative, while derived state are imperative.
+Cached getters are declarative because all the possible values for this entry are declared in the `evaluate` callback. You can't set them manually, you need to change one of their sources in order to change their final value.
+
+Derived state are imperative because there is no single source of truth for that entry, the evaluation for that entry can be scattered across the reducer call, and you can abstract the reducer to other files, so it makes it scattered across the codebase.
+
+#### Derivation Triggers
+
+Cached getters are pure functions of state. They can only derive values from state, they have no access to actions or events.
+
+Derived state can react to actions, events, and context, not just state:
+
+```typescript
+reducer({ state, action, set, dispatch }) {
+  if (action.type === "add-todo") {
+    set({ todos: addTodo(state.todos, action.todo) })
+    dispatch({ type: "todo-added" })
+  }
+  if (action.type === "toggle-todo") {
+    set({ todos: toggleTodo(state.todos, action.todoId) })
+    dispatch({ type: "todo-toggled" })
+  }
+
+  // ✅ Derived from event
+  if (action.type === "todo-added") {
+    set({ $message: "Todo added successfully" })
+  }
+  if (action.type === "todo-toggled") {
+    set({ $message: "Todo toggled successfully" })
+  }
+
+  return state
+}
+```
+
+The same final state can produce different derived values depending on which action caused the change. With cached getters, the same state always produces the same value.
+

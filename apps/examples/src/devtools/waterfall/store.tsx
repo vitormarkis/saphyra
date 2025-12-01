@@ -1,4 +1,4 @@
-import { BarType, CurrentSorters } from "./types"
+import { BarType, CurrentSorters, BarKind } from "./types"
 import { reduceConfig } from "./fn/reduce-config"
 import { createStoreUtils } from "saphyra/react"
 import { newStoreDef } from "saphyra"
@@ -54,6 +54,7 @@ type WaterfallAction =
         transitionName: string
         id: string
         label: string | null
+        kind: BarKind
       }
       callbacks?: {
         onCreate?(bar: BarType): void
@@ -217,7 +218,7 @@ export const newWaterfallStore = newStoreDef<
     }
 
     if (action.type === "add-bar") {
-      const { transitionName, id, label } = action.payload
+      const { transitionName, id, label, kind } = action.payload
       const { onCreate } = action.callbacks ?? {}
 
       if (state.state === "stale") {
@@ -236,6 +237,7 @@ export const newWaterfallStore = newStoreDef<
         id,
         durationMs: "running",
         label,
+        kind,
       }
 
       state.bars = [...state.bars, newBar]

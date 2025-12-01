@@ -8,8 +8,24 @@ export const mockAsync: () => AsyncBuilder = () => () => ({
       promise: () => {},
       setTimeout: () => {},
     }),
+    queue: _id => ({
+      promise: () => {},
+      setTimeout: () => {},
+      onFinish: _props => ({
+        promise: () => {},
+        setTimeout: () => {},
+      }),
+    }),
     promise: () => {},
     setTimeout: () => {},
+  }),
+  queue: _id => ({
+    promise: () => {},
+    setTimeout: () => {},
+    onFinish: _props => ({
+      promise: () => {},
+      setTimeout: () => {},
+    }),
   }),
   onFinish: _props => ({
     promise: () => {},

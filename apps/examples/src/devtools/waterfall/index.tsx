@@ -23,6 +23,26 @@ const WaterfallContext = createContext<{
   extractErrorMessage?: (error: unknown) => string
 } | null>(null)
 
+import { BarKind } from "./types"
+
+const BAR_PATTERNS: Record<BarKind, string> = {
+  queue: `repeating-linear-gradient(
+    -45deg,
+    transparent,
+    transparent 4px,
+    rgba(0, 0, 0, 0.15) 4px,
+    rgba(0, 0, 0, 0.15) 8px
+  )`,
+  onFinish: `repeating-linear-gradient(
+    90deg,
+    transparent,
+    transparent 3px,
+    rgba(255, 255, 255, 0.25) 3px,
+    rgba(255, 255, 255, 0.25) 6px
+  )`,
+  user: "",
+}
+
 type WaterfallProps = {
   store: SomeStoreGeneric
   extractErrorMessage?: (error: unknown) => string
@@ -40,10 +60,10 @@ export function Waterfall({ store, extractErrorMessage }: WaterfallProps) {
   useEffect(() =>
     store.internal.events.on(
       "new-transition",
-      ({ transitionName, id, label }) => {
+      ({ transitionName, id, label, kind }) => {
         waterfallStore.dispatch({
           type: "add-bar",
-          payload: { transitionName, id, label },
+          payload: { transitionName, id, label, kind },
         })
       }
     )
@@ -288,17 +308,6 @@ type ContentProps = {
   seeingElement: string | null
 }
 
-const MOCK: BarType = {
-  transitionName: "auth:role",
-  startedAt: new Date("2025-04-27T22:33:15.058Z"),
-  endedAt: new Date("2025-04-27T22:33:15.760Z"),
-  status: "fail",
-  id: "auth:role-33m_15s_057ms",
-  durationMs: "running",
-  label: "Fetch permissions",
-  error: new Error("Something went wrong!"),
-} as const
-
 export function WaterfallTooltip({
   tooltipRef,
   seeingElement: seeingBar,
@@ -453,6 +462,7 @@ export const Bar = forwardRef(function Bar({
       }
       el.setAttribute("data-status", bar.status)
       el.setAttribute("data-highlight", isHighlighting ? dataHighlight : null)
+      el.style.backgroundImage = BAR_PATTERNS[bar.kind]
       const textEl = el.querySelector("span") as HTMLSpanElement
       if (bar.label != null) {
         textEl.innerText = bar.label

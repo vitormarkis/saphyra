@@ -122,12 +122,14 @@ export type KeyAbort = `abort::${string}`
 
 export type EventsFormat = EventsTuple | Record<KeyAbort, []>
 
+export type BarKind = "queue" | "onFinish" | "user"
+
 export type StoreInternalEvents = {
   "transition-completed": [
     { id: string; status: "fail" | "success" | "cancelled"; error?: unknown },
   ]
   "new-transition": [
-    { transitionName: string; id: string; label: string | null },
+    { transitionName: string; id: string; label: string | null; kind: BarKind },
   ]
 }
 
@@ -147,6 +149,7 @@ type StoreInternals<TState> = {
     setterOrPartialState: SetterOrPartialState<TState>
   ) => TState | null
   context: StoreInternalContext | null
+  onFinishCleanUpRegistry: Record<string, ((error: unknown) => void)[]>
 }
 
 export type GenericStoreValues<
@@ -197,6 +200,7 @@ export type InnerCreateAsync<
   onAsyncOperation: (asyncOperation: AsyncOperation) => void
   from?: string
   onAbort?: () => void
+  queueManager?: import("./queue-manager").QueueManager
 }
 
 export type HandleActionProps<
@@ -290,6 +294,7 @@ export type GenericStoreMethods<
     signal?: AbortSignal,
     onAsyncOperation?: (asyncOperation: AsyncOperation) => void
   ) => AsyncBuilder
+  flushQueue(): Promise<void>
 }
 
 type UncontrolledState<
@@ -505,6 +510,7 @@ export type AsyncTimerConfig = {
 // }
 
 export type OnFinishId = string | StringSerializable[]
+export type QueueId = string | StringSerializable[]
 export type OnFinishCallbackProps = {
   isLast: () => boolean
   getResultList: () => Array<unknown>
@@ -524,6 +530,7 @@ export type AsyncPromiseOnFinishProps = {
 
 export type AsyncModule = {
   setName: (name: string | StringSerializable[]) => Omit<AsyncModule, "setName">
+  queue: (id: QueueId) => Omit<AsyncModule, "queue" | "setName">
   onFinish: (
     props?: AsyncPromiseOnFinishProps | undefined
   ) => Pick<AsyncModule, "promise" | "setTimeout">
@@ -604,6 +611,7 @@ export type OnFinishTransition = (options: OnFinishTransitionProps) => void
 
 export type DoneKeyOptions = {
   onFinishTransition: OnFinishTransition
+  skipDoneEvent?: boolean
 }
 
 export type EmitErrorOptions = {
@@ -664,9 +672,15 @@ export type AsyncOperation = {
   when: number
   fn?: () => void
   fnUser?: (...args: any[]) => any | Promise<any>
-  type: "promise" | "timeout" | "manual"
+  type: "promise" | "timeout" | "manual" | "queue"
   label?: string | null
   whenReadable: string
+}
+
+export type QueueOperation = {
+  fn: (() => void) | null
+  queueId: string
+  transition: Transition
 }
 
 export type OnPushToHistoryProps<

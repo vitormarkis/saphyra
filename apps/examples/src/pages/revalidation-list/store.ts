@@ -98,6 +98,7 @@ export const newRevalidationListStore = newStoreDef<
 
       async()
         .setName("toggle-todo")
+        .queue(["todos"])
         .onFinish(
           settings.manualRevalidation ? undefined : revalidateList(todoIndex)
         )
@@ -121,6 +122,7 @@ export const newRevalidationListStore = newStoreDef<
       }
       async()
         .setName("toggle-disabled-todo")
+        .queue(["todos"])
         .onFinish(
           settings.manualRevalidation ? undefined : revalidateList(todoIndex)
         )
