@@ -1,3 +1,5 @@
+import type { BarSort, BarSorters } from "./sorters"
+
 export type BarType = {
   id: string
   transitionName: string
@@ -9,13 +11,13 @@ export type BarType = {
   error?: unknown
 }
 
-export type BarSort = (a: BarType, b: BarType) => number | undefined | null
-export type BarFilter = (query: string) => (bar: BarType) => boolean
-
 export type CurrentSorters = Record<
-  string,
+  BarSortableProperties,
   {
     name: string
     sorter: BarSort | null
   }
 >
+
+type BarSortableProperties = keyof BarSorters
+

@@ -1,4 +1,6 @@
-import { BarSort } from "./types"
+import type { BarType } from "./types"
+
+export type BarSort = (a: BarType, b: BarType) => number | undefined | null
 
 export const sortByTransitionNameAscending: BarSort = (a, b) => {
   return a.transitionName > b.transitionName
@@ -28,7 +30,7 @@ export const barSorters = {
   transitionName: [
     {
       name: "default",
-      sorter: null as BarSort | null,
+      sorter: null,
     } as const,
     {
       name: "ascending",
@@ -42,7 +44,7 @@ export const barSorters = {
   startedAt: [
     {
       name: "default",
-      sorter: null as BarSort | null,
+      sorter: null,
     } as const,
     {
       name: "ascending",
@@ -56,3 +58,4 @@ export const barSorters = {
 }
 
 export type BarSorters = typeof barSorters
+

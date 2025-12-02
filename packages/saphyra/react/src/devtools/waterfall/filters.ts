@@ -1,4 +1,6 @@
-import { BarFilter } from "./types"
+import type { BarType } from "./types"
+
+export type BarFilter = (query: string) => (bar: BarType) => boolean
 
 export const filterByTransitionName: BarFilter = query => bar => {
   const finalQuery = query.trim().toLowerCase()

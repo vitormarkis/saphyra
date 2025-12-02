@@ -5,7 +5,7 @@ import { cn } from "~/lib/cn"
 import { toastWithSonner } from "~/sonner-error-handler"
 
 import { useHistory, useNewStore } from "saphyra/react"
-import { Waterfall } from "~/devtools/waterfall"
+import { Waterfall } from "saphyra/devtools"
 import { newRevalidationListStore, RevalidationList } from "./store"
 import { INITIAL_TODOS } from "./consts"
 import { toast } from "sonner"

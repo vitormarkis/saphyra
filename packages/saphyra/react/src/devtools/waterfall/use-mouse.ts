@@ -18,5 +18,6 @@ export function useMouse(options: UseMouseOptions = {}) {
     return () => {
       document.removeEventListener("mousemove", handle)
     }
-  }, [options.onPosition])
+  }, [])
 }
+

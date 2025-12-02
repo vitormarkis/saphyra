@@ -1,4 +1,4 @@
-import { BarType } from "../types"
+import type { BarType } from "../types"
 
 export const reduceConfig = (now: number) =>
   [
@@ -27,3 +27,4 @@ export const reduceConfig = (now: number) =>
       max: now,
     } as Record<string, number>,
   ] as const
+

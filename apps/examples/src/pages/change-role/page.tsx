@@ -16,7 +16,7 @@ import {
   useHistory,
   useNewStore,
 } from "saphyra/react"
-import { Waterfall } from "~/devtools/waterfall"
+import { Waterfall } from "saphyra/devtools"
 import { noop } from "~/lib/utils"
 
 export type SelectedRole = "user" | "admin"

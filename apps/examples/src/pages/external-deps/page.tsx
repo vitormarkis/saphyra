@@ -18,7 +18,7 @@ import { fetchPosts } from "./fn/fetch-posts"
 import { placeComment } from "./fn/fetch-place-commment"
 import { likePost } from "./fn/like-post"
 import { useHistory, useNewStore } from "saphyra/react"
-import { Waterfall } from "~/devtools/waterfall"
+import { Waterfall } from "saphyra/devtools"
 import { X } from "lucide-react"
 
 export function ExternalDepsPage() {

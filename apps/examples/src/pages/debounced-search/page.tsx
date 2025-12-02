@@ -7,7 +7,7 @@ import { CenteredErrorUnknown } from "~/components/CenteredError"
 import { useCallback, useEffect } from "react"
 import { createStoreUtils, useBootstrapError, useNewStore } from "saphyra/react"
 import { queryClient } from "~/query-client"
-import { Waterfall } from "~/devtools/waterfall"
+import { Waterfall } from "saphyra/devtools"
 import { Button } from "~/components/ui/button"
 import { noop } from "~/lib/utils"
 
