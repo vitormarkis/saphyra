@@ -102,7 +102,7 @@ export function Waterfall({
     newWaterfallStore({
       bars: [],
       distance: 500,
-      clearTimeout: 1000,
+      clearTimeout: 6_000,
     })
   )
 
