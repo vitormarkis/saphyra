@@ -27,6 +27,31 @@ export const errorNoTransition = () =>
     "No transition! Your reducer triggered async operations without a transition. Add one to your action or set a default transition on your store definition."
   )
 
+export function addBar(
+  store: SomeStoreGeneric,
+  transition: Transition | string,
+  label: string | null
+) {
+  const transitionString = Array.isArray(transition)
+    ? transition.join(":")
+    : transition
+  const when = labelWhen(new Date())
+  const id = `${transitionString}-${when}`
+  store.internal.events.emit("new-transition", {
+    id,
+    transitionName: transitionString,
+    label,
+  })
+
+  return (status: "cancelled" | "fail" | "success", error?: unknown) => {
+    store.internal.events.emit("transition-completed", {
+      id,
+      status,
+      error,
+    })
+  }
+}
+
 export function createAsync<
   TState extends Record<string, any> = Record<string, any>,
   TActions extends ActionShape = DefaultActions & ActionShape,
@@ -42,33 +67,12 @@ export function createAsync<
   from?: string,
   onAbort?: () => void
 ): AsyncBuilder {
-  const completeBar = (
-    id: string,
-    status: "cancelled" | "fail" | "success",
-    error?: unknown
-  ) => {
-    store.internal.events.emit("transition-completed", {
-      id,
-      status,
-      error,
-    })
-  }
-
   const newBar = (
     transitionString: string,
-    when: string,
+    _when: string,
     label: string | null
   ) => {
-    const id = `${transitionString}-${when}`
-    store.internal.events.emit("new-transition", {
-      id,
-      transitionName: transitionString,
-      label,
-    })
-
-    return (status: "cancelled" | "fail" | "success", error?: unknown) => {
-      completeBar(id, status, error)
-    }
+    return addBar(store, transitionString, label)
   }
 
   const wrapPromise = <T>(

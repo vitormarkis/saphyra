@@ -5,7 +5,7 @@ import {
   RemoveFunctionProps,
   StoreInternalContextEnum,
 } from "./types"
-import { createAsync, errorNoTransition } from "./createAsync"
+import { createAsync, errorNoTransition, addBar } from "./createAsync"
 import { runSuccessCallback, TransitionsStore } from "./transitions-store"
 import { InfiniteLoopError } from "./infinite-loop-error"
 import type {
@@ -1785,6 +1785,8 @@ export function newStoreDef<
                 return defaultOnPushToHistoryFnNoop
               })()
 
+              const finishBar = addBar(store, transition, propsAction.type)
+
               const onTransitionEnd = (
                 props: OnTransitionEndProps<
                   TState,
@@ -1804,6 +1806,14 @@ export function newStoreDef<
                     setterOrPartialState
                   )
                 })
+
+                if (props.aborted) {
+                  finishBar("cancelled")
+                } else if (props.error) {
+                  finishBar("fail", props.error)
+                } else {
+                  finishBar("success")
+                }
 
                 return propsAction.onTransitionEnd?.(props)
               }
