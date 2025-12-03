@@ -282,23 +282,23 @@ const CSS = `
 }
 
 .${styles.barRunning} {
-  background: #0ea5e9;
-  color: #e0f2fe;
+  background: #0284c7;
+  color: #bae6fd;
 }
 
 .${styles.barSuccess} {
-  background: #22c55e;
+  background: #16a34a;
   color: #dcfce7;
 }
 
 .${styles.barFail} {
-  background: #ef4444;
+  background: #dc2626;
   color: #fee2e2;
 }
 
 .${styles.barCancelled} {
-  background: #f59e0b;
-  color: #fef3c7;
+  background: #d97706;
+  color: #fcd34d;
 }
 
 .${styles.barHoveringRunning} {
@@ -306,15 +306,15 @@ const CSS = `
 }
 
 .${styles.barHoveringSuccess} {
-  box-shadow: 0 0 0 2px #86efac;
+  box-shadow: 0 0 0 2px #4ade80;
 }
 
 .${styles.barHoveringFail} {
-  box-shadow: 0 0 0 2px #fca5a5;
+  box-shadow: 0 0 0 2px #f87171;
 }
 
 .${styles.barHoveringCancelled} {
-  box-shadow: 0 0 0 2px #fcd34d;
+  box-shadow: 0 0 0 2px #fbbf24;
 }
 
 .${styles.barMuted} {
@@ -350,7 +350,7 @@ const CSS = `
 
 .${styles.tooltipPortal} {
   position: absolute;
-  z-index: 50;
+  z-index: 10000;
   left: 0;
   top: 0;
   pointer-events: none;
@@ -477,26 +477,26 @@ const CSS = `
 
 .${styles.statusBadgeSuccess} {
   background: #16a34a;
-  color: #bbf7d0;
+  color: #dcfce7;
   border-color: #22c55e;
 }
 
 .${styles.statusBadgeFail} {
-  background: #991b1b;
-  color: #fecaca;
-  border-color: #dc2626;
+  background: #dc2626;
+  color: #fee2e2;
+  border-color: #ef4444;
 }
 
 .${styles.statusBadgeCancelled} {
   background: #d97706;
-  color: #fef3c7;
+  color: #fcd34d;
   border-color: #f59e0b;
 }
 
 .${styles.statusBadgeRunning} {
   background: #0284c7;
   color: #bae6fd;
-  border-color: #0ea5e9;
+  border-color: #38bdf8;
 }
 `
 

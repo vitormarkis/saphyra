@@ -24,6 +24,12 @@ import type { MutableRefObject } from "react"
 import type { BarType } from "./types"
 import { useNewStore } from "../../hooks"
 import { styles, injectStyles } from "./styles"
+import {
+  floatingStyles,
+  injectFloatingStyles,
+  DefaultLogo,
+  CloseIcon,
+} from "./floating-styles"
 
 const WaterfallContext = createContext<{
   extractErrorMessage?: (error: unknown) => string
@@ -32,10 +38,65 @@ const WaterfallContext = createContext<{
 export type WaterfallProps = {
   store: SomeStoreGeneric
   extractErrorMessage?: (error: unknown) => string
+  /**
+   * Custom logo for the floating button.
+   * Can be a URL string, base64 data URI, or a React node (like an SVG component).
+   */
+  logo?: React.ReactNode | string
+  /**
+   * Title shown in the overlay header.
+   * @default "Waterfall Devtools"
+   */
+  title?: string
+  /**
+   * Offset the floating button position to prevent collision with other devtools.
+   * @example { bottom: 80 } - Move button 80px from bottom
+   * @example { right: 80 } - Move button 80px from right
+   * @example { bottom: 80, right: 80 } - Move button 80px from both
+   */
+  offset?: {
+    bottom?: number
+    right?: number
+  }
+  /**
+   * Background color of the floating button.
+   * @default "#000000"
+   */
+  buttonColor?: string
+  /**
+   * Border radius of the floating button.
+   * @default "50%" (fully rounded)
+   * @example "8px" - Slightly rounded corners
+   * @example "0" - Square button
+   */
+  buttonRadius?: string | number
+  /**
+   * Padding inside the floating button around the logo.
+   * Useful when the logo doesn't fit well in a circular button.
+   * @default 0
+   */
+  buttonPadding?: string | number
 }
 
-export function Waterfall({ store, extractErrorMessage }: WaterfallProps) {
+export function Waterfall({
+  store,
+  extractErrorMessage,
+  logo,
+  title = "Waterfall Devtools",
+  offset,
+  buttonColor,
+  buttonRadius,
+  buttonPadding,
+}: WaterfallProps) {
   injectStyles()
+  injectFloatingStyles()
+
+  const [isOpen, setIsOpen] = useState(false)
+  const [isGhost, setIsGhost] = useState(false)
+  const [panelHeight, setPanelHeight] = useState(300)
+  const [isDragging, setIsDragging] = useState(false)
+  const [isNearHandle, setIsNearHandle] = useState(false)
+  const panelRef = useRef<HTMLDivElement>(null)
 
   const [waterfallStore, resetStore, isLoading] = useNewStore(() =>
     newWaterfallStore({
@@ -69,13 +130,176 @@ export function Waterfall({ store, extractErrorMessage }: WaterfallProps) {
     )
   )
 
+  const handleClose = useCallback(() => {
+    setIsOpen(false)
+  }, [])
+
+  const handleOpen = useCallback(() => {
+    setIsOpen(true)
+  }, [])
+
+  useEffect(() => {
+    if (!isOpen) return
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        handleClose()
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown)
+    return () => document.removeEventListener("keydown", handleKeyDown)
+  }, [isOpen, handleClose])
+
+  useEffect(() => {
+    if (!isDragging) return
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const newHeight = window.innerHeight - e.clientY
+      const clampedHeight = Math.min(
+        Math.max(newHeight, 150),
+        window.innerHeight - 100
+      )
+      setPanelHeight(clampedHeight)
+    }
+
+    const handleMouseUp = () => {
+      setIsDragging(false)
+    }
+
+    document.addEventListener("mousemove", handleMouseMove)
+    document.addEventListener("mouseup", handleMouseUp)
+
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove)
+      document.removeEventListener("mouseup", handleMouseUp)
+    }
+  }, [isDragging])
+
+  useEffect(() => {
+    if (!isOpen) return
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (panelRef.current) {
+        const rect = panelRef.current.getBoundingClientRect()
+        const distanceFromTop = e.clientY - rect.top
+        setIsNearHandle(distanceFromTop >= -20 && distanceFromTop <= 20)
+      }
+    }
+
+    document.addEventListener("mousemove", handleMouseMove)
+    return () => document.removeEventListener("mousemove", handleMouseMove)
+  }, [isOpen])
+
+  const handleResizeStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    setIsDragging(true)
+  }, [])
+
+  const renderLogo = () => {
+    if (!logo) {
+      return <DefaultLogo />
+    }
+
+    if (typeof logo === "string") {
+      return (
+        <div className={floatingStyles.logo}>
+          <img
+            src={logo}
+            alt="Waterfall Devtools"
+          />
+        </div>
+      )
+    }
+
+    return <div className={floatingStyles.logo}>{logo}</div>
+  }
+
+  const buttonStyle: React.CSSProperties = {
+    ...(offset?.bottom != null && { bottom: offset.bottom }),
+    ...(offset?.right != null && { right: offset.right }),
+    ...(buttonColor != null && {
+      backgroundColor: buttonColor,
+      borderColor: buttonColor,
+    }),
+    ...(buttonRadius != null && { borderRadius: buttonRadius }),
+    ...(buttonPadding != null && {
+      ["--logo-margin" as string]:
+        typeof buttonPadding === "number"
+          ? `${buttonPadding}px`
+          : buttonPadding,
+    }),
+  }
+
   return (
     <WaterfallContext.Provider value={{ extractErrorMessage }}>
       <WF.Context.Provider value={[waterfallStore, resetStore, isLoading]}>
-        <div className={styles.container}>
-          <WaterfallController />
-          <WaterfallContent />
-        </div>
+        {ReactDOM.createPortal(
+          <button
+            className={floatingStyles.button}
+            onClick={handleOpen}
+            aria-label="Open Waterfall Devtools"
+            type="button"
+            style={buttonStyle}
+          >
+            {renderLogo()}
+          </button>,
+          document.body
+        )}
+
+        {isOpen &&
+          ReactDOM.createPortal(
+            <div
+              ref={panelRef}
+              className={cn(
+                floatingStyles.panel,
+                isGhost && floatingStyles.panelGhost
+              )}
+              style={{ height: panelHeight }}
+            >
+              <div
+                className={cn(
+                  floatingStyles.resizeHandle,
+                  (isNearHandle || isDragging) &&
+                    floatingStyles.resizeHandleVisible
+                )}
+                onMouseDown={handleResizeStart}
+                onDoubleClick={handleClose}
+              />
+              <div className={floatingStyles.header}>
+                <div className={floatingStyles.titleBadge}>
+                  <h2 className={floatingStyles.title}>{title}</h2>
+                </div>
+                <div className={floatingStyles.headerButtons}>
+                  <button
+                    className={cn(
+                      floatingStyles.ghostButton,
+                      isGhost && floatingStyles.ghostButtonActive
+                    )}
+                    onClick={() => setIsGhost(g => !g)}
+                    type="button"
+                  >
+                    {isGhost ? "Undo Ghost" : "Ghost"}
+                  </button>
+                  <button
+                    className={floatingStyles.closeButton}
+                    onClick={handleClose}
+                    aria-label="Close Waterfall Devtools"
+                    type="button"
+                  >
+                    <CloseIcon />
+                  </button>
+                </div>
+              </div>
+              <div className={floatingStyles.content}>
+                <div className={styles.container}>
+                  <WaterfallController />
+                  <WaterfallContent />
+                </div>
+              </div>
+            </div>,
+            document.body
+          )}
       </WF.Context.Provider>
     </WaterfallContext.Provider>
   )
@@ -432,11 +656,6 @@ export const Bar = forwardRef(function Bar({
   )
 
   const status = WF.useCommittedSelector(s => s.getBarsByBarId()[barId].status)
-  // const isMuted = WF.useCommittedSelector(s => {
-  //   if (s.highlightingTransition === null) return false
-  //   const bar = s.getBarsByBarId()[barId]
-  //   return s.highlightingTransition !== bar.transitionName
-  // })
 
   const barClassName = cn(
     styles.bar,
@@ -448,7 +667,6 @@ export const Bar = forwardRef(function Bar({
     isHovering && status === "success" && styles.barHoveringSuccess,
     isHovering && status === "fail" && styles.barHoveringFail,
     isHovering && status === "cancelled" && styles.barHoveringCancelled
-    // isMuted && styles.barMuted
   )
 
   return (

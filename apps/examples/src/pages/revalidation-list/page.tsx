@@ -20,6 +20,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "~/components/ui/tooltip"
+import { devtoolsLogoBase64 } from "./devtools-logo"
 
 export function RevalidationListPage() {
   const [displayingContent, setDisplayingContent] = useState(true)
@@ -255,12 +256,14 @@ export function RevalidationListPage() {
             </div>
           )}
         </div>
-        <div className="flex-1 grid min-h-0 min-w-0 h-full gap-4 w-full">
-          {/* <div className="size-full p-4">
-            <pre>{JSON.stringify(subtransitions, null, 2)}</pre>
-          </div> */}
-          <Waterfall store={revalidationListStore} />
-        </div>
+        <Waterfall
+          store={revalidationListStore}
+          offset={{ right: 80 }}
+          logo={devtoolsLogoBase64}
+          buttonColor="#aaa"
+          buttonPadding={6}
+          buttonRadius={0}
+        />
       </div>
     </RevalidationList.Context.Provider>
   )
