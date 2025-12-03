@@ -519,7 +519,7 @@ export function WaterfallTooltip({
   const barInfo = WF.useCommittedSelector(s =>
     seeingBar ? s.getBarsByBarId()[seeingBar] : null
   )
-  if (!seeingBar || barInfo === null) return null
+  if (!seeingBar || barInfo == null) return null
 
   return (
     <div
