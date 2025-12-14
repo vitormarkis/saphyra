@@ -367,4 +367,191 @@ describe("setStateAsync", () => {
       )
     })
   })
+
+  describe("no transition error propagation", () => {
+    const noTransitionErrorMessage =
+      "No transition! Your reducer triggered async operations without a transition. Add one to your action or set a default transition on your store definition."
+
+    it("should reject when setStateAsync is called without transition and reducer triggers async().promise()", async () => {
+      const newStore = newStoreDefTest({
+        reducer({ state, diff, async }) {
+          diff()
+            .on([s => s.count])
+            .run(() => {
+              async().promise(async () => {
+                await delay()
+              })
+            })
+          return state
+        },
+      })
+      const store = newStore({ count: 0 }, { errorHandlers: [errorHandler] })
+      await store.waitForBootstrap()
+
+      const promise = store.setStateAsync({ count: 5 })
+
+      await expect(promise).rejects.toThrow(noTransitionErrorMessage)
+      expect(errorHandler).toHaveBeenCalledWith(
+        expect.objectContaining({ message: noTransitionErrorMessage }),
+        undefined
+      )
+    })
+
+    it("should reject when setStateAsync is called without transition and reducer triggers async().setTimeout()", async () => {
+      const newStore = newStoreDefTest({
+        reducer({ state, diff, async }) {
+          diff()
+            .on([s => s.count])
+            .run(() => {
+              async().setTimeout(() => {}, 100)
+            })
+          return state
+        },
+      })
+      const store = newStore({ count: 0 }, { errorHandlers: [errorHandler] })
+      await store.waitForBootstrap()
+
+      const promise = store.setStateAsync({ count: 5 })
+
+      await expect(promise).rejects.toThrow(noTransitionErrorMessage)
+      expect(errorHandler).toHaveBeenCalledWith(
+        expect.objectContaining({ message: noTransitionErrorMessage }),
+        undefined
+      )
+    })
+
+    it("should reject when setStateAsync is called without transition and reducer triggers sync async operation outside async() builder", async () => {
+      const newStore = newStoreDefTest({
+        reducer({ state, diff, async }) {
+          diff()
+            .on([s => s.name])
+            .run(() => {
+              async().promise(async () => {
+                await delay()
+              })
+            })
+          return state
+        },
+      })
+      const store = newStore(
+        { count: 0, name: "" },
+        { errorHandlers: [errorHandler] }
+      )
+      await store.waitForBootstrap()
+
+      const promise = store.setStateAsync({ name: "test" })
+
+      await expect(promise).rejects.toThrow(noTransitionErrorMessage)
+      expect(errorHandler).toHaveBeenCalledWith(
+        expect.objectContaining({ message: noTransitionErrorMessage }),
+        undefined
+      )
+    })
+
+    it("should allow try/catch to handle the error when setStateAsync rejects", async () => {
+      const newStore = newStoreDefTest({
+        reducer({ state, diff, async }) {
+          diff()
+            .on([s => s.count])
+            .run(() => {
+              async().promise(async () => {
+                await delay()
+              })
+            })
+          return state
+        },
+      })
+      const store = newStore({ count: 0 }, { errorHandlers: [errorHandler] })
+      await store.waitForBootstrap()
+
+      let caughtError: Error | null = null
+      let finallyCalled = false
+
+      try {
+        await store.setStateAsync({ count: 5 })
+      } catch (error) {
+        caughtError = error as Error
+      } finally {
+        finallyCalled = true
+      }
+
+      expect(caughtError).toBeInstanceOf(Error)
+      expect(caughtError?.message).toBe(noTransitionErrorMessage)
+      expect(finallyCalled).toBe(true)
+    })
+
+    it("should reject when setStateAsync with setter function is called without transition", async () => {
+      const newStore = newStoreDefTest({
+        reducer({ state, diff, async }) {
+          diff()
+            .on([s => s.count])
+            .run(() => {
+              async().promise(async () => {
+                await delay()
+              })
+            })
+          return state
+        },
+      })
+      const store = newStore({ count: 0 }, { errorHandlers: [errorHandler] })
+      await store.waitForBootstrap()
+
+      const promise = store.setStateAsync(s => ({ count: s.count + 1 }))
+
+      await expect(promise).rejects.toThrow(noTransitionErrorMessage)
+    })
+
+    it("should work correctly when transition is provided", async () => {
+      const newStore = newStoreDefTest({
+        reducer({ state, diff, async, set }) {
+          diff()
+            .on([s => s.count])
+            .run(count => {
+              async().promise(async () => {
+                await delay()
+                set({ $doubled: count * 2 })
+              })
+            })
+          return state
+        },
+      })
+      const store = newStore({ count: 0 }, { errorHandlers: [errorHandler] })
+      await store.waitForBootstrap()
+
+      await store.setStateAsync({ count: 5 }, ["update"])
+
+      expect(store.getState().count).toBe(5)
+      expect(store.getState().$doubled).toBe(10)
+      expect(errorHandler).not.toHaveBeenCalled()
+    })
+
+    it("should work correctly with default transition configured", async () => {
+      const newStore = newStoreDefTest({
+        config: {
+          defaults: {
+            transition: ["DEFAULT"],
+          },
+        },
+        reducer({ state, diff, async, set }) {
+          diff()
+            .on([s => s.count])
+            .run(count => {
+              async().promise(async () => {
+                await delay()
+                set({ $doubled: count * 2 })
+              })
+            })
+          return state
+        },
+      })
+      const store = newStore({ count: 0 }, { errorHandlers: [errorHandler] })
+      await store.waitForBootstrap()
+
+      await store.setStateAsync({ count: 7 })
+
+      expect(store.getState().count).toBe(7)
+      expect(store.getState().$doubled).toBe(14)
+      expect(errorHandler).not.toHaveBeenCalled()
+    })
+  })
 })

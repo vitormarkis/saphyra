@@ -1180,6 +1180,14 @@ export function newStoreDef<
         }
 
         handleError(error, action.transition)
+        // Notify onTransitionEnd callback so async promises can reject properly
+        if (action.onTransitionEnd) {
+          action.onTransitionEnd({
+            error,
+            aborted: false,
+            state: store.state,
+          })
+        }
         return () => {}
       }
     }
