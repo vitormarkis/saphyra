@@ -1196,10 +1196,12 @@ export function newStoreDef<
             ],
             asyncOperationsHistory: [],
             events: store.events,
-            meta: {},
+            meta: action.transition
+              ? store.transitions.meta.get(action.transition)
+              : {},
             setterOrPartialStateList: [],
             store,
-            transition: undefined as unknown as Transition,
+            transition: action.transition!,
             transitionStore: store.transitions,
           })
         }
