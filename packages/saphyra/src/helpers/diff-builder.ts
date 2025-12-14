@@ -7,18 +7,38 @@ export function createDiffBuilder<TState>(prevState: TState, newState: TState) {
     on<const TSelectors extends ((state: TState) => any)[]>(
       selectors: TSelectors
     ) {
+      const changes = selectors.map(selector => {
+        let prevValue: any
+        try {
+          prevValue = selector(prevState)
+        } catch {
+          prevValue = undefined
+        }
+        const newValue = selector(newState)
+        return prevValue !== newValue ? [prevValue, newValue] : undefined
+      })
+
       return {
+        changes,
         run<TArgs extends SelectorValues<TState, TSelectors>>(
-          run: (...args: TArgs) => void
+          run: (this: typeof changes, ...args: TArgs) => void
         ) {
-          const hasChanges = selectors.some(
-            selector => selector(prevState) !== selector(newState)
-          )
+          const hasChanges = changes.some(change => change !== undefined)
           if (hasChanges) {
-            run(...(selectors.map(selector => selector(newState)) as TArgs))
+            run.call(
+              changes,
+              ...(selectors.map(selector => selector(newState)) as TArgs)
+            )
           }
         },
       }
+    },
+    changed<TSelector extends (state: TState) => any>(
+      selector: TSelector
+    ): boolean {
+      const prevValue = selector(prevState)
+      const newValue = selector(newState)
+      return prevValue !== newValue
     },
   })
 }
