@@ -1186,6 +1186,21 @@ export function newStoreDef<
             error,
             aborted: false,
             state: store.state,
+            actionHistory: [
+              {
+                action,
+                depth: 0,
+                source: "dispatch",
+                timestamp: new Date(),
+              },
+            ],
+            asyncOperationsHistory: [],
+            events: store.events,
+            meta: {},
+            setterOrPartialStateList: [],
+            store,
+            transition: undefined as unknown as Transition,
+            transitionStore: store.transitions,
           })
         }
         return () => {}
