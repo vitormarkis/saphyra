@@ -88,4 +88,42 @@ export default defineConfig([
       import: importPlugin,
     },
   },
+
+  // Configuration for syberia package
+  {
+    files: ["packages/syberia/**/*.{js,mjs,cjs,ts,mts,cts,jsx,tsx}"],
+    settings: {
+      "react": {
+        version: "detect",
+      },
+      "import/resolver": {
+        typescript: {
+          project: "./packages/syberia/tsconfig.json",
+        },
+        node: {
+          paths: ["packages/syberia/src"],
+          extensions: [".js", ".jsx", ".ts", ".tsx"],
+        },
+      },
+    },
+    rules: {
+      "react-refresh/only-export-components": "off", // Library doesn't need this
+      "@typescript-eslint/no-explicit-any": "off",
+      "no-debugger": "off",
+      "import/no-unresolved": ["error"],
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        { ignoreRestSiblings: true, argsIgnorePattern: "^_" },
+      ],
+      "@typescript-eslint/no-this-alias": [
+        "error",
+        {
+          allowedNames: ["self"],
+        },
+      ],
+    },
+    plugins: {
+      import: importPlugin,
+    },
+  },
 ])

@@ -40,6 +40,7 @@
     "react": "^18.3.1",
     "saphyra": "workspace:*",
     "scheduler": "^0.25.0",
+    "syberia": "workspace:*",
     "tiny-invariant": "^1.3.3",
     "use-context-selector": "^2.0.0"
   },

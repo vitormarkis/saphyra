@@ -10,6 +10,7 @@ import { DebouncedSearchPage } from "./pages/debounced-search/page"
 import { MultipleOptimisticUpdatesPage } from "./pages/multiple-optimistic-updates/page"
 import { ResizeDebouncedPage } from "./pages/resize-debounced/page"
 import { DependentSelectPage } from "./pages/dependent-select/page"
+import { SyberiaCardsPage } from "./pages/syberia-cards/page"
 
 export const myRoutesManifest = [
   {
@@ -59,5 +60,9 @@ export const myRoutesManifest = [
   {
     path: "/dependent-select",
     element: <DependentSelectPage />,
+  },
+  {
+    path: "/syberia-cards",
+    element: <SyberiaCardsPage />,
   },
 ]

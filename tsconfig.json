@@ -2,6 +2,7 @@
   "files": [],
   "compilerOptions": {
     "baseUrl": ".",
+    "noImplicitAny": true,
     "strictNullChecks": false,
     "paths": {
       "~/*": ["./src/*"]
