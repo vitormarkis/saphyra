@@ -25,12 +25,12 @@ export class DerivedEngine<TState extends Record<string, any>> {
     this.asyncRunner = new AsyncRunner(transitionsStore)
   }
 
-  process(state: TState, setState: SetStateFn<TState>) {
+  process(state: TState, setState: SetStateFn<TState>, transition: Transition) {
     for (const def of this.definitions) {
       if (isFromEachDefinition(def)) {
-        this.processFromEach(def, state, setState, [])
+        this.processFromEach(def, state, setState, [], transition)
       } else {
-        this.processDerived(def, state, setState, [])
+        this.processDerived(def, state, setState, [], transition)
       }
     }
   }
@@ -39,7 +39,8 @@ export class DerivedEngine<TState extends Record<string, any>> {
     def: FromEachDefinition,
     state: TState,
     setState: SetStateFn<TState>,
-    parentPath: PathInstruction[]
+    parentPath: PathInstruction[],
+    transition: Transition
   ) {
     const collection = def.fromSelector(state)
     if (!Array.isArray(collection)) return
@@ -69,9 +70,9 @@ export class DerivedEngine<TState extends Record<string, any>> {
               ...nestedDef,
               fromSelector: (s: any) => nestedDef.fromSelector(keyedItem),
             }
-            this.processFromEach(scopedFromEach, state, setState, currentPath)
+            this.processFromEach(scopedFromEach, state, setState, currentPath, transition)
           } else {
-            this.processDerived(nestedDef, state, setState, currentPath)
+            this.processDerived(nestedDef, state, setState, currentPath, transition)
           }
         }
       }
@@ -103,7 +104,8 @@ export class DerivedEngine<TState extends Record<string, any>> {
     def: DerivedDefinition,
     state: TState,
     setState: SetStateFn<TState>,
-    parentPath: PathInstruction[]
+    parentPath: PathInstruction[],
+    transition: Transition
   ) {
     if (!def.deps || def.deps.length === 0) return
 
@@ -137,7 +139,7 @@ export class DerivedEngine<TState extends Record<string, any>> {
     if (def.type === "sync") {
       this.executeSync(def, currentDeps, state, setState, parentPath)
     } else if (def.type === "async") {
-      this.executeAsync(def, currentDeps, state, setState, parentPath)
+      this.executeAsync(def, currentDeps, state, setState, parentPath, transition)
     }
   }
 
@@ -170,9 +172,9 @@ export class DerivedEngine<TState extends Record<string, any>> {
     deps: any[],
     state: TState,
     setState: SetStateFn<TState>,
-    parentPath: PathInstruction[]
+    parentPath: PathInstruction[],
+    transition: Transition
   ) {
-    const transition = this.getTransition(def, parentPath)
     const controller = new AbortController()
 
     if (def.pattern === "declarative" && def.targetPath) {
@@ -205,17 +207,6 @@ export class DerivedEngine<TState extends Record<string, any>> {
         await asyncFn({ signal, ...setters })
       })
     }
-  }
-
-  private getTransition(def: DerivedDefinition, parentPath: PathInstruction[]): Transition {
-    if (def.targetPath) {
-      return def.targetPath.map(inst => {
-        if (inst.type === "prop") return inst.name
-        if (inst.type === "find") return `${inst.key}=${inst.value}`
-        return String(inst.value)
-      })
-    }
-    return ["derived"]
   }
 
   private getCacheKey(def: DerivedDefinition, parentPath: PathInstruction[]): string {

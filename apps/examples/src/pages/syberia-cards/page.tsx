@@ -1,8 +1,9 @@
 import { createStoreUtils, useNewStore } from "syberia/react"
-import { newSyberiaStore } from "syberia"
+import { newSyberiaStore, type Transition } from "syberia"
 import { memo, useEffect, useState } from "react"
 import { Button } from "~/components/ui/button"
 import { Checkbox } from "~/components/ui/checkbox"
+import { sleep } from "~/sleep"
 
 type Card = {
   id: string
@@ -87,7 +88,9 @@ const newSyberiaCardsStore = newSyberiaStore<State, State, Actions>({
                     $ => $.pages[page].columns[col].cards[card].title,
                   ])
                   .target($ => $.pages[page].columns[col].cards[card].title)
-                  .get((done, title) => {
+                  .getAsync((done, title) => async ({ signal }) => {
+                    // Simulate async work
+                    await sleep(300, `updating title for ${card.id}`, signal)
                     return done
                       ? `[DONE] ${stripPrefix(title)}`
                       : `[TODO] ${stripPrefix(title)}`
@@ -186,7 +189,7 @@ export function SyberiaCardsPage() {
   return (
     <SyberiaCards.Context.Provider value={[store, resetStore, isLoading]}>
       <div className="p-8">
-        <h1 className="text-2xl font-bold mb-6">Syberia Cards</h1>
+        <h1 className="text-2xl font-bold mb-6 text-foreground">Syberia Cards</h1>
         <SyberiaCardsContent />
       </div>
     </SyberiaCards.Context.Provider>
@@ -194,7 +197,6 @@ export function SyberiaCardsPage() {
 }
 
 const SyberiaCardsContent = memo(function SyberiaCardsContent() {
-  const [store] = SyberiaCards.useStore()
   const pages = SyberiaCards.useSelector(s => s.pages)
 
   return (
@@ -220,13 +222,14 @@ const ColumnComponent = memo(function ColumnComponent({
   pageId: string
 }) {
   return (
-    <div className="min-w-[300px] bg-gray-100 rounded-lg p-4 flex flex-col gap-2">
-      <h2 className="font-semibold text-lg mb-2">{column.title}</h2>
+    <div className="min-w-[300px] bg-gray-100 dark:bg-gray-800 rounded-lg p-4 flex flex-col gap-2">
+      <h2 className="font-semibold text-lg mb-2 text-foreground">{column.title}</h2>
       <div className="flex flex-col gap-2">
         {column.cards.map(card => (
           <CardComponent
             key={card.id}
             pageId={pageId}
+            columnId={column.id}
             card={card}
           />
         ))}
@@ -238,12 +241,14 @@ const ColumnComponent = memo(function ColumnComponent({
 const CardComponent = memo(function CardComponent({
   card,
   pageId,
+  columnId,
 }: {
   card: Card
   pageId: string
+  columnId: string
 }) {
   const [store] = SyberiaCards.useStore()
-  const [isEditing, setIsEditing] = useState(false)
+  const [mode, setMode] = useState<"view" | "edit">("view")
   const [editTitle, setEditTitle] = useState("")
 
   const cardState = SyberiaCards.useSelector(s => {
@@ -252,6 +257,24 @@ const CardComponent = memo(function CardComponent({
     const col = page.columns.find(c => c.cards.some(cd => cd.id === card.id))
     return col?.cards.find(c => c.id === card.id)
   })
+
+  // Check if title is being updated asynchronously
+  // The derived computation runs under the transition that triggered the state change
+  const toggleTransition: Transition = [
+    pageId,
+    columnId,
+    card.id,
+    "toggle-card",
+  ]
+  const renameTransition: Transition = [
+    pageId,
+    columnId,
+    card.id,
+    "rename-card",
+  ]
+  const isToggling = SyberiaCards.useTransition(toggleTransition)
+  const isRenaming = SyberiaCards.useTransition(renameTransition)
+  const isUpdatingTitle = isToggling || isRenaming
 
   if (!cardState) return null
 
@@ -262,10 +285,16 @@ const CardComponent = memo(function CardComponent({
         pageId,
         cardId: card.id,
         title: editTitle.trim(),
+        transition: renameTransition,
       })
-      setIsEditing(false)
+      setMode("view")
       setEditTitle("")
     }
+  }
+
+  const handleCancelRename = () => {
+    setMode("view")
+    setEditTitle("")
   }
 
   const handleToggle = () => {
@@ -273,20 +302,38 @@ const CardComponent = memo(function CardComponent({
       type: "toggle-card",
       pageId,
       cardId: card.id,
+      transition: toggleTransition,
     })
   }
 
   return (
-    <div className="bg-white rounded p-3 shadow-sm border border-gray-200">
+    <div className="bg-white dark:bg-gray-900 rounded p-3 shadow-sm border border-gray-200 dark:border-gray-700">
       <div className="flex items-start gap-2">
         <Checkbox
           checked={cardState.done}
           onCheckedChange={handleToggle}
+          disabled={isUpdatingTitle}
           className="mt-1"
         />
         <div className="flex-1">
-          {isEditing ? (
-            <div className="flex gap-2">
+          <div className="flex items-center gap-2">
+            <span
+              className={`flex-1 text-sm text-foreground ${
+                cardState.done
+                  ? "line-through text-gray-500 dark:text-gray-400"
+                  : ""
+              } ${isUpdatingTitle ? "opacity-50" : ""}`}
+            >
+              {cardState.title}
+              {isUpdatingTitle && (
+                <span className="ml-2 text-xs text-gray-400 dark:text-gray-500">
+                  (updating...)
+                </span>
+              )}
+            </span>
+          </div>
+          {mode === "edit" ? (
+            <div className="mt-2 flex gap-2">
               <input
                 type="text"
                 value={editTitle}
@@ -295,44 +342,37 @@ const CardComponent = memo(function CardComponent({
                   if (e.key === "Enter") {
                     handleRename()
                   } else if (e.key === "Escape") {
-                    setIsEditing(false)
-                    setEditTitle("")
+                    handleCancelRename()
                   }
                 }}
-                className="flex-1 px-2 py-1 border rounded text-sm"
+                className="flex-1 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded text-sm bg-background text-foreground"
+                disabled={isUpdatingTitle}
                 autoFocus
               />
               <Button
                 onClick={handleRename}
+                disabled={isUpdatingTitle}
                 className="h-7 px-2 text-xs"
               >
                 Save
               </Button>
               <Button
-                onClick={() => {
-                  setIsEditing(false)
-                  setEditTitle("")
-                }}
-                className="h-7 px-2 text-xs border border-gray-300 text-gray-700 bg-white hover:bg-gray-100"
+                onClick={handleCancelRename}
+                disabled={isUpdatingTitle}
+                className="h-7 px-2 text-xs border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700"
               >
                 Cancel
               </Button>
             </div>
           ) : (
-            <div className="flex items-center gap-2">
-              <span
-                className={`flex-1 text-sm ${
-                  cardState.done ? "line-through text-gray-500" : ""
-                }`}
-              >
-                {cardState.title}
-              </span>
+            <div className="mt-2 flex justify-end">
               <Button
                 onClick={() => {
                   setEditTitle(stripPrefix(cardState.title))
-                  setIsEditing(true)
+                  setMode("edit")
                 }}
-                className="h-6 px-2 text-xs bg-transparent text-blue-600 hover:bg-blue-50"
+                disabled={isUpdatingTitle}
+                className="h-6 px-2 text-xs bg-transparent text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Rename
               </Button>
